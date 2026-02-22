@@ -1,0 +1,3 @@
+{
+  "extends": "@hugomrdias/configs/tsconfig"
+}

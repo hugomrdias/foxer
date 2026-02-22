@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "extends": ["@hugomrdias/configs/biome"],
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "!**/node_modules",
+      "!**/.ponder",
+      "!**/drizzle",
+      "!**/generated",
+      "!**/dist",
+      "!**/build"
+    ]
+  }
+}
