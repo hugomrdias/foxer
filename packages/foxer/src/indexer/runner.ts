@@ -1,73 +1,34 @@
-import { gracefulExit } from 'exit-hook'
-import { config } from '../config'
-import { env } from '../config/env'
-import { createDatabase, type DatabaseContext } from '../db/client'
-import { runMigrations } from '../db/migrate'
-import { HookRegistry } from '../hooks/registry'
-import { createComponentLogger } from '../logger'
-import { createRpcClient } from '../rpc/client'
-import { createExit } from '../utils/shutdown'
-import { runBackfill } from './backfill'
-import { startLiveSync } from './live'
-import { verifyRecentBlocks } from './reorg'
+import type { PublicClient } from 'viem'
+import { env } from '../config/env.ts'
+import type { Database } from '../db/client.ts'
+import type { relations, schema } from '../db/schema/index.ts'
+import type { HookRegistry } from '../hooks/registry.ts'
+import type { InternalConfig } from '../utils/types.ts'
+import { runBackfill } from './backfill.ts'
+import { startLiveSync } from './live.ts'
+import { verifyRecentBlocks } from './reorg.ts'
 
-const log = createComponentLogger('indexer')
-
-/**
- * Starts the indexer lifecycle: migrate, verify recent blocks, backfill, then live sync.
- */
-export async function runIndexer(options?: {
-  dbContext?: DatabaseContext
-}): Promise<{ stop: () => Promise<void> }> {
-  const dbContext = options?.dbContext ?? createDatabase()
-  const client = createRpcClient()
-  const ownDb = !options?.dbContext
-  if (ownDb) {
-    await runMigrations({ dbContext })
-  }
-  const hooks = new HookRegistry()
-
+export async function bootstrapIndexer(options: {
+  db: Database<typeof schema, typeof relations>
+  client: PublicClient
+  registry: HookRegistry
+  config: InternalConfig
+}): Promise<{ stop: () => void }> {
   await verifyRecentBlocks({
-    db: dbContext.db,
-    client,
+    db: options.db,
+    client: options.client,
     depth: env.REORG_CHECK_DEPTH,
   })
 
-  const nextCursor = await runBackfill({
-    config: config as never,
-    db: dbContext.db,
-    client,
-    hooks,
-  })
+  const nextCursor = await runBackfill(options)
 
   const live = startLiveSync({
-    config: config as never,
-    db: dbContext.db,
-    client,
-    hooks,
+    config: options.config,
+    db: options.db,
+    client: options.client,
+    registry: options.registry,
     initialCursor: nextCursor,
   })
 
-  return {
-    stop: async () => {
-      live.stop()
-      if (ownDb) {
-        await dbContext.close()
-      }
-    },
-  }
-}
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runIndexer()
-    .then((indexer) => {
-      createExit({
-        logger: log,
-        stop: indexer.stop,
-      })
-    })
-    .catch((error) => {
-      log.error({ err: error }, 'indexer runner failed')
-      gracefulExit(1)
-    })
+  return live
 }

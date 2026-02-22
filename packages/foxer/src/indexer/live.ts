@@ -16,10 +16,10 @@ export function startLiveSync(args: {
   config: InternalConfig
   db: Database
   client: PublicClient
-  hooks: HookRegistry
+  registry: HookRegistry
   initialCursor: bigint
 }): { stop: () => void } {
-  const { config, db, client, hooks } = args
+  const { config, db, client, registry } = args
 
   // filter out contracts that have endBlock set
   const contracts = Object.values(config.contracts).filter(
@@ -51,7 +51,7 @@ export function startLiveSync(args: {
             config,
             db,
             client,
-            hooks,
+            registry,
             queueSize: pqueue.size,
             onRewind: (rewindTo) => {
               nextBlockToQueue = rewindTo

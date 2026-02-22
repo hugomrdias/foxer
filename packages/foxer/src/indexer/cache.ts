@@ -1,8 +1,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: its ok */
-import { getColumns, sql } from 'drizzle-orm'
 import type { PublicClient } from 'viem'
-import type { Database } from '../db/client.ts'
-import { schema } from '../db/schema/index.ts'
+import { buildConflictUpdateColumns, type Database } from '../db/client.ts'
+import { type relations, schema } from '../db/schema/index.ts'
 import { safeGetBlock } from '../rpc/block-fetcher.ts'
 import type { BlockSimpleWithTransactions } from '../utils/types.ts'
 
@@ -25,24 +24,17 @@ export async function cacheBlockAndTransactions(args: {
     return
   }
 
-  const txCols = getColumns(schema.transactions)
-  const setAll = Object.fromEntries(
-    Object.entries(txCols)
-      .filter(([k]) => !['hash'].includes(k)) // conflict key cols
-      .map(([k, col]) => [k, sql.raw(`excluded.${col.name}`)])
-  ) as Partial<typeof schema.transactions.$inferInsert>
-
   await db
     .insert(schema.transactions)
     .values(transactions)
     .onConflictDoUpdate({
       target: [schema.transactions.hash],
-      set: setAll,
+      set: buildConflictUpdateColumns(schema.transactions),
     })
 }
 
 export async function getBlocksInRange(
-  db: Database,
+  db: Database<typeof schema, typeof relations>,
   blockNumbers: bigint[],
   client: PublicClient
 ): Promise<Map<bigint, BlockSimpleWithTransactions>> {

@@ -2,6 +2,7 @@ import type { PublicClient } from 'viem'
 import { filterContracts } from '../config/config.ts'
 import { env } from '../config/env.ts'
 import type { Database } from '../db/client.ts'
+import type { relations, schema } from '../db/schema/index.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { createComponentLogger } from '../logger.ts'
@@ -18,12 +19,12 @@ const log = createComponentLogger('backfill')
  */
 export async function runBackfill(args: {
   config: InternalConfig
-  db: Database
+  db: Database<typeof schema, typeof relations>
   client: PublicClient
-  hooks: HookRegistry
+  registry: HookRegistry
 }): Promise<bigint> {
   console.time('runBackfill')
-  const { db, client, hooks, config } = args
+  const { db, client, registry, config } = args
   const chainHead = await client.getBlockNumber()
   const safeHead =
     chainHead > BigInt(env.CONFIRMATION_DEPTH)
@@ -131,7 +132,7 @@ export async function runBackfill(args: {
             config,
             db: tx,
             client,
-            hooks,
+            registry,
             blockNumber: block,
             prefetchedLogs: logsByBlock.get(block) ?? [],
             prefetchedBlock,

@@ -1,21 +1,14 @@
-import {
-  bigint,
-  foreignKey,
-  pgTable,
-  primaryKey,
-  text,
-} from 'drizzle-orm/pg-core'
-
-import { schema } from 'foxer'
+import { foreignKey, pgTable, primaryKey, text } from 'drizzle-orm/pg-core'
+import { address, bigint, schema } from 'foxer'
 
 export const pieces = pgTable(
   'pieces',
   {
-    id: bigint('id', { mode: 'bigint' }).notNull(),
-    datasetId: bigint('dataset_id', { mode: 'bigint' }).notNull(),
-    address: text('address').notNull(),
+    id: bigint().notNull(),
+    datasetId: bigint().notNull(),
+    address: address().notNull(),
     cid: text('cid').notNull(),
-    blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+    blockNumber: bigint().notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.datasetId, table.id] }),

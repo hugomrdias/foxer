@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c9d96752-43f9-48f3-9bdf-4f10648e0431",
+  "id": "7f87be57-21d7-4ce6-b14e-a12466361a03",
   "prevIds": [
-    "5a6c4210-1a09-4c76-8de7-5645da73f37d"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
@@ -26,6 +26,12 @@
     },
     {
       "isRlsEnabled": false,
+      "name": "pieces",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": false,
       "name": "blocks",
       "entityType": "tables",
       "schema": "public"
@@ -35,6 +41,123 @@
       "name": "transactions",
       "entityType": "tables",
       "schema": "public"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "data_set_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "provider_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "pdp_rail_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cache_miss_rail_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "cdn_rail_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(42)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payer",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(42)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "service_provider",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "varchar(42)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "payee",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "type": "json",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "metadata",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "datasets"
     },
     {
       "type": "bigint",
@@ -60,7 +183,7 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "datasets"
+      "table": "pieces"
     },
     {
       "type": "bigint",
@@ -70,75 +193,23 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "provider_id",
+      "name": "dataset_id",
       "entityType": "columns",
       "schema": "public",
-      "table": "datasets"
+      "table": "pieces"
     },
     {
-      "type": "bigint",
+      "type": "varchar(42)",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "pdpRailId",
+      "name": "address",
       "entityType": "columns",
       "schema": "public",
-      "table": "datasets"
-    },
-    {
-      "type": "bigint",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cdnRailId",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "datasets"
-    },
-    {
-      "type": "bigint",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cacheMissRailId",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "datasets"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "payee",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "datasets"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "storage_provider",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "datasets"
+      "table": "pieces"
     },
     {
       "type": "text",
@@ -148,49 +219,23 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "account_address",
+      "name": "cid",
       "entityType": "columns",
       "schema": "public",
-      "table": "datasets"
+      "table": "pieces"
     },
     {
-      "type": "json",
+      "type": "bigint",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "metadata",
+      "name": "block_number",
       "entityType": "columns",
       "schema": "public",
-      "table": "datasets"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "created_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "datasets"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "datasets"
+      "table": "pieces"
     },
     {
       "type": "bigint",
@@ -312,7 +357,7 @@
     {
       "type": "varchar(18)",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -325,7 +370,7 @@
     {
       "type": "varchar(66)",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -377,7 +422,7 @@
     {
       "type": "varchar(66)",
       "typeSchema": null,
-      "notNull": true,
+      "notNull": false,
       "dimensions": 0,
       "default": null,
       "generated": null,
@@ -427,7 +472,7 @@
       "table": "blocks"
     },
     {
-      "type": "text",
+      "type": "varchar",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -518,7 +563,7 @@
       "table": "transactions"
     },
     {
-      "type": "text",
+      "type": "varchar",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -609,7 +654,7 @@
       "table": "transactions"
     },
     {
-      "type": "varchar(66)",
+      "type": "varchar",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -736,6 +781,23 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
+      "name": "datasets_block_fk",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "pieces"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "block_number"
+      ],
+      "schemaTo": "public",
+      "tableTo": "blocks",
+      "columnsTo": [
+        "number"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
       "name": "transactions_block_fk",
       "entityType": "fks",
       "schema": "public",
@@ -743,13 +805,24 @@
     },
     {
       "columns": [
+        "dataset_id",
         "id"
       ],
       "nameExplicit": false,
-      "name": "datasets_pkey",
+      "name": "pieces_pkey",
       "entityType": "pks",
       "schema": "public",
-      "table": "datasets"
+      "table": "pieces"
+    },
+    {
+      "columns": [
+        "data_set_id"
+      ],
+      "nameExplicit": false,
+      "name": "datasets_pkey",
+      "schema": "public",
+      "table": "datasets",
+      "entityType": "pks"
     },
     {
       "columns": [

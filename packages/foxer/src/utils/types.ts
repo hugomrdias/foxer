@@ -1,16 +1,9 @@
-import type {
-  Abi,
-  AbiEvent,
-  Address,
-  ExtractAbiEvent,
-  ExtractAbiEventNames,
-} from 'abitype'
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import type { PgliteDatabase } from 'drizzle-orm/pglite'
+import type { Abi, ExtractAbiEvent, ExtractAbiEventNames } from 'abitype'
+import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
 import type { Hono } from 'hono'
 import type { BlankEnv, BlankSchema } from 'hono/types'
-import type { Simplify } from 'type-fest'
-import type { AccessList, Block, Hex, Transaction } from 'viem'
+import type { AccessList, Block, Transaction } from 'viem'
+import type { Database } from '../db/client'
 import type { HookRegistry } from '../hooks/registry'
 
 export type EnsureUniqueTuple<
@@ -74,31 +67,21 @@ export type ContractsConfig<contracts> =
         [name in keyof contracts]: GetContract<contracts[name]>
       }
 
-export type Config<
-  TSchema extends Record<string, unknown> = Record<string, unknown>,
-> = {
-  contracts: { [contractName: string]: GetContract }
-  app: Hono<BlankEnv, BlankSchema, '/'>
-  schema: TSchema
-  hooks: (context: {
-    db: NodePgDatabase<TSchema> | PgliteDatabase<TSchema>
-    schema: TSchema
-    registry: HookRegistry
-  }) => void
-}
-
 export type InternalConfig<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
-> = Simplify<
-  {
-    eventNames: MergedContractEvents<Config['contracts']>[]
-    eventSignatures: string[]
-    eventSelectors: Hex[]
-    eventAbis: AbiEvent[]
-    contractNameByAddress: Record<Address, string>
-    addresses: Address[]
-  } & Config<TSchema>
->
+  TRelations extends AnyRelations = EmptyRelations,
+> = {
+  contracts: { [contractName: string]: GetContract }
+  drizzleFolder: string
+  app: ({
+    db,
+  }: {
+    db: Database<TSchema, TRelations>
+  }) => Hono<BlankEnv, BlankSchema, '/'>
+  schema: TSchema
+  relations: TRelations
+  hooks: (context: { registry: HookRegistry }) => void
+}
 
 export type EventKey = `${string}:${string}`
 

@@ -12,7 +12,7 @@ export type QueueBlockArgs = {
   config: InternalConfig
   db: Database
   client: PublicClient
-  hooks: HookRegistry
+  registry: HookRegistry
   queueSize: number
 }
 
@@ -21,7 +21,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
     config,
     db,
     client,
-    hooks,
+    registry,
     blockNumber,
     logger,
     onRewind,
@@ -34,7 +34,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
       config,
       db,
       client,
-      hooks,
+      registry,
       blockNumber,
     })
 

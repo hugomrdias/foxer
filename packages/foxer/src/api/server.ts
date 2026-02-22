@@ -1,30 +1,21 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { PGlite } from '@electric-sql/pglite'
+import type { Node, RawStmt } from '@pgsql/types'
 import { Hono } from 'hono'
-import type { Database } from '../db/client'
-import { schema } from '../db/schema'
-import { getBlockByIdOrLatest } from '../indexer/state'
-import type { InternalConfig } from '../utils/types'
+import { type PinoLogger, pinoLogger } from 'hono-pino'
+import { parse } from 'libpg-query'
+import { Pool } from 'pg'
+import type { Database } from '../db/client.ts'
+import { getBlockByIdOrLatest } from '../indexer/state.ts'
+import { createComponentLogger } from '../logger.ts'
+import type { InternalConfig } from '../utils/types.ts'
+
+// biome-ignore lint/style/noNonNullAssertion: we know the node is not null
+const getNodeType = (node: Node) => Object.keys(node)[0]!
+
+const log = createComponentLogger('api')
 
 /**
- * Parses and clamps query limit values for list endpoints.
- */
-function parseLimit(value: string | undefined): number {
-  const parsed = Number(value ?? '50')
-  if (!Number.isFinite(parsed)) return 50
-  return Math.max(1, Math.min(parsed, 200))
-}
-
-/**
- * Parses and clamps query offset values for list endpoints.
- */
-function parseOffset(value: string | undefined): number {
-  const parsed = Number(value ?? '0')
-  if (!Number.isFinite(parsed)) return 0
-  return Math.max(0, Math.trunc(parsed))
-}
-
-/**
- * Builds the Hono API server with health and read endpoints.
+ * Builds the Hono API server with health and sql endpoints.
  */
 export function createApiServer({
   db,
@@ -33,7 +24,13 @@ export function createApiServer({
   db: Database
   config: InternalConfig
 }) {
-  const app = new Hono()
+  const app = new Hono<{ Variables: { logger: PinoLogger } }>()
+
+  app.use(
+    pinoLogger({
+      pino: log,
+    })
+  )
 
   app.get('/health', async (c) => {
     const latest = (await getBlockByIdOrLatest({ db }))?.blockNumber ?? null
@@ -43,102 +40,81 @@ export function createApiServer({
     })
   })
 
-  // app.get('/session-keys', async (c) => {
-  //   const limit = parseLimit(c.req.query('limit'))
-  //   const offset = parseOffset(c.req.query('offset'))
+  app.post('/sql', async (c) => {
+    const { sql, params, method } = await c.req.json()
 
-  //   const rows = await db
-  //     .select()
-  //     .from(sessionsKeys)
-  //     .orderBy(desc(sessionsKeys.blockNumber))
-  //     .limit(limit)
-  //     .offset(offset)
+    const result = (await parse(sql)) as { stmts: RawStmt[] }
 
-  //   return c.json({
-  //     items: rows.map((row) => ({
-  //       ...row,
-  //       blockNumber: row.blockNumber.toString(),
-  //     })),
-  //     limit,
-  //     offset,
-  //   })
-  // })
+    if (result.stmts.length === 0) {
+      return c.json({ error: 'No statement found' }, 400)
+    }
 
-  // app.get('/datasets', async (c) => {
-  //   const limit = parseLimit(c.req.query('limit'))
-  //   const offset = parseOffset(c.req.query('offset'))
-  //   const address = c.req.query('address')
+    if (result.stmts.length > 1) {
+      return c.json({ error: 'Only one statement is allowed' }, 400)
+    }
 
-  //   const rows = await db
-  //     .select()
-  //     .from(datasets)
-  //     .orderBy(desc(datasets.blockNumber), desc(datasets.id))
-  //     .where(address ? eq(datasets.accountAddress, address) : undefined)
-  //     .limit(limit)
-  //     .offset(offset)
+    const stmt = result.stmts[0]
+    if (stmt.stmt == null) {
+      return c.json({ error: 'Invalid statement' }, 400)
+    }
 
-  //   return c.json({
-  //     items: rows.map((row) => ({
-  //       ...row,
-  //       id: row.id.toString(),
-  //       pdpRailId: row.pdpRailId?.toString(),
-  //       blockNumber: row.blockNumber.toString(),
-  //       providerId: row.providerId?.toString(),
-  //       cacheMissRailId: row.cacheMissRailId?.toString(),
-  //       cdnRailId: row.cdnRailId?.toString(),
-  //     })),
-  //     limit,
-  //     offset,
-  //   })
-  // })
+    const node = stmt.stmt
+    const nodeType = getNodeType(node)
 
-  // app.get('/pieces', async (c) => {
-  //   const limit = parseLimit(c.req.query('limit'))
-  //   const offset = parseOffset(c.req.query('offset'))
-  //   const address = c.req.query('address')
+    if (nodeType !== 'SelectStmt') {
+      return c.json({ error: 'Only select statements are allowed' }, 400)
+    }
 
-  //   const datasetId = c.req.query('datasetId')
-  //   if (!address && !datasetId) {
-  //     return c.json(
-  //       {
-  //         error: 'At least one filter is required: address and/or datasetId',
-  //       },
-  //       400
-  //     )
-  //   }
+    if (!('SelectStmt' in node)) {
+      return c.json({ error: 'Invalid statement' }, 400)
+    }
+    const selectStmt = node.SelectStmt
+    if (selectStmt.lockingClause || selectStmt.intoClause) {
+      return c.json({ error: 'Locking or into clauses are not allowed' }, 400)
+    }
+    if (selectStmt.withClause?.recursive) {
+      return c.json({ error: 'Recursive with clauses are not allowed' }, 400)
+    }
 
-  //   const whereClauses = [
-  //     address ? eq(pieces.accountAddress, address) : undefined,
-  //     datasetId ? eq(pieces.datasetId, BigInt(datasetId)) : undefined,
-  //   ].filter((clause) => clause != null)
+    if (!selectStmt.limitCount || !('ParamRef' in selectStmt.limitCount)) {
+      return c.json({ error: 'Limit is required' }, 400)
+    }
+    const limitIndex = selectStmt.limitCount.ParamRef.number as number
+    const limit = params[limitIndex - 1]
 
-  //   const where =
-  //     whereClauses.length === 0
-  //       ? undefined
-  //       : whereClauses.length === 1
-  //         ? whereClauses[0]
-  //         : and(...whereClauses)
+    if (limit > 100) {
+      return c.json({ error: 'Limit is too large (max 100)' }, 400)
+    }
 
-  //   const rows = await db
-  //     .select()
-  //     .from(pieces)
-  //     .where(where)
-  //     .orderBy(desc(pieces.blockNumber), desc(pieces.id))
-  //     .limit(limit)
-  //     .offset(offset)
+    let dbResult: { rows: unknown[] } | undefined
+    if (db.$client instanceof PGlite) {
+      dbResult = await db.$client.query(sql, params, {
+        rowMode: method === 'all' ? 'array' : undefined,
+      })
+    }
+    if (db.$client instanceof Pool) {
+      dbResult = await db.$client.query(
+        {
+          text: sql,
+          values: params,
+          ...(method === 'all' ? { rowMode: 'array' } : {}),
+        },
+        params
+      )
+    }
 
-  //   return c.json({
-  //     items: rows.map((row) => ({
-  //       ...row,
-  //       id: row.id.toString(),
-  //       blockNumber: row.blockNumber.toString(),
-  //       datasetId: row.datasetId.toString(),
-  //     })),
-  //     limit,
-  //     offset,
-  //   })
-  // })
+    if (!dbResult) {
+      return c.json({ error: 'Internal server error' }, 500)
+    }
 
-  app.route('/', config.app)
+    try {
+      return c.json(dbResult.rows, 200)
+    } catch (error) {
+      log.error({ error }, 'sql query failed')
+      return c.json({ error: 'Internal server error' }, 500)
+    }
+  })
+
+  app.route('/', config.app({ db }))
   return app
 }

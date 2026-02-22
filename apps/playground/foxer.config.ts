@@ -1,16 +1,16 @@
 import { calibration } from '@filoz/synapse-core/chains'
+import { metadataArrayToObject } from '@filoz/synapse-core/utils'
+import { eq } from 'drizzle-orm'
+import type { Database as FoxerDatabase, HookRegistry } from 'foxer'
 import { createConfig } from 'foxer'
-import type { HookRegistry } from 'foxer/src/hooks/registry.ts'
-import { Hono } from 'hono'
+
+import { stringify } from 'viem'
+import { buildApp } from './src/app.ts'
 import { relations, schema } from './src/schema/index.ts'
 
-const app = new Hono()
-
-app.get('/books', (c) => c.json('list books'))
-app.post('/books', (c) => c.json('create a book', 201))
-app.get('/books/:id', (c) => c.json(`get ${c.req.param('id')}`))
-
 export const config = createConfig({
+  drizzleFolder: './drizzle',
+  app: buildApp,
   contracts: {
     sessionKeyRegistry: {
       address: calibration.contracts.sessionKeyRegistry.address,
@@ -28,21 +28,47 @@ export const config = createConfig({
       events: ['ServiceTerminated', 'DataSetCreated'],
     },
   },
-  app,
   schema,
   relations,
-  hooks: ({ db, schema, registry }) => {
+  hooks: ({ registry }) => {
     storageEvents(registry)
   },
 })
 
-export type Registry = HookRegistry<typeof config.contracts>
+export type Database = FoxerDatabase<typeof schema, typeof relations>
+
+export type Registry = HookRegistry<
+  typeof config.contracts,
+  typeof config.schema,
+  typeof config.relations
+>
 
 function storageEvents(registry: Registry) {
   registry.on('storage:DataSetCreated', async ({ context, event }) => {
+    console.log('🚀 ~ storageEvents ~ event:', stringify(event.args))
     const ds = event.args
+
+    const metadata = metadataArrayToObject([ds.metadataKeys, ds.metadataValues])
+
+    await context.db
+      .insert(schema.datasets)
+      .values({
+        ...ds,
+        metadata,
+        blockNumber: context.blockNumber,
+      })
+      .onConflictDoUpdate({
+        target: [schema.datasets.dataSetId],
+        set: {
+          ...ds,
+          metadata,
+        },
+      })
   })
   registry.on('storage:ServiceTerminated', async ({ context, event }) => {
     const ds = event.args
+    await context.db
+      .delete(schema.datasets)
+      .where(eq(schema.datasets.dataSetId, ds.dataSetId))
   })
 }

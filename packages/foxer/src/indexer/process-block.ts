@@ -28,7 +28,7 @@ export async function processBlock(args: {
   config: InternalConfig
   db: Database
   client: PublicClient
-  hooks: HookRegistry<NonNullable<unknown>>
+  registry: HookRegistry<NonNullable<unknown>>
   blockNumber: bigint
   prefetchedLogs?: Log<bigint, number, false, AbiEvent>[]
   prefetchedBlock?: BlockSimpleWithTransactions
@@ -40,7 +40,7 @@ export async function processBlock(args: {
     config,
     db,
     client,
-    hooks,
+    registry,
     blockNumber,
     prefetchedBlock,
     prefetchedLogs,
@@ -81,7 +81,7 @@ export async function processBlock(args: {
     // console.timeLog("processBlock", "ensureParentContinuity");
   }
 
-  const { eventAbis, addresses } = filterContracts(
+  const { eventAbis, addresses, contractNameByAddress } = filterContracts(
     config,
     blockNumber,
     blockNumber
@@ -111,7 +111,14 @@ export async function processBlock(args: {
     // }
 
     for (const log of logs) {
-      const contractName = config.contractNameByAddress[getAddress(log.address)]
+      const contractName = contractNameByAddress[getAddress(log.address)]
+      if (!contractName) {
+        logger.warn(
+          { address: log.address },
+          'contract not found in contract name by address'
+        )
+        continue
+      }
       const eventName = log.eventName
       const transaction = transactionByHash.get(log.transactionHash)
       if (!transaction) {
@@ -122,7 +129,7 @@ export async function processBlock(args: {
         )
         continue
       }
-      await hooks.dispatch({
+      await registry.dispatch({
         key: `${contractName}:${eventName}` as never,
         args: log.args as never,
         log: log as never,

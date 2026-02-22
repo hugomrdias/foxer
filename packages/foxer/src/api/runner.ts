@@ -1,58 +1,43 @@
 import { serve } from '@hono/node-server'
-import { gracefulExit } from 'exit-hook'
-import { config } from '../config'
-import { env } from '../config/env'
-import { createDatabase, type DatabaseContext } from '../db/client'
-import { runMigrations } from '../db/migrate'
-import { createComponentLogger } from '../logger'
-import { createExit } from '../utils/shutdown'
-import { createApiServer } from './server'
+import shutdown from 'http-shutdown'
+import { env } from '../config/env.ts'
+import type { Database } from '../db/client.ts'
+import { createComponentLogger } from '../logger.ts'
+import type { InternalConfig } from '../utils/types.ts'
+import { createApiServer } from './server.ts'
 
 const log = createComponentLogger('api')
 
-/**
- * Starts the HTTP API server and optionally manages process signal handlers.
- */
-export async function runApiServer(options?: {
-  dbContext?: DatabaseContext
-}): Promise<{ stop: () => Promise<void> }> {
-  const dbContext = options?.dbContext ?? createDatabase()
-  const ownDb = !options?.dbContext
-  if (ownDb) {
-    await runMigrations({ dbContext })
-  }
+export function bootstrapApiServer(options: {
+  db: Database
+  config: InternalConfig
+}): { stop: () => void } {
   const app = createApiServer({
-    db: dbContext.db,
-    config: config as never,
+    db: options.db,
+    config: options.config,
   })
 
-  const server = serve({
-    fetch: app.fetch,
-    port: env.API_PORT,
-  })
+  const server = serve(
+    {
+      fetch: app.fetch,
+      port: env.API_PORT,
+    },
+    () => {
+      log.info({ port: env.API_PORT }, 'api server listening')
+    }
+  )
 
-  log.info({ port: env.API_PORT }, 'api server listening')
+  const _server = shutdown(server)
 
   return {
-    stop: async () => {
-      server.close()
-      if (ownDb) {
-        await dbContext.close()
-      }
+    stop: () => {
+      _server.shutdown((err) => {
+        if (err) {
+          log.error({ err }, 'api server shutdown failed')
+          return
+        }
+        log.info('api server shutdown complete')
+      })
     },
   }
-}
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runApiServer()
-    .then(({ stop }) => {
-      createExit({
-        logger: log,
-        stop,
-      })
-    })
-    .catch((error) => {
-      log.error({ err: error }, 'api runner failed')
-      gracefulExit(1)
-    })
 }

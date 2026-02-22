@@ -1,3 +1,4 @@
+import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
 import type { GetEventArgs, Log } from 'viem'
 import type { Database } from '../db/client'
 import type {
@@ -11,8 +12,11 @@ import type {
   TransactionSimple,
 } from '../utils/types'
 
-export type HookContext = {
-  db: Database
+export type HookContext<
+  TSchema extends Record<string, unknown> = Record<string, unknown>,
+  TRelations extends AnyRelations = EmptyRelations,
+> = {
+  db: Database<TSchema, TRelations>
   chainId: bigint
   blockNumber: bigint
 }
@@ -35,10 +39,11 @@ export type DecodedEvent<
 export type EventHook<
   C extends ContractsConfig<NonNullable<unknown>>,
   Event extends EventKey = EventKey,
+  TSchema extends Record<string, unknown> = Record<string, unknown>,
+  TRelations extends AnyRelations = EmptyRelations,
 > = (args: {
-  context: HookContext
+  context: HookContext<TSchema, TRelations>
   event: DecodedEvent<C, Event>
-  log: Log<bigint, number, false, ContractAbiEventByEventKey<C, Event>>
 }) => Promise<void> | void
 
 /**
@@ -48,17 +53,19 @@ export class HookRegistry<
   C extends ContractsConfig<NonNullable<unknown>> = ContractsConfig<
     NonNullable<unknown>
   >,
+  TSchema extends Record<string, unknown> = Record<string, unknown>,
+  TRelations extends AnyRelations = EmptyRelations,
 > {
-  private readonly hooks = new Map<MergedContractEvents<C>, EventHook<C>>()
+  private readonly hooks = new Map<MergedContractEvents<C>, unknown>()
 
   /**
    * Registers a hook for a specific `contract:event` key.
    */
   on<K extends MergedContractEvents<C>>(
     streamKey: K,
-    hook: EventHook<C, K>
+    hook: EventHook<C, K, TSchema, TRelations>
   ): void {
-    this.hooks.set(streamKey, hook as unknown as EventHook<C>)
+    this.hooks.set(streamKey, hook)
   }
 
   /**
@@ -74,10 +81,15 @@ export class HookRegistry<
     log: Log<bigint, number, false, ContractAbiEventByEventKey<C, K>>
     block: BlockSimpleWithTransactions
     transaction: TransactionSimple
-    context: HookContext
+    context: HookContext<TSchema, TRelations>
   }): Promise<void> {
     const { key, args, log, block, transaction, context } = options
-    const hook = this.hooks.get(key) as unknown as EventHook<C, K>
+    const hook = this.hooks.get(key) as unknown as EventHook<
+      C,
+      K,
+      TSchema,
+      TRelations
+    >
     if (!hook) return
 
     const event = {
@@ -90,7 +102,6 @@ export class HookRegistry<
     await hook({
       context,
       event,
-      log,
     })
   }
 }

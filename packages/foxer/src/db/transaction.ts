@@ -3,7 +3,7 @@ import type { Database } from './client'
 /**
  * Runs work in a transaction for either postgres or pglite drivers.
  */
-export async function withTransaction<T>(
+export function withTransaction<T>(
   db: Database,
   run: (tx: Database) => Promise<T>
 ): Promise<T> {

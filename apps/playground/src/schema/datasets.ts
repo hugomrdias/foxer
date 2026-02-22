@@ -1,19 +1,19 @@
-import { bigint, foreignKey, json, pgTable, text } from 'drizzle-orm/pg-core'
-import { schema } from 'foxer'
+import { foreignKey, json, pgTable, text } from 'drizzle-orm/pg-core'
+import { address, bigint, schema } from 'foxer'
 
 export const datasets = pgTable(
   'datasets',
   {
-    id: bigint('id', { mode: 'bigint' }).primaryKey(),
-    providerId: bigint('provider_id', { mode: 'bigint' }).notNull(),
-    pdpRailId: bigint({ mode: 'bigint' }),
-    cdnRailId: bigint({ mode: 'bigint' }),
-    cacheMissRailId: bigint({ mode: 'bigint' }),
-    payee: text('payee'),
-    storageProvider: text('storage_provider'),
-    address: text('account_address').notNull(),
-    metadata: json('metadata').$type<Record<string, unknown>>(),
-    blockNumber: bigint('block_number', { mode: 'bigint' }).notNull(),
+    dataSetId: bigint().primaryKey(),
+    providerId: bigint().notNull(),
+    pdpRailId: bigint().notNull(),
+    cacheMissRailId: bigint().notNull(),
+    cdnRailId: bigint().notNull(),
+    payer: address().notNull(),
+    serviceProvider: address().notNull(),
+    payee: address().notNull(),
+    metadata: json().$type<Record<string, unknown>>(),
+    blockNumber: bigint().notNull(),
   },
   (table) => [
     foreignKey({
@@ -23,3 +23,18 @@ export const datasets = pgTable(
     }).onDelete('cascade'),
   ]
 )
+
+// {
+//   dataSetId: bigint
+//   providerId: bigint
+//   pdpRailId: bigint
+//   cacheMissRailId: bigint
+//   cdnRailId: bigint
+//   payer: `0x${string}`
+//   serviceProvider: `0x${string}`
+//   payee: `0x${string}`
+//   metadataKeys: readonly
+//   string[];
+//   metadataValues: readonly
+//   string[];
+// }
