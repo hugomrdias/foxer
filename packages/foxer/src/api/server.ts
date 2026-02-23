@@ -1,16 +1,16 @@
-import { PGlite } from '@electric-sql/pglite'
-import type { Node, RawStmt } from '@pgsql/types'
+import type { QueryWithTypings } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { streamSSE } from 'hono/streaming'
 import { type PinoLogger, pinoLogger } from 'hono-pino'
-import { parse } from 'libpg-query'
-import { Pool } from 'pg'
+import postgres from 'postgres'
+import { env } from '../config/env.ts'
 import type { Database } from '../db/client.ts'
 import { getBlockByIdOrLatest } from '../indexer/state.ts'
 import { createComponentLogger } from '../logger.ts'
+import { noop } from '../utils/common.ts'
 import type { InternalConfig } from '../utils/types.ts'
-
-// biome-ignore lint/style/noNonNullAssertion: we know the node is not null
-const getNodeType = (node: Node) => Object.keys(node)[0]!
+import { executeSql, validateSql } from './sql.ts'
+import { sseError } from './sse.ts'
 
 const log = createComponentLogger('api')
 
@@ -40,79 +40,99 @@ export function createApiServer({
     })
   })
 
-  app.post('/sql', async (c) => {
-    const { sql, params, method } = await c.req.json()
-
-    const result = (await parse(sql)) as { stmts: RawStmt[] }
-
-    if (result.stmts.length === 0) {
-      return c.json({ error: 'No statement found' }, 400)
+  app.get('/sql/live', async (c) => {
+    const queryString = c.req.query('sql')
+    if (!queryString) {
+      return sseError(c, 'sql query is required')
     }
+    const query = JSON.parse(queryString) as QueryWithTypings
 
-    if (result.stmts.length > 1) {
-      return c.json({ error: 'Only one statement is allowed' }, 400)
-    }
-
-    const stmt = result.stmts[0]
-    if (stmt.stmt == null) {
-      return c.json({ error: 'Invalid statement' }, 400)
+    const result = await validateSql(query)
+    if (result.error) {
+      return sseError(c, result.error.message)
     }
 
-    const node = stmt.stmt
-    const nodeType = getNodeType(node)
+    const tables = result.result
 
-    if (nodeType !== 'SelectStmt') {
-      return c.json({ error: 'Only select statements are allowed' }, 400)
-    }
+    const dbResult = await executeSql({ db, query })
 
-    if (!('SelectStmt' in node)) {
-      return c.json({ error: 'Invalid statement' }, 400)
-    }
-    const selectStmt = node.SelectStmt
-    if (selectStmt.lockingClause || selectStmt.intoClause) {
-      return c.json({ error: 'Locking or into clauses are not allowed' }, 400)
-    }
-    if (selectStmt.withClause?.recursive) {
-      return c.json({ error: 'Recursive with clauses are not allowed' }, 400)
+    if (dbResult.error) {
+      return sseError(c, dbResult.error.message)
     }
 
-    if (!selectStmt.limitCount || !('ParamRef' in selectStmt.limitCount)) {
-      return c.json({ error: 'Limit is required' }, 400)
-    }
-    const limitIndex = selectStmt.limitCount.ParamRef.number as number
-    const limit = params[limitIndex - 1]
+    let closeSubscription: () => void = noop
+    const pg = postgres(env.DATABASE_URL!, {
+      publications: 'alltables',
+    })
 
-    if (limit > 100) {
-      return c.json({ error: 'Limit is too large (max 100)' }, 400)
+    return streamSSE(
+      c,
+      async (stream) => {
+        stream.onAbort(async () => {
+          log.debug('stream aborted')
+          closeSubscription()
+          await pg.end()
+        })
+
+        stream.writeSSE({
+          data: JSON.stringify(dbResult.result),
+        })
+
+        for (const table of tables) {
+          await pg.subscribe(table, async () => {
+            const dbResult = await executeSql({ db, query })
+            stream.writeSSE({
+              data: JSON.stringify(dbResult.result),
+            })
+          })
+        }
+
+        // const { unsubscribe } = await pg.subscribe(
+        //   '*',
+        //   (row, info) => {
+        //     // console.log('🚀 ~ createApiServer ~ info:', info)
+        //     // console.log('🚀 ~ createApiServer ~ row:', row)
+        //     // Callback function for each row change
+        //     // tell about new event row over eg. websockets or do something else
+        //   },
+        //   () => {
+        //     log.debug('stream connected')
+        //   },
+        //   () => {
+        //     log.debug('stream disconnected')
+        //   }
+        // )
+        while (stream.closed === false && stream.aborted === false) {
+          // keep the stream alive
+          await stream.sleep(1000)
+        }
+      },
+      async (e) => {
+        log.error({ err: e }, 'stream error')
+        closeSubscription()
+        await pg.end()
+      }
+    )
+  })
+
+  app.get('/sql/db', async (c) => {
+    const queryString = c.req.query('sql')
+    if (!queryString) {
+      return c.json({ error: 'sql query is required' }, 400)
+    }
+    const query = JSON.parse(queryString) as QueryWithTypings
+
+    const result = await validateSql(query)
+    if (result.error) {
+      return c.json({ error: result.error.message }, 400)
     }
 
-    let dbResult: { rows: unknown[] } | undefined
-    if (db.$client instanceof PGlite) {
-      dbResult = await db.$client.query(sql, params, {
-        rowMode: method === 'all' ? 'array' : undefined,
-      })
-    }
-    if (db.$client instanceof Pool) {
-      dbResult = await db.$client.query(
-        {
-          text: sql,
-          values: params,
-          ...(method === 'all' ? { rowMode: 'array' } : {}),
-        },
-        params
-      )
-    }
+    const dbResult = await executeSql({ db, query })
 
-    if (!dbResult) {
-      return c.json({ error: 'Internal server error' }, 500)
+    if (dbResult.error) {
+      return c.json({ error: dbResult.error.message }, 500)
     }
-
-    try {
-      return c.json(dbResult.rows, 200)
-    } catch (error) {
-      log.error({ error }, 'sql query failed')
-      return c.json({ error: 'Internal server error' }, 500)
-    }
+    return c.json(dbResult.result, 200)
   })
 
   app.route('/', config.app({ db }))

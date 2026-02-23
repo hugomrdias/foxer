@@ -1,17 +1,21 @@
 import { serve } from '@hono/node-server'
 import shutdown from 'http-shutdown'
 import { env } from '../config/env.ts'
-import type { Database } from '../db/client.ts'
+import { createPublication, type Database } from '../db/client.ts'
 import { createComponentLogger } from '../logger.ts'
 import type { InternalConfig } from '../utils/types.ts'
 import { createApiServer } from './server.ts'
 
 const log = createComponentLogger('api')
 
-export function bootstrapApiServer(options: {
+export async function bootstrapApiServer(options: {
   db: Database
   config: InternalConfig
-}): { stop: () => void } {
+}): Promise<{ stop: () => void }> {
+  // create publication for all tables
+  // this is needed for the live sync to work
+  await createPublication(options.db)
+
   const app = createApiServer({
     db: options.db,
     config: options.config,

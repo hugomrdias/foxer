@@ -82,6 +82,7 @@ export const dev: Command = command(
         schema: { ...config.schema, ...InternalSchema.schema },
         relations: { ...config.relations, ...InternalSchema.relations },
       })
+
       await runMigrations({ dbContext, drizzleFolder: config.drizzleFolder })
 
       const client = createRpcClient()
