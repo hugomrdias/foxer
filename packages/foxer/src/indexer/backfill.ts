@@ -6,6 +6,7 @@ import type { relations, schema } from '../db/schema/index.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { createComponentLogger } from '../logger.ts'
+import { startClock } from '../utils/timer.ts'
 import type { InternalConfig } from '../utils/types.ts'
 import { getBlocksInRange } from './cache.ts'
 import { windowEnd } from './cursor.ts'
@@ -23,7 +24,7 @@ export async function runBackfill(args: {
   client: PublicClient
   registry: HookRegistry
 }): Promise<bigint> {
-  console.time('runBackfill')
+  const endClock = startClock()
   const { db, client, registry, config } = args
   const chainHead = await client.getBlockNumber()
   const safeHead =
@@ -164,16 +165,18 @@ export async function runBackfill(args: {
     log.info(
       {
         indexedUpTo: toBlock.toString(),
-        processed: processedInBatch.toString(),
-        nullRounds: nullRoundsInBatch,
-        traversedBlocks: batchBlockNumbers.length,
-        throughputBlocksPerSecond: Number(blocksPerSecond.toFixed(2)),
+        nulls: nullRoundsInBatch,
+        duration: batchElapsedMs,
+        throughput: Number(blocksPerSecond.toFixed(2)),
       },
       'backfill batch completed'
     )
     cursor = toBlock + 1n
   }
 
-  console.timeEnd('runBackfill')
+  log.info(
+    { duration: endClock(), blocks: cursor - env.START_BLOCK },
+    'backfill completed'
+  )
   return cursor
 }
