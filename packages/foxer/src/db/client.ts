@@ -1,7 +1,7 @@
 import { PGlite } from '@electric-sql/pglite'
 import { DrizzleQueryError, getColumns, type SQL, sql } from 'drizzle-orm'
 import {
-  drizzle as drizzleNodePg,
+  drizzle as drizzleNodePostgres,
   type NodePgDatabase,
 } from 'drizzle-orm/node-postgres'
 import type { PgTable } from 'drizzle-orm/pg-core'
@@ -10,9 +10,10 @@ import {
   type PgliteDatabase,
 } from 'drizzle-orm/pglite'
 import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
-import { Pool } from 'pg'
+import { Pool, type PoolConfig } from 'pg'
 import { snakeCase } from 'scule'
-import { env } from '../config/env.ts'
+import type { DatabaseConfig } from '../config/config.ts'
+import type { Env } from '../config/env.ts'
 
 export type Database<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
@@ -53,15 +54,35 @@ export function createDatabase<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
   TRelations extends AnyRelations = EmptyRelations,
 >({
+  env,
+  config,
   schema,
   relations,
 }: {
+  env: Env
+  config?: DatabaseConfig
   schema: TSchema
   relations: TRelations
 }): DatabaseContext<TSchema, TRelations> {
-  if (env.DB_DRIVER === 'postgres') {
-    const pool = new Pool({ connectionString: env.DATABASE_URL })
-    const db = drizzleNodePg({
+  let driver: string = 'pglite'
+  let url: string | undefined
+  let options: PoolConfig | undefined
+
+  if (env.DATABASE_URL && typeof env.DATABASE_URL === 'string') {
+    driver = 'postgres'
+    url = env.DATABASE_URL
+  } else if (config?.driver === 'postgres') {
+    driver = config.driver
+    url = config.url
+    options = config.options
+  }
+
+  if (driver === 'postgres' && url) {
+    const pool = new Pool({
+      ...options,
+      connectionString: url,
+    })
+    const db = drizzleNodePostgres({
       client: pool,
       relations: relations,
       schema: schema,
@@ -77,7 +98,11 @@ export function createDatabase<
     }
   }
 
-  const client = new PGlite(env.PGLITE_DATA_DIR)
+  const client = new PGlite(
+    config?.driver === 'pglite' && config.directory
+      ? config.directory
+      : env.PGLITE_DATA_DIR
+  )
   const db = drizzlePglite({
     client: client,
     relations: relations,

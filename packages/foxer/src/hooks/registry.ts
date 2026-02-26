@@ -1,15 +1,15 @@
 import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
 import type { GetEventArgs, Log } from 'viem'
 import type { Database } from '../db/client'
+import type { EncodedBlockWithTransactions, EncodedTransaction } from '../types'
+import type { Logger } from '../utils/logger'
 import type {
-  BlockSimpleWithTransactions,
   ContractAbiByEventKey,
   ContractAbiEventByEventKey,
   ContractsConfig,
   EventKey,
   EventNameFromEventKey,
   MergedContractEvents,
-  TransactionSimple,
 } from '../utils/types'
 
 export type HookContext<
@@ -17,8 +17,8 @@ export type HookContext<
   TRelations extends AnyRelations = EmptyRelations,
 > = {
   db: Database<TSchema, TRelations>
-  chainId: bigint
-  blockNumber: bigint
+  chainId: number
+  logger: Logger
 }
 
 export type DecodedEvent<
@@ -32,8 +32,8 @@ export type DecodedEvent<
     { EnableUnion: false; IndexedOnly: false; Required: true }
   >
   log: Log<bigint, number, false, ContractAbiEventByEventKey<C, Event>>
-  block: BlockSimpleWithTransactions
-  transaction: TransactionSimple
+  block: EncodedBlockWithTransactions
+  transaction: EncodedTransaction
 }
 
 export type EventHook<
@@ -79,8 +79,8 @@ export class HookRegistry<
       { EnableUnion: false; IndexedOnly: false; Required: true }
     >
     log: Log<bigint, number, false, ContractAbiEventByEventKey<C, K>>
-    block: BlockSimpleWithTransactions
-    transaction: TransactionSimple
+    block: EncodedBlockWithTransactions
+    transaction: EncodedTransaction
     context: HookContext<TSchema, TRelations>
   }): Promise<void> {
     const { key, args, log, block, transaction, context } = options

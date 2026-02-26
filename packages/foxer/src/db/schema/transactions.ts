@@ -34,7 +34,6 @@ export const transactions = pgTable(
     s: hash().notNull(),
     v: numeric78().notNull(),
     type: transactionTypeEnum().notNull(),
-    typeHex: hex(),
     gas: numeric78().notNull(),
     gasPrice: numeric78(),
     maxFeePerGas: numeric78(),

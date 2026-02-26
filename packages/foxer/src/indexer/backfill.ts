@@ -1,40 +1,38 @@
-import type { PublicClient } from 'viem'
-import { filterContracts } from '../config/config.ts'
-import { env } from '../config/env.ts'
+import { filterContracts, type InternalConfig } from '../config/config.ts'
+import type { Env } from '../config/env.ts'
 import type { Database } from '../db/client.ts'
 import type { relations, schema } from '../db/schema/index.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
-import { createComponentLogger } from '../logger.ts'
+import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
-import type { InternalConfig } from '../utils/types.ts'
 import { getBlocksInRange } from './cache.ts'
 import { windowEnd } from './cursor.ts'
 import { getLogsInRange } from './logs.ts'
 import { processBlock } from './process-block.ts'
 
-const log = createComponentLogger('backfill')
-
 /**
  * Executes historical catch-up from the current cursor to the safe head.
  */
 export async function runBackfill(args: {
+  env: Env
+  logger: Logger
   config: InternalConfig
   db: Database<typeof schema, typeof relations>
-  client: PublicClient
   registry: HookRegistry
 }): Promise<bigint> {
   const endClock = startClock()
-  const { db, client, registry, config } = args
+  const { env, db, registry, config, logger } = args
+  const client = config.clients.backfill
   const chainHead = await client.getBlockNumber()
   const safeHead =
     chainHead > BigInt(env.CONFIRMATION_DEPTH)
       ? chainHead - BigInt(env.CONFIRMATION_DEPTH)
       : 0n
-  let cursor = env.START_BLOCK
+  let cursor = config.startBlockNumber
 
   if (cursor > safeHead) {
-    log.info(
+    logger.debug(
       {
         cursor: cursor.toString(),
         backfillHead: safeHead.toString(),
@@ -47,7 +45,7 @@ export async function runBackfill(args: {
 
   const batchSize = BigInt(env.BATCH_SIZE)
   const dbBatchSize = BigInt(env.BACKFILL_DB_BATCH_SIZE)
-  log.info(
+  logger.debug(
     {
       fromBlock: cursor.toString(),
       toBlock: safeHead.toString(),
@@ -62,7 +60,7 @@ export async function runBackfill(args: {
     const toBlock = windowEnd(cursor, batchSize, safeHead)
     const windowContracts = filterContracts(config, cursor, toBlock)
 
-    log.debug(
+    logger.debug(
       {
         batchFromBlock: cursor.toString(),
         batchToBlock: toBlock.toString(),
@@ -77,10 +75,10 @@ export async function runBackfill(args: {
       blockNumber += 1n
     }
 
-    console.time('getBlocksInRange and getLogsInRange')
     const [blocksByNumber, logsByBlock] = await Promise.all([
-      getBlocksInRange(db, batchBlockNumbers, client),
+      getBlocksInRange(logger, db, batchBlockNumbers, client),
       getLogsInRange({
+        logger,
         client,
         addresses: windowContracts.addresses,
         events: windowContracts.eventAbis,
@@ -88,20 +86,6 @@ export async function runBackfill(args: {
         toBlock,
       }),
     ])
-    console.timeEnd('getBlocksInRange and getLogsInRange')
-    // console.time('getBlocksInRange')
-    // const blocksByNumber = await getBlocksInRange(db, batchBlockNumbers, client)
-    // console.timeEnd('getBlocksInRange')
-
-    // console.time('getLogsInRange')
-    // const logsByBlock = await getLogsInRange({
-    //   client,
-    //   addresses: windowContracts.addresses,
-    //   events: windowContracts.eventAbis,
-    //   fromBlock: cursor,
-    //   toBlock,
-    // })
-    // console.timeEnd('getLogsInRange')
 
     let processedInBatch = 0n
     let nullRoundsInBatch = 0
@@ -121,7 +105,7 @@ export async function runBackfill(args: {
           const prefetchedBlock = blocksByNumber.get(block)
           if (!prefetchedBlock) {
             nullRoundsInBatch += 1
-            log.debug(
+            logger.debug(
               { blockNumber: block.toString() },
               'skipping null round block'
             )
@@ -130,6 +114,7 @@ export async function runBackfill(args: {
           }
 
           const result = await processBlock({
+            logger,
             config,
             db: tx,
             client,
@@ -139,18 +124,19 @@ export async function runBackfill(args: {
             prefetchedBlock,
             skipParentContinuityCheck: true,
             disableTransaction: true,
+            filteredContracts: windowContracts,
           })
           if (result.status === 'processed') {
             processedInBatch += 1n
-            log.debug(
-              {
-                blockNumber: block.toString(),
-                batchFromBlock: cursor.toString(),
-                batchToBlock: toBlock.toString(),
-                processedInBatch: processedInBatch.toString(),
-              },
-              'processed backfill block'
-            )
+            // logger.debug(
+            //   {
+            //     blockNumber: block.toString(),
+            //     batchFromBlock: cursor.toString(),
+            //     batchToBlock: toBlock.toString(),
+            //     processedInBatch: processedInBatch.toString(),
+            //   },
+            //   'processed backfill block'
+            // )
           }
           blockIndex += 1
         }
@@ -162,7 +148,7 @@ export async function runBackfill(args: {
       batchElapsedMs > 0
         ? blocksInRange / (batchElapsedMs / 1000)
         : blocksInRange
-    log.info(
+    logger.info(
       {
         indexedUpTo: toBlock.toString(),
         nulls: nullRoundsInBatch,
@@ -174,8 +160,8 @@ export async function runBackfill(args: {
     cursor = toBlock + 1n
   }
 
-  log.info(
-    { duration: endClock(), blocks: cursor - env.START_BLOCK },
+  logger.info(
+    { duration: endClock(), blocks: cursor - config.startBlockNumber },
     'backfill completed'
   )
   return cursor

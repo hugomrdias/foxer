@@ -1,9 +1,13 @@
 import type { PublicClient } from 'viem'
-import type { BlockSimpleWithTransactions } from '../utils/types.ts'
+import { encodeBlockWithTransactions } from '../db/encode.ts'
+import type { EncodedBlockWithTransactions } from '../types'
 import { isNullRoundRpcError } from './errors.ts'
 
 export type SafeGetBlockResult =
-  | { status: 'ok'; block: BlockSimpleWithTransactions }
+  | {
+      status: 'ok'
+      block: EncodedBlockWithTransactions
+    }
   | { status: 'null_round' }
 
 /**
@@ -21,7 +25,7 @@ export async function safeGetBlock(
 
     return {
       status: 'ok',
-      block: block as unknown as BlockSimpleWithTransactions,
+      block: encodeBlockWithTransactions(block),
     }
   } catch (error) {
     if (isNullRoundRpcError(error)) {

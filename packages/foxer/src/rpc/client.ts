@@ -1,27 +1,28 @@
-import { createPublicClient, http } from 'viem'
-import { filecoinCalibration } from 'viem/chains'
+import { createPublicClient, type PublicClient } from 'viem'
+import type { ClientConfig } from '../config/config.ts'
 
-import { env } from '../config/env.ts'
+export type RpcClients = {
+  backfill: PublicClient
+  live: PublicClient
+}
 
 /**
  * Creates a viem public client configured for the target FEVM chain.
  */
-export function createRpcClient() {
-  return createPublicClient({
-    chain: {
-      ...filecoinCalibration,
-      id: env.CHAIN_ID,
-      rpcUrls: {
-        default: { http: [env.RPC_URL] },
-        public: { http: [env.RPC_URL] },
-      },
-    },
-    transport: http(env.RPC_URL, {
-      batch: true,
-      // batch: {
-      //   batchSize: env.RPC_BATCH_SIZE,
-      //   wait: env.RPC_BATCH_WAIT_MS,
-      // },
-    }),
+export function createRpcClients(options: ClientConfig): RpcClients {
+  const backfill = createPublicClient(options)
+
+  const liveTransport = options.realtimeTransport ?? options.transport
+
+  const live = createPublicClient({
+    chain: options.chain,
+    transport: liveTransport,
+    pollingInterval: 1000,
   })
+  console.log('liveTransport', live.transport)
+
+  return {
+    backfill,
+    live,
+  }
 }

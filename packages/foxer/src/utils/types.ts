@@ -1,10 +1,6 @@
 import type { Abi, ExtractAbiEvent, ExtractAbiEventNames } from 'abitype'
-import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
-import type { Hono } from 'hono'
-import type { BlankEnv, BlankSchema } from 'hono/types'
 import type { AccessList, Block, Transaction } from 'viem'
-import type { Database } from '../db/client'
-import type { HookRegistry } from '../hooks/registry'
+import type { UnknownObject } from '../types'
 
 export type EnsureUniqueTuple<
   tuple extends readonly unknown[],
@@ -59,29 +55,12 @@ export type GetContract<contract = unknown> = contract extends {
   : // 3. Contract has an invalid abi
     ContractConfig<Abi>
 
-export type ContractsConfig<contracts> =
-  NonNullable<unknown> extends contracts
-    ? // contracts empty, return empty
-      NonNullable<unknown>
-    : {
-        [name in keyof contracts]: GetContract<contracts[name]>
-      }
-
-export type InternalConfig<
-  TSchema extends Record<string, unknown> = Record<string, unknown>,
-  TRelations extends AnyRelations = EmptyRelations,
-> = {
-  contracts: { [contractName: string]: GetContract }
-  drizzleFolder: string
-  app: ({
-    db,
-  }: {
-    db: Database<TSchema, TRelations>
-  }) => Hono<BlankEnv, BlankSchema, '/'>
-  schema: TSchema
-  relations: TRelations
-  hooks: (context: { registry: HookRegistry }) => void
-}
+export type ContractsConfig<contracts> = UnknownObject extends contracts
+  ? // contracts empty, return empty
+    UnknownObject
+  : {
+      [name in keyof contracts]: GetContract<contracts[name]>
+    }
 
 export type EventKey = `${string}:${string}`
 
@@ -107,47 +86,3 @@ export type ContractAbiEventByEventKey<
   ContractAbiByEventKey<C, Event>,
   EventNameFromEventKey<Event>
 >
-
-export type BlockWithTransactions<T extends boolean = true> = Block<
-  bigint,
-  T,
-  'latest' | 'finalized'
->
-
-export type TransactionSimple = Omit<
-  Transaction<bigint, number, false>,
-  | 'yParity'
-  | 'gasPrice'
-  | 'accessList'
-  | 'maxFeePerGas'
-  | 'maxPriorityFeePerGas'
-> & {
-  gasPrice: bigint | null
-  accessList: AccessList | null
-  maxFeePerGas: bigint | null
-  maxPriorityFeePerGas: bigint | null
-}
-
-export type BlockSimple = Omit<
-  BlockWithTransactions<false>,
-  | 'transactions'
-  | 'blobGasUsed'
-  | 'sealFields'
-  | 'withdrawals'
-  | 'withdrawalsRoot'
-  | 'excessBlobGas'
-  | 'uncles'
->
-
-export type BlockSimpleWithTransactions = Omit<
-  BlockWithTransactions<false>,
-  | 'blobGasUsed'
-  | 'sealFields'
-  | 'withdrawals'
-  | 'withdrawalsRoot'
-  | 'excessBlobGas'
-  | 'uncles'
-  | 'transactions'
-> & {
-  transactions: TransactionSimple[]
-}

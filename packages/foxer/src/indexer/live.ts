@@ -1,39 +1,38 @@
 import PQueue from 'p-queue'
-import type { PublicClient } from 'viem'
+import { InternalRpcError, type PublicClient } from 'viem'
+import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
-import { createComponentLogger } from '../logger.ts'
 import { noop } from '../utils/common.ts'
-import type { InternalConfig } from '../utils/types.ts'
+import type { Logger } from '../utils/logger.ts'
 import { queueBlock } from './reorg-handling.ts'
-
-const log = createComponentLogger('live')
 
 /**
  * Starts live head following and sequential block processing.
  */
 export function startLiveSync(args: {
+  logger: Logger
   config: InternalConfig
   db: Database
   client: PublicClient
   registry: HookRegistry
   initialCursor: bigint
 }): { stop: () => void } {
-  const { config, db, client, registry } = args
+  const { config, db, client, registry, logger } = args
 
   // filter out contracts that have endBlock set
-  const contracts = Object.values(config.contracts).filter(
-    (contract) => contract.endBlock == null
-  )
+  const contracts = config.contractsForLive
 
   if (contracts.length === 0) {
-    log.info('all configured contracts have endBlock set; live sync disabled')
+    logger.debug(
+      'all configured contracts have endBlock set; live sync disabled'
+    )
     return { stop: noop }
   }
 
   const pqueue = new PQueue({ concurrency: 1 })
   pqueue.on('error', (error) => {
-    log.error({ err: error }, 'live queue error')
+    logger.error({ error }, 'live queue error')
   })
 
   let nextBlockToQueue = args.initialCursor
@@ -46,7 +45,7 @@ export function startLiveSync(args: {
         const blockNumber = nextBlockToQueue
         pqueue.add(async () => {
           await queueBlock({
-            logger: log,
+            logger,
             blockNumber,
             config,
             db,
@@ -63,11 +62,11 @@ export function startLiveSync(args: {
       }
     },
     onError: (error) => {
-      log.error({ err: error }, 'watchBlockNumber stream error')
+      logger.error({ error }, 'watchBlockNumber stream error')
     },
   })
 
-  log.info(
+  logger.debug(
     { startBlock: nextBlockToQueue.toString() },
     'watching latest chain head'
   )

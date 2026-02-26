@@ -1,4 +1,4 @@
-import { defineRelations } from 'drizzle-orm'
+import { defineRelations } from 'drizzle-orm/relations'
 import { datasets } from './datasets.ts'
 import { pieces } from './pieces.ts'
 

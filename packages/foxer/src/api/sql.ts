@@ -8,8 +8,7 @@ import {
 import type { Visitor } from '@pgsql/traverse'
 import { walk } from '@pgsql/traverse'
 import type { QueryWithTypings } from 'drizzle-orm'
-
-import { Pool } from 'pg'
+import postgres from 'postgres'
 import type { Database } from '../db/client'
 import type { MaybeResult } from '../types'
 
@@ -126,7 +125,7 @@ export async function executeSql({
       .prepareQuery(query, undefined, undefined, false)
       .execute()
   }
-  if (db.$client instanceof Pool) {
+  if (db.$client instanceof postgres) {
     dbResult = await db.transaction(
       (tx) => {
         return tx._.session

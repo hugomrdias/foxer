@@ -22,7 +22,7 @@ export default createConfig({
   },
   projects: [
     {
-      id: 'ponder',
+      id: 'live',
       cors: {
         // List of allowed origins. Use ["*"] to allow any origin
         allowedOrigins: ['*'],
@@ -46,48 +46,55 @@ export default createConfig({
         },
       ],
       upstreams: [
-        // {
-        //   id: 'chainlove-realtime',
-        //   endpoint: `https://filecoin.chain.love/load-balancer?token=${process.env.RPC_REALTIME_TOKEN}`,
-        //   evm: {
-        //     chainId: 314159,
-        //     nodeType: 'full',
-        //     maxAvailableRecentBlocks: 500,
-        //     blockAvailability: {
-        //       lower: {
-        //         latestBlockMinus: 500,
-        //         probe: 'eventLogs',
-        //       },
-        //     },
-        //   },
-        // },
-        // {
-        //   id: 'chainlove-public',
-        //   endpoint: `https://api.calibration.node.glif.io/rpc/v1`,
-        //   evm: {
-        //     chainId: 314159,
-        //     nodeType: 'full',
-        //     maxAvailableRecentBlocks: 1200,
-        //   },
-        // },
-        // {
-        //   id: 'ankr-public',
-        //   endpoint: `https://rpc.ankr.com/filecoin_testnet`,
-        //   rateLimitBudget: 'ankr',
-        //   evm: {
-        //     chainId: 314159,
-        //     nodeType: 'full',
-        //   },
-        // },
-        // {
-        //   id: 'drpc-public',
-        //   endpoint: `https://filecoin-calibration.drpc.org`,
-        //   evm: {
-        //     chainId: 314159,
-        //     nodeType: 'full',
-        //     maxAvailableRecentBlocks: 500,
-        //   },
-        // },
+        {
+          id: 'chainlove-realtime',
+          endpoint: `https://filecoin.chain.love/load-balancer?token=${process.env.RPC_REALTIME_TOKEN}`,
+          evm: {
+            chainId: 314159,
+          },
+        },
+        {
+          id: 'chainlove-public',
+          endpoint: `https://api.calibration.node.glif.io/rpc/v1`,
+          evm: {
+            chainId: 314159,
+          },
+        },
+        {
+          id: 'ankr-public',
+          endpoint: `https://rpc.ankr.com/filecoin_testnet`,
+          rateLimitBudget: 'ankr',
+          evm: {
+            chainId: 314159,
+          },
+        },
+      ],
+    },
+    {
+      id: 'archive',
+      cors: {
+        // List of allowed origins. Use ["*"] to allow any origin
+        allowedOrigins: ['*'],
+        // HTTP methods allowed for CORS requests
+        allowedMethods: ['GET', 'POST', 'OPTIONS'],
+        // Headers allowed in actual requests
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        // Headers exposed to the browser
+        exposedHeaders: ['X-Request-ID'],
+        // Whether the browser should include credentials with requests
+        allowCredentials: true,
+        // How long (in seconds) browsers should cache preflight request results
+        maxAge: 3600,
+      },
+      networks: [
+        {
+          architecture: 'evm',
+          evm: {
+            chainId: 314159,
+          },
+        },
+      ],
+      upstreams: [
         {
           id: 'chainlove-archive',
           endpoint: `https://calibration.node.glif.io/archive/lotus/rpc/v1?token=${process.env.RPC_ARCHIVE_TOKEN}`,
@@ -107,7 +114,7 @@ export default createConfig({
         rules: [
           {
             method: '*',
-            maxCount: 1800,
+            maxCount: 1000,
             period: 1,
           },
         ],
@@ -145,22 +152,22 @@ export default createConfig({
           connector: 'memory-cache',
           ttl: '30s',
         },
-        {
-          network: '*',
-          method: '*',
-          finality: DataFinalityStateRealtime,
-          empty: CacheEmptyBehaviorAllow,
-          connector: 'memory-cache',
-          ttl: '30s',
-        },
-        {
-          network: '*',
-          method: '*',
-          finality: DataFinalityStateUnknown,
-          empty: CacheEmptyBehaviorAllow,
-          connector: 'memory-cache',
-          ttl: '30s',
-        },
+        // {
+        //   network: '*',
+        //   method: '*',
+        //   finality: DataFinalityStateRealtime,
+        //   empty: CacheEmptyBehaviorAllow,
+        //   connector: 'memory-cache',
+        //   ttl: '30s',
+        // },
+        // {
+        //   network: '*',
+        //   method: '*',
+        //   finality: DataFinalityStateUnknown,
+        //   empty: CacheEmptyBehaviorAllow,
+        //   connector: 'memory-cache',
+        //   ttl: '30s',
+        // },
       ],
     },
   },

@@ -1,11 +1,5 @@
-import { config } from 'dotenv'
 import { defineConfig } from 'drizzle-kit'
 import { schemaFiles } from 'foxer'
-
-config({
-  quiet: true,
-  path: '.env.local',
-})
 
 export default defineConfig({
   out: './drizzle',

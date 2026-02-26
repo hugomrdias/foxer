@@ -1,11 +1,9 @@
 import path from 'node:path'
-import { migrate as migrateNodePg } from 'drizzle-orm/node-postgres/migrator'
 import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator'
-
-import { createComponentLogger } from '../logger.ts'
+import { migrate as migratePostgresJs } from 'drizzle-orm/postgres-js/migrator'
+import type { Logger } from '../utils/logger.ts'
+import { startClock } from '../utils/timer.ts'
 import type { DatabaseContext } from './client.ts'
-
-const log = createComponentLogger('migrations')
 
 /**
  * Applies pending SQL migrations at runtime (Option 4 strategy).
@@ -13,16 +11,19 @@ const log = createComponentLogger('migrations')
 export async function runMigrations({
   dbContext,
   drizzleFolder,
+  logger,
 }: {
   drizzleFolder: string
   dbContext: DatabaseContext
+  logger: Logger
 }): Promise<void> {
+  const endClock = startClock()
   const { db, driver } = dbContext
   const migrationsFolder = path.resolve(process.cwd(), drizzleFolder)
   if (driver === 'postgres') {
-    await migrateNodePg(db, { migrationsFolder })
+    await migratePostgresJs(db, { migrationsFolder })
   } else {
     await migratePglite(db, { migrationsFolder })
   }
-  log.info({ driver }, 'migrations applied')
+  logger.info({ driver, duration: endClock() }, 'migrations applied')
 }

@@ -1,8 +1,8 @@
 import type { Logger } from 'pino'
 import type { PublicClient } from 'viem'
+import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
-import type { InternalConfig } from '../utils/types.ts'
 import { processBlock } from './process-block.ts'
 
 export type QueueBlockArgs = {
@@ -31,6 +31,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
   const start = Date.now()
   try {
     const result = await processBlock({
+      logger,
       config,
       db,
       client,
@@ -71,7 +72,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
     )
   } catch (error) {
     logger.error(
-      { err: error, blockNumber: blockNumber.toString() },
+      { error, blockNumber: blockNumber.toString() },
       'block processing failed; rewinding'
     )
     onRewind(blockNumber - 1n)

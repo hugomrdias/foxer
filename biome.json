@@ -11,5 +11,12 @@
       "!**/dist",
       "!**/build"
     ]
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "noNamespace": "off"
+      }
+    }
   }
 }

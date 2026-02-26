@@ -9,7 +9,7 @@ export const schemaFiles = [
 ]
 
 export { PGlite } from '@electric-sql/pglite'
-export { Pool } from 'pg'
+export type * from './config/config.ts'
 export { createConfig } from './config/config.ts'
 export type { Database } from './db/client.ts'
 export * from './db/column-types.ts'

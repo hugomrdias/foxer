@@ -229,6 +229,13 @@ export function createClient<
       }
 
       function onSSEError(event: Event | MessageEvent) {
+        console.log(
+          '🚀 ~ onSSEError ~ event:',
+          event,
+          'data' in event,
+          JSON.stringify(event.data)
+        )
+
         if ('data' in event) {
           onError?.(new Error(event.data))
         } else {
@@ -289,7 +296,7 @@ client.live(
     console.log('🚀 ~ createClient ~ result:', result)
   },
   (error) => {
-    console.error('🚀 ~ createClient ~ error:', error)
+    console.error(error)
   }
 )
 

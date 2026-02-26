@@ -3,32 +3,34 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { type PinoLogger, pinoLogger } from 'hono-pino'
 import postgres from 'postgres'
-import { env } from '../config/env.ts'
+import type { InternalConfig } from '../config/config.ts'
+import type { Env } from '../config/env.ts'
 import type { Database } from '../db/client.ts'
 import { getBlockByIdOrLatest } from '../indexer/state.ts'
-import { createComponentLogger } from '../logger.ts'
 import { noop } from '../utils/common.ts'
-import type { InternalConfig } from '../utils/types.ts'
+import type { Logger } from '../utils/logger.ts'
 import { executeSql, validateSql } from './sql.ts'
 import { sseError } from './sse.ts'
-
-const log = createComponentLogger('api')
 
 /**
  * Builds the Hono API server with health and sql endpoints.
  */
 export function createApiServer({
+  env,
   db,
   config,
+  logger,
 }: {
+  env: Env
   db: Database
   config: InternalConfig
+  logger: Logger
 }) {
   const app = new Hono<{ Variables: { logger: PinoLogger } }>()
 
   app.use(
     pinoLogger({
-      pino: log,
+      pino: logger,
     })
   )
 
@@ -69,7 +71,7 @@ export function createApiServer({
       c,
       async (stream) => {
         stream.onAbort(async () => {
-          log.debug('stream aborted')
+          logger.debug('stream aborted')
           closeSubscription()
           await pg.end()
         })
@@ -107,8 +109,8 @@ export function createApiServer({
           await stream.sleep(1000)
         }
       },
-      async (e) => {
-        log.error({ err: e }, 'stream error')
+      async (error) => {
+        logger.error({ error }, 'stream error')
         closeSubscription()
         await pg.end()
       }
@@ -135,6 +137,6 @@ export function createApiServer({
     return c.json(dbResult.result, 200)
   })
 
-  app.route('/', config.app({ db }))
+  app.route('/', config.hono({ db }))
   return app
 }

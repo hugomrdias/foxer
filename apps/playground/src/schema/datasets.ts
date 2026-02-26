@@ -1,4 +1,4 @@
-import { foreignKey, json, pgTable, text } from 'drizzle-orm/pg-core'
+import { foreignKey, json, pgTable } from 'drizzle-orm/pg-core'
 import { address, bigint, schema } from 'foxer'
 
 export const datasets = pgTable(
