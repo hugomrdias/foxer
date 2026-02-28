@@ -1,11 +1,11 @@
 import PQueue from 'p-queue'
-import { InternalRpcError, type PublicClient } from 'viem'
+import type { PublicClient } from 'viem'
 import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { noop } from '../utils/common.ts'
 import type { Logger } from '../utils/logger.ts'
-import { queueBlock } from './reorg-handling.ts'
+import { queueBlock } from './queue-block.ts'
 
 /**
  * Starts live head following and sequential block processing.

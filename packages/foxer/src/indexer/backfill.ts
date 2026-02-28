@@ -1,14 +1,14 @@
 import { filterContracts, type InternalConfig } from '../config/config.ts'
 import type { Env } from '../config/env.ts'
+import { getBlocksInRange } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
 import type { relations, schema } from '../db/schema/index.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
+import { getLogsInRange } from '../rpc/get-logs.ts'
+import { windowEnd } from '../utils/cursor.ts'
 import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
-import { getBlocksInRange } from './cache.ts'
-import { windowEnd } from './cursor.ts'
-import { getLogsInRange } from './logs.ts'
 import { processBlock } from './process-block.ts'
 
 /**
@@ -44,13 +44,11 @@ export async function runBackfill(args: {
   }
 
   const batchSize = BigInt(env.BATCH_SIZE)
-  const dbBatchSize = BigInt(env.BACKFILL_DB_BATCH_SIZE)
   logger.debug(
     {
       fromBlock: cursor.toString(),
       toBlock: safeHead.toString(),
       batchSize: batchSize.toString(),
-      dbBatchSize: dbBatchSize.toString(),
     },
     'starting backfill'
   )
@@ -87,61 +85,48 @@ export async function runBackfill(args: {
       }),
     ])
 
-    let processedInBatch = 0n
     let nullRoundsInBatch = 0
     let blockIndex = 0
-    while (blockIndex < batchBlockNumbers.length) {
-      const txWindowEndIndex = Math.min(
-        blockIndex + Number(dbBatchSize),
-        batchBlockNumbers.length
-      )
-      await withTransaction(db, async (tx) => {
-        while (blockIndex < txWindowEndIndex) {
-          const block = batchBlockNumbers[blockIndex]
-          if (block == null) {
-            blockIndex += 1
-            continue
-          }
-          const prefetchedBlock = blocksByNumber.get(block)
-          if (!prefetchedBlock) {
-            nullRoundsInBatch += 1
-            logger.debug(
-              { blockNumber: block.toString() },
-              'skipping null round block'
-            )
-            blockIndex += 1
-            continue
-          }
 
-          const result = await processBlock({
-            logger,
-            config,
-            db: tx,
-            client,
-            registry,
-            blockNumber: block,
-            prefetchedLogs: logsByBlock.get(block) ?? [],
-            prefetchedBlock,
-            skipParentContinuityCheck: true,
-            disableTransaction: true,
-            filteredContracts: windowContracts,
-          })
-          if (result.status === 'processed') {
-            processedInBatch += 1n
-            // logger.debug(
-            //   {
-            //     blockNumber: block.toString(),
-            //     batchFromBlock: cursor.toString(),
-            //     batchToBlock: toBlock.toString(),
-            //     processedInBatch: processedInBatch.toString(),
-            //   },
-            //   'processed backfill block'
-            // )
-          }
+    const endClockBatch = startClock()
+    await withTransaction(db, async (tx) => {
+      while (blockIndex < batchBlockNumbers.length) {
+        const block = batchBlockNumbers[blockIndex]
+        if (block == null) {
           blockIndex += 1
+          continue
         }
-      })
-    }
+        const prefetchedBlock = blocksByNumber.get(block)
+        if (!prefetchedBlock) {
+          nullRoundsInBatch += 1
+          logger.debug(
+            { blockNumber: block.toString() },
+            'skipping null round block'
+          )
+          blockIndex += 1
+          continue
+        }
+
+        await processBlock({
+          logger,
+          config,
+          db: tx,
+          client,
+          registry,
+          blockNumber: block,
+          prefetchedLogs: logsByBlock.get(block) ?? [],
+          prefetchedBlock,
+          skipParentContinuityCheck: true,
+          disableTransaction: true,
+          filteredContracts: windowContracts,
+        })
+        blockIndex += 1
+      }
+    })
+    logger.info(
+      { duration: endClockBatch() },
+      'batch block and events processed'
+    )
     const batchElapsedMs = Date.now() - batchStartMs
     const blocksInRange = Number(toBlock - cursor + 1n)
     const blocksPerSecond =

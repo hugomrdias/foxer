@@ -3,6 +3,7 @@ import type { PublicClient } from 'viem'
 import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
+import { startClock } from '../utils/timer.ts'
 import { processBlock } from './process-block.ts'
 
 export type QueueBlockArgs = {
@@ -28,7 +29,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
     queueSize,
   } = args
 
-  const start = Date.now()
+  const endClock = startClock()
   try {
     const result = await processBlock({
       logger,
@@ -64,7 +65,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
 
     logger.info(
       {
-        duration: Date.now() - start,
+        duration: endClock(),
         blockNumber: blockNumber.toString(),
         queueSize,
       },

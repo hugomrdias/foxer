@@ -1,3 +1,4 @@
+import type { Hash } from 'viem'
 import type {
   ChainBlock,
   ChainTransaction,
@@ -59,5 +60,40 @@ export function encodeBlockWithTransactions(
   return {
     ...encodeBlock(block),
     transactions: block.transactions.map(encodeTransaction),
+  }
+}
+
+const EMPTY_TRIE_HASH =
+  '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'
+const EMPTY_LOGS_BLOOM =
+  '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+export function encodeNullRoundBlock(options: {
+  number: bigint
+  hash: Hash
+}): EncodedBlockWithTransactions {
+  return {
+    number: options.number,
+    // TODO: probably should be previous block timestamp plus 30 seconds
+    timestamp: BigInt(Math.floor(Date.now() / 1000)),
+    hash: options.hash,
+    parentHash: options.hash,
+    logsBloom: EMPTY_LOGS_BLOOM,
+    miner: '0x0000000000000000000000000000000000000000',
+    gasUsed: 0n,
+    gasLimit: 30_000_000n,
+    baseFeePerGas: 1_000_000_000n,
+    nonce: '0x0000000000000000',
+    mixHash:
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+    stateRoot: EMPTY_TRIE_HASH,
+    receiptsRoot: EMPTY_TRIE_HASH,
+    transactionsRoot: EMPTY_TRIE_HASH,
+    sha3Uncles:
+      '0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
+    size: 0n,
+    difficulty: 0n,
+    totalDifficulty: 0n,
+    extraData: '0x',
+    transactions: [],
   }
 }

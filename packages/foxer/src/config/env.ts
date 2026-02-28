@@ -13,7 +13,6 @@ const envSchema = z.object({
   RPC_URL: z.url().default('https://foc-dev.up.railway.app/ponder/evm/314159'),
   CONFIRMATION_DEPTH: z.coerce.number().int().nonnegative().default(30),
   BATCH_SIZE: z.coerce.number().int().positive().default(100),
-  BACKFILL_DB_BATCH_SIZE: z.coerce.number().int().positive().default(10),
   PORT: z.coerce.number().int().positive().default(4200),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])

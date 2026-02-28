@@ -1,23 +1,11 @@
-import { gte } from 'drizzle-orm'
 import type { PublicClient } from 'viem'
+import { deleteBlocksFrom } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
-import { schema } from '../db/schema/index.ts'
-import { safeGetBlock } from '../rpc/block-fetcher.ts'
+import { safeGetBlock } from '../rpc/get-block.ts'
 import type { EncodedBlockWithTransactions } from '../types'
+import { hashEquals } from '../utils/hash.ts'
 import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
-import { hashEquals } from './hash.ts'
-import { getBlockByIdOrLatest } from './state.ts'
-
-/**
- * Deletes canonical block rows from a specific block onward.
- */
-async function deleteBlocksFrom(
-  db: Database,
-  fromBlock: bigint
-): Promise<void> {
-  await db.delete(schema.blocks).where(gte(schema.blocks.number, fromBlock))
-}
 
 /**
  * Verifies parent-hash continuity and rolls back divergent canonical rows if needed.
@@ -33,14 +21,16 @@ export async function ensureParentContinuity(args: {
   if (block.number === 0n) return null
 
   // get the previous block
-  const previous = await getBlockByIdOrLatest({
-    db,
-    blockNumber: block.number - 1n,
-  })
+  const previous = (
+    await db.$prepared.getBlockById.execute({
+      db,
+      blockNumber: block.number - 1n,
+    })
+  )[0]
   if (!previous) return null
 
   // check if the previous block's hash is the same as the block's parent hash
-  if (hashEquals(previous.blockHash, block.parentHash)) {
+  if (hashEquals(previous.hash, block.parentHash)) {
     return null
   }
 
@@ -53,18 +43,12 @@ export async function ensureParentContinuity(args: {
   // a block number where DB and chain hashes agree again.
   let cursor = block.number - 1n
 
-  console.log('🚀 ~ ensureParentContinuity ~ cursor:', cursor)
-
   while (true) {
     // 1) Read the DB's canonical block at this height.
-    const dbBlock = await getBlockByIdOrLatest({ db, blockNumber: cursor })
+    const dbBlock = (
+      await db.$prepared.getBlockById.execute({ blockNumber: cursor })
+    )[0]
     if (!dbBlock) {
-      // Missing DB row at this height: keep scanning backward.
-      // If even genesis is missing, drop everything and replay from 0.
-      // if (cursor === 0n) {
-      //   await deleteBlocksFrom(db, 0n)
-      //   return 0n
-      // }
       cursor -= 1n
       continue
     }
@@ -72,28 +56,20 @@ export async function ensureParentContinuity(args: {
     // 2) Read chain block at the same height.
     const blockResult = await safeGetBlock(client, cursor)
     if (blockResult.status === 'null_round') {
-      // Chain has no stable block here yet; move backward.
-      // If this happens at genesis, safest fallback is full reset.
-      // if (cursor === 0n) {
-      //   await deleteBlocksFrom(db, 0n)
-      //   return 0n
-      // }
       cursor -= 1n
       continue
     }
+
+    // 3) Found the last common ancestor. Rewind to the first divergent height.
     const chainBlock = blockResult.block
-    const chainHash = chainBlock.hash?.toLowerCase()
-    if (chainHash && hashEquals(chainHash, dbBlock.blockHash)) {
-      // 3) Found the last common ancestor. Rewind to the first divergent height.
-      // If mismatch was detected exactly at the current parent boundary,
-      // rewind one extra block to avoid re-processing the same block in a loop.
+    if (hashEquals(chainBlock.hash, dbBlock.hash)) {
       const rewindTo = cursor
       await deleteBlocksFrom(db, rewindTo)
       return rewindTo
     }
 
     // 4) Still divergent at this height; keep scanning backward.
-    // If we reach genesis with no match, reset everything.
+    // TODO This should finality depth and it should delete and throw critical error
     if (cursor === 0n) {
       await deleteBlocksFrom(db, 0n)
       return 0n
@@ -113,13 +89,16 @@ export async function verifyRecentBlocks(args: {
 }): Promise<void> {
   const { logger, db, client, depth } = args
   const endClock = startClock()
-  const latest = (await getBlockByIdOrLatest({ db }))?.blockNumber ?? null
+  const latest =
+    (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
   if (latest == null) return
 
   const start = latest - BigInt(depth) >= 0n ? latest - BigInt(depth) : 0n
   let blockNumber = start
   while (blockNumber <= latest) {
-    const dbBlock = await getBlockByIdOrLatest({ db, blockNumber })
+    const dbBlock = (
+      await db.$prepared.getBlockById.execute({ blockNumber })
+    )[0]
     if (!dbBlock) {
       blockNumber += 1n
       continue
@@ -134,8 +113,7 @@ export async function verifyRecentBlocks(args: {
       return
     }
     const chainBlock = blockResult.block
-    const chainHash = chainBlock.hash?.toLowerCase()
-    if (!chainHash || !hashEquals(chainHash, dbBlock.blockHash)) {
+    if (!hashEquals(chainBlock.hash, dbBlock.hash)) {
       logger.warn(
         { blockNumber: blockNumber.toString() },
         'startup sanity check mismatch detected'

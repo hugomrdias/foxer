@@ -4,13 +4,13 @@ import {
   filterContracts,
   type InternalConfig,
 } from '../config/config.ts'
+import { cacheBlockAndTransactions } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
-import { safeGetBlock } from '../rpc/block-fetcher.ts'
+import { safeGetBlock } from '../rpc/get-block.ts'
 import type { EncodedBlockWithTransactions, EncodedTransaction } from '../types'
 import type { Logger } from '../utils/logger.ts'
-import { cacheBlockAndTransactions } from './cache.ts'
 import { ensureParentContinuity } from './reorg.ts'
 
 export type ProcessBlockResult =
@@ -105,7 +105,7 @@ export async function processBlock(args: {
       const contractName =
         filteredContracts.contractNameByAddress[getAddress(log.address)]
       if (!contractName) {
-        logger.warn(
+        logger.trace(
           { address: log.address },
           'contract not found in contract name by address'
         )
@@ -117,7 +117,7 @@ export async function processBlock(args: {
       }
       const transaction = transactionByHash.get(log.transactionHash)
       if (!transaction) {
-        logger.warn(
+        logger.trace(
           { transactionHash: log.transactionHash },
 
           'transaction not found in block transaction list'

@@ -19,7 +19,6 @@ export function createRpcClients(options: ClientConfig): RpcClients {
     transport: liveTransport,
     pollingInterval: 1000,
   })
-  console.log('liveTransport', live.transport)
 
   return {
     backfill,

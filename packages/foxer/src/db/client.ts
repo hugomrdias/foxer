@@ -1,5 +1,12 @@
 import { PGlite } from '@electric-sql/pglite'
-import { DrizzleQueryError, getColumns, type SQL, sql } from 'drizzle-orm'
+import {
+  DrizzleQueryError,
+  desc,
+  eq,
+  getColumns,
+  type SQL,
+  sql,
+} from 'drizzle-orm'
 import {
   drizzle as drizzleNodePostgres,
   type NodePgDatabase,
@@ -14,6 +21,7 @@ import { Pool, type PoolConfig } from 'pg'
 import { snakeCase } from 'scule'
 import type { DatabaseConfig } from '../config/config.ts'
 import type { Env } from '../config/env.ts'
+import { type relations, schema } from './schema/index.ts'
 
 export type Database<
   TSchema extends Record<string, unknown> = Record<string, unknown>,
@@ -21,9 +29,11 @@ export type Database<
 > =
   | (PgliteDatabase<TSchema, TRelations> & {
       $client: PGlite
+      $prepared: ReturnType<typeof generatePrepared>
     })
   | (NodePgDatabase<TSchema, TRelations> & {
       $client: Pool
+      $prepared: ReturnType<typeof generatePrepared>
     })
 
 export type DbDriver = 'pglite' | 'postgres'
@@ -35,6 +45,7 @@ export type DatabaseContext<
   | {
       db: NodePgDatabase<TSchema, TRelations> & {
         $client: Pool
+        $prepared: ReturnType<typeof generatePrepared>
       }
       driver: 'postgres'
       close: () => Promise<void>
@@ -42,6 +53,7 @@ export type DatabaseContext<
   | {
       db: PgliteDatabase<TSchema, TRelations> & {
         $client: PGlite
+        $prepared: ReturnType<typeof generatePrepared>
       }
       driver: 'pglite'
       close: () => Promise<void>
@@ -87,7 +99,13 @@ export function createDatabase<
       relations: relations,
       schema: schema,
       casing: 'snake_case',
-    })
+    }) as NodePgDatabase<TSchema, TRelations> & {
+      $client: Pool
+      $prepared: ReturnType<typeof generatePrepared>
+    }
+
+    // @ts-expect-error - TODO: fix this
+    db.$prepared = generatePrepared(db)
 
     return {
       db,
@@ -108,7 +126,13 @@ export function createDatabase<
     relations: relations,
     schema: schema,
     casing: 'snake_case',
-  })
+  }) as PgliteDatabase<TSchema, TRelations> & {
+    $client: PGlite
+    $prepared: ReturnType<typeof generatePrepared>
+  }
+
+  // @ts-expect-error - TODO: fix this
+  db.$prepared = generatePrepared(db)
 
   return {
     db,
@@ -159,5 +183,50 @@ export async function createPublication(db: Database) {
       return
     }
     throw error
+  }
+}
+
+function generatePrepared(
+  db: Omit<Database<typeof schema, typeof relations>, '$prepared'>
+) {
+  const getLatestBlock = db
+    .select({
+      number: schema.blocks.number,
+      hash: schema.blocks.hash,
+      parentHash: schema.blocks.parentHash,
+    })
+    .from(schema.blocks)
+    .orderBy(desc(schema.blocks.number))
+    .limit(1)
+    .prepare('get_latest_block')
+
+  const getBlockById = db
+    .select({
+      number: schema.blocks.number,
+      hash: schema.blocks.hash,
+      parentHash: schema.blocks.parentHash,
+    })
+    .from(schema.blocks)
+    .where(eq(schema.blocks.number, sql.placeholder('blockNumber')))
+    .prepare('get_block_by_id')
+
+  const getBlocksInRange = db.query.blocks
+    .findMany({
+      with: {
+        transactions: true,
+      },
+      where: {
+        AND: [
+          { number: { gte: sql.placeholder('firstBlockNumber') } },
+          { number: { lte: sql.placeholder('lastBlockNumber') } },
+        ],
+      },
+    })
+    .prepare('get_blocks_in_range')
+
+  return {
+    getLatestBlock,
+    getBlockById,
+    getBlocksInRange,
   }
 }

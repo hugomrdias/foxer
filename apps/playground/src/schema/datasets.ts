@@ -14,6 +14,9 @@ export const datasets = pgTable(
     payee: address().notNull(),
     metadata: json().$type<Record<string, unknown>>(),
     blockNumber: bigint().notNull(),
+    listenerAddr: address(),
+    createdAt: bigint(),
+    updatedAt: bigint(),
   },
   (table) => [
     foreignKey({

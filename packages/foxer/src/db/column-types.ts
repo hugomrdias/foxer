@@ -1,5 +1,5 @@
 import { customType } from 'drizzle-orm/pg-core'
-import type { Address, Hash, Hex } from 'viem'
+import { type Address, type Hash, type Hex, stringify } from 'viem'
 
 export const numeric78 = customType<{ data: bigint; driverData: string }>({
   dataType() {
@@ -80,3 +80,12 @@ export const bigint = customType<{ data: bigint; driverData: string }>({
 
 export const uint256 = numeric78
 export const int256 = numeric78
+
+export const jsonb = customType<{ data: unknown; driverData: string }>({
+  dataType() {
+    return 'jsonb'
+  },
+  toDriver(value: unknown): string {
+    return stringify(value)
+  },
+})

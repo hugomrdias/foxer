@@ -6,7 +6,6 @@ import postgres from 'postgres'
 import type { InternalConfig } from '../config/config.ts'
 import type { Env } from '../config/env.ts'
 import type { Database } from '../db/client.ts'
-import { getBlockByIdOrLatest } from '../indexer/state.ts'
 import { noop } from '../utils/common.ts'
 import type { Logger } from '../utils/logger.ts'
 import { executeSql, validateSql } from './sql.ts'
@@ -35,7 +34,8 @@ export function createApiServer({
   )
 
   app.get('/health', async (c) => {
-    const latest = (await getBlockByIdOrLatest({ db }))?.blockNumber ?? null
+    const latest =
+      (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
     return c.json({
       ok: true,
       latestIndexedBlock: latest?.toString() ?? null,

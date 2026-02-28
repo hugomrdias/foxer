@@ -98,6 +98,14 @@ export default createConfig({
         {
           id: 'chainlove-archive',
           endpoint: `https://calibration.node.glif.io/archive/lotus/rpc/v1?token=${process.env.RPC_ARCHIVE_TOKEN}`,
+          // jsonRpc: {
+          //   // When enabled eRPC will wait for a specified amount of time to batch as many requests as possible.
+          //   supportsBatch: true,
+          //   // The maximum amount of time to wait to collect requests for a batch.
+          //   batchMaxWait: '5ms',
+          //   // The maximum amount of requests in a single batch, which is usually enforced by the provider.
+          //   batchMaxSize: 10,
+          // },
           evm: {
             chainId: 314159,
             nodeType: 'archive',
