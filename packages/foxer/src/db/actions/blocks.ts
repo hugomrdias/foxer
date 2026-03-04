@@ -14,6 +14,7 @@ import { type relations, schema } from '../schema/index.ts'
 
 /**
  * Deletes canonical block rows from a specific block onward.
+ * TODO: go over all the user schemas check tables with blockNumber and delete from there too
  */
 export async function deleteBlocksFrom(
   db: Database,

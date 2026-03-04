@@ -69,7 +69,7 @@ const noopDatabase = drizzle(() => Promise.resolve({ rows: [] }), {
 // @ts-expect-error - dialect is not typed
 const dialect: PgDialect = noopDatabase.dialect
 
-const compileQuery = (query: SQLWrapper) => {
+export const compileQuery = (query: SQLWrapper) => {
   return dialect.sqlToQuery(query.getSQL())
 }
 

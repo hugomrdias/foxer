@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.client.tsbuildinfo",
+    "outDir": "./dist"
+  },
+  "include": ["src/index.ts", "src/schema/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

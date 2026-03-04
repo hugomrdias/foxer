@@ -1,0 +1,67 @@
+{
+  "name": "foxer-react",
+  "version": "0.0.1",
+  "description": "React hooks for interacting with Filecoin Onchain Cloud smart contracts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hugomrdias/foxer.git"
+  },
+  "keywords": [
+    "filecoin",
+    "synapse",
+    "filecoin pay",
+    "filecoin onchain cloud",
+    "web3",
+    "react",
+    "hooks"
+  ],
+  "author": "Hugo Dias <hugomrdias@gmail.com>",
+  "license": "Apache-2.0 OR MIT",
+  "bugs": {
+    "url": "https://github.com/hugomrdias/foxer/issues"
+  },
+  "homepage": "https://github.com/hugomrdias/foxer/tree/main/packages/foxer-react",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "module": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist/src",
+    "dist/src/**/*.d.ts",
+    "dist/src/**/*.d.ts.map"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "tsc --build && biome check .",
+    "lint:fix": "biome check --fix ."
+  },
+  "dependencies": {
+    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "foxer-client": "workspace:^"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.5",
+    "@types/node": "25.3.3",
+    "@types/react": "^19.2.14",
+    "type-fest": "^5.4.3",
+    "typescript": "5.9.3",
+    "viem": "2.46.3"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "5.x",
+    "@wagmi/core": "3.x",
+    "react": ">=18",
+    "viem": "2.x",
+    "wagmi": "3.x"
+  }
+}

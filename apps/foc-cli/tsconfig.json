@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": ["src", "package.json"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    {
+      "path": "../../packages/foxer"
+    },
+    {
+      "path": "../../apps/foc-api"
+    }
+  ]
+}

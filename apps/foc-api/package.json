@@ -1,14 +1,31 @@
 {
-  "name": "playground",
+  "name": "foc-api",
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "src/main.ts",
+  "main": "dist/src/index.js",
+  "module": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "dist/src",
+    "dist/src/**/*.d.ts",
+    "dist/src/**/*.d.ts.map"
+  ],
   "scripts": {
     "dev": "foxer dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "biome check",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p ./tsconfig.client.json"
   },
   "keywords": [],
   "author": "",

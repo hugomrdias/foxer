@@ -1,6 +1,8 @@
 import { sValidator } from '@hono/standard-validator'
-import { type Logger, sqlMiddleware } from 'foxer'
+import type { Logger } from 'foxer'
+import { sqlMiddleware } from 'foxer/api'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { type Address, isAddress, stringify } from 'viem'
 import * as z from 'zod'
 import type { Database } from '../foxer.config.ts'
@@ -11,7 +13,7 @@ export const zHex = z.custom<Address>((val) => {
 
 export function buildApp({ db, logger }: { db: Database; logger: Logger }) {
   const app = new Hono()
-
+  app.use(cors())
   app.use('/sql/*', sqlMiddleware({ db, logger }))
 
   const datasetsParamsSchema = z.object({

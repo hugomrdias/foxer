@@ -5,6 +5,7 @@
   "author": "Hugo Dias <hugomrdias@gmail.com>",
   "license": "Apache-2.0 OR MIT",
   "type": "module",
+  "sideEffects": false,
   "bin": {
     "foxer": "./src/bin/index.ts"
   },
@@ -15,9 +16,23 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./client": {
-      "import": "./src/client/index.ts",
-      "default": "./src/client/index.ts"
+    "./api": {
+      "import": "./src/api/index.ts",
+      "default": "./src/api/index.ts"
+    },
+    "./schema": {
+      "import": "./src/schema.ts",
+      "default": "./src/schema.ts"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "api": [
+        "./src/api/index.ts"
+      ],
+      "schema": [
+        "./src/schema.ts"
+      ]
     }
   },
   "scripts": {

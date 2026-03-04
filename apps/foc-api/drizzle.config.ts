@@ -1,5 +1,5 @@
 import { defineConfig } from 'drizzle-kit'
-import { schemaFiles } from 'foxer'
+import { schemaFiles } from 'foxer/schema'
 
 export default defineConfig({
   out: './drizzle',

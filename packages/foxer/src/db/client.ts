@@ -1,17 +1,15 @@
 import { PGlite } from '@electric-sql/pglite'
-import { desc, eq, getColumns, type SQL, sql } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import {
   drizzle as drizzleNodePostgres,
   type NodePgDatabase,
 } from 'drizzle-orm/node-postgres'
-import type { PgTable } from 'drizzle-orm/pg-core'
 import {
   drizzle as drizzlePglite,
   type PgliteDatabase,
 } from 'drizzle-orm/pglite'
 import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
 import { Pool, type PoolConfig } from 'pg'
-import { snakeCase } from 'scule'
 import type { DatabaseConfig } from '../config/config.ts'
 import type { Env } from '../config/env.ts'
 import { type relations, schema } from './schema/index.ts'
@@ -134,28 +132,6 @@ export function createDatabase<
       await client.close()
     },
   }
-}
-
-export const buildConflictUpdateColumns = <
-  T extends PgTable,
-  Q extends keyof T['_']['columns'],
->(
-  table: T,
-  columns?: Q[]
-) => {
-  const cls = getColumns(table)
-  const cols = columns ?? (Object.keys(cls) as Q[])
-  const r = cols.reduce(
-    (acc, column) => {
-      const colName = snakeCase(cls[column].name)
-
-      acc[column] = sql.raw(`excluded.${colName}`)
-      return acc
-    },
-    {} as Record<Q, SQL>
-  )
-
-  return r
 }
 
 function generatePrepared(
