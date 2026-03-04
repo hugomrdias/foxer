@@ -1,4 +1,3 @@
-import type { PDPOffering } from '@filoz/synapse-core/warm-storage'
 import {
   foreignKey,
   integer,

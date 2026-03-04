@@ -1,14 +1,15 @@
 import { calibration } from '@filoz/synapse-core/chains'
 import type { Database as FoxerDatabase, HookRegistry } from 'foxer'
 import { createConfig } from 'foxer'
-import { http, webSocket } from 'viem'
+import { http } from 'viem'
 import { buildApp } from './src/app.ts'
 import { handleDatasets } from './src/hooks/handle-datasets.ts'
 import { handlePieces } from './src/hooks/handle-pieces.ts'
 import { handleProviders } from './src/hooks/handle-providers.ts'
+import { handleSessionKeys } from './src/hooks/handle-session-keys.ts'
 import { relations, schema } from './src/schema/index.ts'
 
-const START_BLOCK = 3271094n - 15000n // service provider registry start block
+const START_BLOCK = 3271094n + 10000n // service provider registry start block
 
 export type Database = FoxerDatabase<typeof schema, typeof relations>
 
@@ -19,18 +20,20 @@ export type Registry = HookRegistry<
 >
 
 export const config = createConfig({
-  drizzleFolder: './drizzle',
   hono: buildApp,
   hooks: ({ registry }) => {
     handleDatasets(registry)
     handlePieces(registry)
     handleProviders(registry)
+    handleSessionKeys(registry)
   },
+  batchSize: 500,
   client: {
-    // transport: http(
-    //   `https://calibration.node.glif.io/archive/lotus/rpc/v1?token=${process.env.RPC_ARCHIVE_TOKEN}`
-    // ),
-    transport: http(process.env.RPC_URL),
+    transport: http(process.env.RPC_URL, {
+      batch: {
+        batchSize: 10,
+      },
+    }),
     realtimeTransport: http(process.env.RPC_LIVE_URL),
     chain: calibration,
   },
@@ -48,8 +51,8 @@ export const config = createConfig({
       startBlock: START_BLOCK,
     },
     storage: {
-      address: calibration.contracts.storage.address,
-      abi: calibration.contracts.storage.abi,
+      address: calibration.contracts.fwss.address,
+      abi: calibration.contracts.fwss.abi,
       events: ['ServiceTerminated', 'DataSetCreated'],
       startBlock: START_BLOCK,
     },

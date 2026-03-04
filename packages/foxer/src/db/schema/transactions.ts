@@ -1,14 +1,6 @@
-import {
-  foreignKey,
-  index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
-} from 'drizzle-orm/pg-core'
+import { index, integer, jsonb, pgEnum, pgTable } from 'drizzle-orm/pg-core'
 import type { AccessList } from 'viem'
-import { address, bigint, hash, hex, numeric78 } from '../column-types.ts'
-import { blocks } from './blocks.ts'
+import { address, bigint, bytea, numeric78 } from '../column-types.ts'
 
 export const transactionTypeEnum = pgEnum('transaction_type', [
   'legacy',
@@ -21,17 +13,17 @@ export const transactionTypeEnum = pgEnum('transaction_type', [
 export const transactions = pgTable(
   'transactions',
   {
-    hash: hash().primaryKey(),
+    hash: bytea().primaryKey(),
     blockNumber: bigint().notNull(),
     transactionIndex: integer().notNull(),
-    blockHash: hash().notNull(),
+    blockHash: bytea().notNull(),
     from: address().notNull(),
     to: address(),
-    input: hex().notNull(),
+    input: bytea().notNull(),
     value: numeric78().notNull(),
     nonce: integer().notNull(),
-    r: hash().notNull(),
-    s: hash().notNull(),
+    r: bytea().notNull(),
+    s: bytea().notNull(),
     v: numeric78().notNull(),
     type: transactionTypeEnum().notNull(),
     gas: numeric78().notNull(),
@@ -40,12 +32,5 @@ export const transactions = pgTable(
     maxPriorityFeePerGas: numeric78(),
     accessList: jsonb().$type<AccessList>(),
   },
-  (table) => [
-    foreignKey({
-      columns: [table.blockNumber],
-      foreignColumns: [blocks.number],
-      name: 'transactions_block_fk',
-    }).onDelete('cascade'),
-    index('transactions_block_number_index').on(table.blockNumber),
-  ]
+  (table) => [index('transactions_block_number_index').on(table.blockNumber)]
 )

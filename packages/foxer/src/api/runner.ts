@@ -1,29 +1,17 @@
 import { serve } from '@hono/node-server'
 import shutdown from 'http-shutdown'
 import type { InternalConfig } from '../config/config.ts'
-import type { Env } from '../config/env.ts'
-import { createPublication, type Database } from '../db/client.ts'
+import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
 import { createApiServer } from './server.ts'
 
-export async function bootstrapApiServer(options: {
-  env: Env
+export function bootstrapApiServer(options: {
   db: Database
   config: InternalConfig
   logger: Logger
-}): Promise<{ stop: () => void }> {
-  // create publication for all tables
-  // this is needed for the live sync to work
-  // TODO create publication only for tables that are used in the api
-  // check wal is enabled
-  // const result = await options.db.execute('SELECT * FROM pg_stat_replication')
-  // if (result.rows.length === 0) {
-  //   throw new Error('WAL is not enabled')
-  // }
-  await createPublication(options.db)
-
+  port: number
+}): { stop: () => void } {
   const app = createApiServer({
-    env: options.env,
     logger: options.logger,
     db: options.db,
     config: options.config,
@@ -32,10 +20,10 @@ export async function bootstrapApiServer(options: {
   const server = serve(
     {
       fetch: app.fetch,
-      port: options.env.PORT,
+      port: options.port,
     },
     () => {
-      options.logger.info({ port: options.env.PORT }, 'api server listening')
+      options.logger.info({ port: options.port }, 'api server listening')
     }
   )
 

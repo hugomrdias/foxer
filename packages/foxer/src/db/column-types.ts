@@ -89,3 +89,17 @@ export const jsonb = customType<{ data: unknown; driverData: string }>({
     return stringify(value)
   },
 })
+
+export const bytea = customType<{ data: Hex; driverData: Buffer }>({
+  dataType() {
+    return 'bytea'
+  },
+  toDriver(value: string): Buffer {
+    return Buffer.from(value.slice(2), 'hex')
+  },
+  fromDriver(value: Buffer): Hex {
+    const hex = value.toString('hex')
+    const _value = hex.startsWith('\\x') ? hex.slice(2) : hex
+    return `0x${_value}` as Hex
+  },
+})

@@ -1,1 +1,0 @@
-ALTER TABLE "providers" ALTER COLUMN "capabilities" SET DATA TYPE jsonb USING "capabilities"::jsonb;

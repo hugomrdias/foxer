@@ -9,7 +9,10 @@ CREATE TABLE "datasets" (
 	"service_provider" varchar(42) NOT NULL,
 	"payee" varchar(42) NOT NULL,
 	"metadata" json,
-	"block_number" bigint NOT NULL
+	"block_number" bigint NOT NULL,
+	"listener_addr" varchar(42),
+	"created_at" bigint,
+	"updated_at" bigint
 );
 --> statement-breakpoint
 CREATE TABLE "pieces" (
@@ -21,43 +24,61 @@ CREATE TABLE "pieces" (
 	CONSTRAINT "pieces_pkey" PRIMARY KEY("dataset_id","id")
 );
 --> statement-breakpoint
+CREATE TABLE "providers" (
+	"provider_id" bigint PRIMARY KEY,
+	"service_provider" varchar(42) NOT NULL,
+	"payee" varchar(42) NOT NULL,
+	"description" text,
+	"name" varchar(128),
+	"service_url" varchar(256),
+	"min_piece_size_in_bytes" bigint,
+	"max_piece_size_in_bytes" bigint,
+	"storage_price_per_tib_per_day" bigint,
+	"min_proving_period_in_epochs" bigint,
+	"location" varchar(128),
+	"payment_token_address" varchar(42),
+	"product_type" integer,
+	"created_at" bigint,
+	"updated_at" bigint,
+	"block_number" bigint NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "blocks" (
 	"number" bigint PRIMARY KEY,
 	"timestamp" bigint NOT NULL,
-	"hash" varchar(66) NOT NULL,
-	"parent_hash" varchar(66) NOT NULL,
-	"logs_bloom" varchar(514) NOT NULL,
+	"hash" bytea NOT NULL,
+	"parent_hash" bytea NOT NULL,
+	"logs_bloom" bytea NOT NULL,
 	"miner" varchar(42) NOT NULL,
 	"gas_used" numeric(78,0) NOT NULL,
 	"gas_limit" numeric(78,0) NOT NULL,
 	"base_fee_per_gas" numeric(78,0),
-	"nonce" varchar(18),
-	"mix_hash" varchar(66),
-	"state_root" varchar(66) NOT NULL,
-	"receipts_root" varchar(66) NOT NULL,
-	"transactions_root" varchar(66) NOT NULL,
-	"sha3_uncles" varchar(66),
+	"nonce" bytea NOT NULL,
+	"mix_hash" bytea NOT NULL,
+	"state_root" bytea NOT NULL,
+	"receipts_root" bytea NOT NULL,
+	"transactions_root" bytea NOT NULL,
+	"sha3_uncles" bytea NOT NULL,
 	"size" numeric(78,0) NOT NULL,
 	"difficulty" numeric(78,0) NOT NULL,
 	"total_difficulty" numeric(78,0),
-	"extra_data" varchar NOT NULL
+	"extra_data" bytea NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "transactions" (
-	"hash" varchar(66) PRIMARY KEY,
+	"hash" bytea PRIMARY KEY,
 	"block_number" bigint NOT NULL,
 	"transaction_index" integer NOT NULL,
-	"block_hash" varchar(66) NOT NULL,
+	"block_hash" bytea NOT NULL,
 	"from" varchar(42) NOT NULL,
 	"to" varchar(42),
-	"input" varchar NOT NULL,
+	"input" bytea NOT NULL,
 	"value" numeric(78,0) NOT NULL,
 	"nonce" integer NOT NULL,
-	"r" varchar(66) NOT NULL,
-	"s" varchar(66) NOT NULL,
+	"r" bytea NOT NULL,
+	"s" bytea NOT NULL,
 	"v" numeric(78,0) NOT NULL,
 	"type" "transaction_type" NOT NULL,
-	"type_hex" varchar,
 	"gas" numeric(78,0) NOT NULL,
 	"gas_price" numeric(78,0),
 	"max_fee_per_gas" numeric(78,0),
@@ -68,4 +89,4 @@ CREATE TABLE "transactions" (
 CREATE INDEX "transactions_block_number_index" ON "transactions" ("block_number");--> statement-breakpoint
 ALTER TABLE "datasets" ADD CONSTRAINT "datasets_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "pieces" ADD CONSTRAINT "datasets_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;
+ALTER TABLE "providers" ADD CONSTRAINT "datasets_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;

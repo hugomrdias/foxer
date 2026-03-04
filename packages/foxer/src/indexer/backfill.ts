@@ -1,5 +1,4 @@
 import { filterContracts, type InternalConfig } from '../config/config.ts'
-import type { Env } from '../config/env.ts'
 import { getBlocksInRange } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
 import type { relations, schema } from '../db/schema/index.ts'
@@ -15,20 +14,17 @@ import { processBlock } from './process-block.ts'
  * Executes historical catch-up from the current cursor to the safe head.
  */
 export async function runBackfill(args: {
-  env: Env
   logger: Logger
   config: InternalConfig
   db: Database<typeof schema, typeof relations>
   registry: HookRegistry
 }): Promise<bigint> {
   const endClock = startClock()
-  const { env, db, registry, config, logger } = args
+  const { db, registry, config, logger } = args
   const client = config.clients.backfill
   const chainHead = await client.getBlockNumber()
   const safeHead =
-    chainHead > BigInt(env.CONFIRMATION_DEPTH)
-      ? chainHead - BigInt(env.CONFIRMATION_DEPTH)
-      : 0n
+    chainHead > config.finality ? chainHead - config.finality : 0n
   let cursor = config.startBlockNumber
 
   if (cursor > safeHead) {
@@ -43,7 +39,7 @@ export async function runBackfill(args: {
     return cursor
   }
 
-  const batchSize = BigInt(env.BATCH_SIZE)
+  const batchSize = config.batchSize
   logger.debug(
     {
       fromBlock: cursor.toString(),
@@ -85,27 +81,13 @@ export async function runBackfill(args: {
       }),
     ])
 
-    let nullRoundsInBatch = 0
     let blockIndex = 0
 
     const endClockBatch = startClock()
     await withTransaction(db, async (tx) => {
       while (blockIndex < batchBlockNumbers.length) {
-        const block = batchBlockNumbers[blockIndex]
-        if (block == null) {
-          blockIndex += 1
-          continue
-        }
-        const prefetchedBlock = blocksByNumber.get(block)
-        if (!prefetchedBlock) {
-          nullRoundsInBatch += 1
-          logger.debug(
-            { blockNumber: block.toString() },
-            'skipping null round block'
-          )
-          blockIndex += 1
-          continue
-        }
+        const blockNumber = batchBlockNumbers[blockIndex]
+        const prefetchedBlock = blocksByNumber.get(blockNumber)
 
         await processBlock({
           logger,
@@ -113,8 +95,8 @@ export async function runBackfill(args: {
           db: tx,
           client,
           registry,
-          blockNumber: block,
-          prefetchedLogs: logsByBlock.get(block) ?? [],
+          blockNumber,
+          prefetchedLogs: logsByBlock.get(blockNumber) ?? [],
           prefetchedBlock,
           skipParentContinuityCheck: true,
           disableTransaction: true,
@@ -136,7 +118,6 @@ export async function runBackfill(args: {
     logger.info(
       {
         indexedUpTo: toBlock.toString(),
-        nulls: nullRoundsInBatch,
         duration: batchElapsedMs,
         throughput: Number(blocksPerSecond.toFixed(2)),
       },

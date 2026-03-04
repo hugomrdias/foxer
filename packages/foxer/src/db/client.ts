@@ -1,12 +1,5 @@
 import { PGlite } from '@electric-sql/pglite'
-import {
-  DrizzleQueryError,
-  desc,
-  eq,
-  getColumns,
-  type SQL,
-  sql,
-} from 'drizzle-orm'
+import { desc, eq, getColumns, type SQL, sql } from 'drizzle-orm'
 import {
   drizzle as drizzleNodePostgres,
   type NodePgDatabase,
@@ -119,7 +112,7 @@ export function createDatabase<
   const client = new PGlite(
     config?.driver === 'pglite' && config.directory
       ? config.directory
-      : env.PGLITE_DATA_DIR
+      : '.pglite'
   )
   const db = drizzlePglite({
     client: client,
@@ -163,27 +156,6 @@ export const buildConflictUpdateColumns = <
   )
 
   return r
-}
-
-/**
- * Creates a publication for all tables in the database.
- * This is needed for the live sync to work.
- *
- * @param db - The database to create the publication for
- * @returns The publication name
- */
-export async function createPublication(db: Database) {
-  try {
-    await db.execute('CREATE PUBLICATION alltables FOR ALL TABLES')
-  } catch (error) {
-    if (
-      error instanceof DrizzleQueryError &&
-      error.cause?.message.includes('publication "alltables" already exists')
-    ) {
-      return
-    }
-    throw error
-  }
 }
 
 function generatePrepared(

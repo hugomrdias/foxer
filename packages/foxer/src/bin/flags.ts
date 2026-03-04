@@ -57,4 +57,9 @@ export const globalFlags = {
     description: 'The log mode to use',
     default: LogMode(process.env.NODE_ENV !== 'production' ? 'pretty' : 'json'),
   },
+  port: {
+    type: Number,
+    description: 'The port to use for the API server',
+    default: process.env.PORT ? Number(process.env.PORT) : 4200,
+  },
 } as const

@@ -1,6 +1,4 @@
 import {
-  CacheEmptyBehaviorAllow,
-  CacheEmptyBehaviorIgnore,
   createConfig,
   DataFinalityStateFinalized,
   DataFinalityStateRealtime,
@@ -40,6 +38,9 @@ export default createConfig({
       networks: [
         {
           architecture: 'evm',
+          directiveDefaults: {
+            validateTransactionsRoot: false,
+          },
           evm: {
             chainId: 314159,
           },
@@ -89,6 +90,9 @@ export default createConfig({
       networks: [
         {
           architecture: 'evm',
+          directiveDefaults: {
+            validateTransactionsRoot: false,
+          },
           evm: {
             chainId: 314159,
           },
@@ -98,14 +102,6 @@ export default createConfig({
         {
           id: 'chainlove-archive',
           endpoint: `https://calibration.node.glif.io/archive/lotus/rpc/v1?token=${process.env.RPC_ARCHIVE_TOKEN}`,
-          // jsonRpc: {
-          //   // When enabled eRPC will wait for a specified amount of time to batch as many requests as possible.
-          //   supportsBatch: true,
-          //   // The maximum amount of time to wait to collect requests for a batch.
-          //   batchMaxWait: '5ms',
-          //   // The maximum amount of requests in a single batch, which is usually enforced by the provider.
-          //   batchMaxSize: 10,
-          // },
           evm: {
             chainId: 314159,
             nodeType: 'archive',
@@ -142,40 +138,47 @@ export default createConfig({
             emitMetrics: false,
           },
         },
+        {
+          id: 'postgres-cache',
+          driver: 'postgresql',
+          postgresql: {
+            connectionUri: process.env.DATABASE_URL ?? '',
+            table: 'rpc_cache',
+            initTimeout: '5s',
+            getTimeout: '1s',
+            setTimeout: '2s',
+          },
+        },
       ],
       policies: [
         {
           network: '*',
           method: '*',
           finality: DataFinalityStateFinalized,
-          empty: CacheEmptyBehaviorAllow,
-          connector: 'memory-cache',
+          connector: 'postgres-cache',
           ttl: 0,
         },
         {
           network: '*',
           method: '*',
           finality: DataFinalityStateUnfinalized,
-          empty: CacheEmptyBehaviorIgnore,
+          connector: 'memory-cache',
+          ttl: '10s',
+        },
+        {
+          network: '*',
+          method: '*',
+          finality: DataFinalityStateRealtime,
+          connector: 'memory-cache',
+          ttl: '5s',
+        },
+        {
+          network: '*',
+          method: '*',
+          finality: DataFinalityStateUnknown,
           connector: 'memory-cache',
           ttl: '30s',
         },
-        // {
-        //   network: '*',
-        //   method: '*',
-        //   finality: DataFinalityStateRealtime,
-        //   empty: CacheEmptyBehaviorAllow,
-        //   connector: 'memory-cache',
-        //   ttl: '30s',
-        // },
-        // {
-        //   network: '*',
-        //   method: '*',
-        //   finality: DataFinalityStateUnknown,
-        //   empty: CacheEmptyBehaviorAllow,
-        //   connector: 'memory-cache',
-        //   ttl: '30s',
-        // },
       ],
     },
   },

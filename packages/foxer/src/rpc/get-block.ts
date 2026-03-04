@@ -1,34 +1,67 @@
-import type { PublicClient } from 'viem'
-import { encodeBlockWithTransactions } from '../db/encode.ts'
+import type { Hash, PublicClient } from 'viem'
+import type { Database } from '../db/client.ts'
+import {
+  encodeBlockWithTransactions,
+  encodeNullRoundBlock,
+} from '../db/encode.ts'
 import type { EncodedBlockWithTransactions } from '../types.ts'
-
-export type SafeGetBlockResult =
-  | {
-      status: 'ok'
-      block: EncodedBlockWithTransactions
-    }
-  | { status: 'null_round' }
 
 /**
  * Fetches a block while normalizing null-round behavior into an explicit result.
  */
-export async function safeGetBlock(
-  client: PublicClient,
+export async function safeGetBlock(options: {
+  client: PublicClient
   blockNumber: bigint
-): Promise<SafeGetBlockResult> {
+  db: Database
+}): Promise<EncodedBlockWithTransactions> {
+  const { client, blockNumber, db } = options
   try {
     const block = await client.getBlock({
       blockNumber,
       includeTransactions: true,
     })
 
-    return {
-      status: 'ok',
-      block: encodeBlockWithTransactions(block),
-    }
+    return encodeBlockWithTransactions(block)
   } catch (error) {
     if (isNullRoundRpcError(error)) {
-      return { status: 'null_round' }
+      // console.warn('null round rpc error', blockNumber)
+      let previousBlock:
+        | { number: bigint; hash: Hash; parentHash: Hash }
+        | undefined
+
+      previousBlock = (
+        await db.$prepared.getBlockById.execute({
+          blockNumber: blockNumber - 1n,
+        })
+      )[0]
+
+      let previousBlockNumber = blockNumber - 1n
+      // good to the chain and loop back until a full block is found
+      if (!previousBlock) {
+        while (!previousBlock) {
+          try {
+            const block = await client.getBlock({
+              blockNumber: previousBlockNumber,
+            })
+            previousBlock = {
+              number: block.number,
+              hash: block.hash,
+              parentHash: block.parentHash,
+            }
+          } catch (error) {
+            // catched another null round, keep going
+            if (isNullRoundRpcError(error)) {
+              previousBlockNumber -= 1n
+              continue
+            }
+            throw error
+          }
+        }
+      }
+      return encodeNullRoundBlock({
+        number: blockNumber,
+        hash: previousBlock.hash,
+      })
     }
     throw error
   }

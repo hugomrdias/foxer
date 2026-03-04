@@ -14,7 +14,7 @@ export function encodeTransaction(tx: ChainTransaction): EncodedTransaction {
     transactionIndex: tx.transactionIndex,
     blockHash: tx.blockHash,
     from: tx.from,
-    to: tx.to,
+    to: tx.to ?? null,
     input: tx.input,
     value: tx.value,
     nonce: tx.nonce,
@@ -22,11 +22,11 @@ export function encodeTransaction(tx: ChainTransaction): EncodedTransaction {
     s: tx.s,
     v: tx.v,
     type: tx.type,
-    gas: tx.gas,
-    gasPrice: tx.gasPrice,
-    maxFeePerGas: tx.maxFeePerGas,
-    maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-    accessList: tx.accessList,
+    gas: tx.gas ?? null,
+    gasPrice: tx.gasPrice ?? null,
+    maxFeePerGas: tx.maxFeePerGas ?? null,
+    maxPriorityFeePerGas: tx.maxPriorityFeePerGas ?? null,
+    accessList: tx.accessList ?? null,
   }
 }
 
@@ -40,7 +40,7 @@ export function encodeBlock(block: ChainBlock): EncodedBlock {
     miner: block.miner,
     gasUsed: block.gasUsed,
     gasLimit: block.gasLimit,
-    baseFeePerGas: block.baseFeePerGas,
+    baseFeePerGas: block.baseFeePerGas ?? null,
     nonce: block.nonce,
     mixHash: block.mixHash,
     stateRoot: block.stateRoot,
@@ -49,7 +49,7 @@ export function encodeBlock(block: ChainBlock): EncodedBlock {
     sha3Uncles: block.sha3Uncles,
     size: block.size,
     difficulty: block.difficulty,
-    totalDifficulty: block.totalDifficulty,
+    totalDifficulty: block.totalDifficulty ?? null,
     extraData: block.extraData,
   }
 }

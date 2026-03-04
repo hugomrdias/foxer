@@ -1,9 +1,9 @@
 import { calibration } from '@filoz/synapse-core/chains'
+import type { PDPOffering } from '@filoz/synapse-core/sp-registry'
 import {
   capabilitiesListToObject,
   decodePDPCapabilities,
 } from '@filoz/synapse-core/utils'
-import type { PDPOffering } from '@filoz/synapse-core/warm-storage'
 import { eq } from 'drizzle-orm'
 import { decodeFunctionData } from 'viem'
 import type { Registry } from '../../foxer.config.ts'
@@ -15,10 +15,12 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProviderRegistered',
     async ({ context, event }) => {
-      context.logger.warn({ event: event.args }, 'ProviderRegistered')
+      context.logger.debug({ event: event.args }, 'ProviderRegistered')
       const args = event.args
 
-      const decoded = decodeRegisterProvider(event.transaction.input)
+      const decoded = decodeRegisterProvider(
+        event.transaction.input as `0x${string}`
+      )
 
       await context.db
         .insert(schema.providers)
@@ -41,31 +43,14 @@ export function handleProviders(registry: Registry) {
           updatedAt: event.block.timestamp,
           productType: decoded.productType,
         })
-        .onConflictDoUpdate({
-          target: [schema.providers.providerId],
-          set: {
-            description: decoded.description,
-            name: decoded.name,
-            serviceURL: decoded.capabilities?.serviceURL,
-            minPieceSizeInBytes: decoded.capabilities?.minPieceSizeInBytes,
-            storagePricePerTibPerDay:
-              decoded.capabilities?.storagePricePerTibPerDay,
-            minProvingPeriodInEpochs:
-              decoded.capabilities?.minProvingPeriodInEpochs,
-            location: decoded.capabilities?.location,
-            paymentTokenAddress: decoded.capabilities?.paymentTokenAddress,
-            updatedAt: event.block.timestamp,
-            createdAt: event.block.timestamp,
-            productType: decoded.productType,
-          },
-        })
+        .onConflictDoNothing()
     }
   )
 
   registry.on(
     'serviceProviderRegistry:ProviderRemoved',
     async ({ context, event }) => {
-      context.logger.warn({ event: event.args }, 'ProviderRemoved')
+      context.logger.debug({ event: event.args }, 'ProviderRemoved')
       const args = event.args
       await context.db
         .delete(schema.providers)
@@ -76,10 +61,12 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProviderInfoUpdated',
     async ({ context, event }) => {
-      context.logger.warn({ event: event.args }, 'ProviderInfoUpdated')
+      context.logger.debug({ event: event.args }, 'ProviderInfoUpdated')
       const args = event.args
 
-      const decoded = decodeUpdateProviderInfo(event.transaction.input)
+      const decoded = decodeUpdateProviderInfo(
+        event.transaction.input as `0x${string}`
+      )
       if (!decoded) {
         context.logger.error(
           { event: event.args },
@@ -101,7 +88,7 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProductUpdated',
     async ({ context, event }) => {
-      context.logger.warn({ event: event.args }, 'ProductUpdated')
+      context.logger.debug({ event: event.args }, 'ProductUpdated')
       const args = event.args
 
       const capabilities = decodePDPCapabilities(

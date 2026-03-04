@@ -49,6 +49,7 @@ export async function processBlock(args: {
   const transactionByHash = new Map<`0x${string}`, EncodedTransaction>()
   const filteredContracts =
     args.filteredContracts ?? filterContracts(config, blockNumber, blockNumber)
+
   let block: EncodedBlockWithTransactions | undefined
   let logs: Log<bigint, number, false, AbiEvent>[] | undefined
 
@@ -60,7 +61,7 @@ export async function processBlock(args: {
   }
   if (!block || !logs) {
     const [blockResult, logsResult] = await Promise.all([
-      safeGetBlock(client, blockNumber),
+      safeGetBlock({ client, blockNumber, db }),
       client.getLogs({
         address: filteredContracts.addresses,
         events: filteredContracts.eventAbis,
@@ -68,14 +69,8 @@ export async function processBlock(args: {
         toBlock: blockNumber,
       }),
     ])
-    if (blockResult.status === 'null_round') {
-      logger.debug(
-        { blockNumber: blockNumber.toString() },
-        'skipping null round block'
-      )
-      return { status: 'skipped_null_round' }
-    }
-    block = blockResult.block
+
+    block = blockResult
     logs = logsResult
   }
 
@@ -96,10 +91,12 @@ export async function processBlock(args: {
   }
 
   const write = async (tx: Database) => {
-    const persistPromise = cacheBlockAndTransactions({
-      db: tx,
-      block,
-    })
+    if (!skipParentContinuityCheck) {
+      await cacheBlockAndTransactions({
+        db: tx,
+        block,
+      })
+    }
 
     for (const log of logs) {
       const contractName =
@@ -137,7 +134,6 @@ export async function processBlock(args: {
         },
       })
     }
-    await persistPromise
   }
 
   if (disableTransaction) {

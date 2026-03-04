@@ -35,11 +35,16 @@ export const dev: Command = command(
         msg: 'Local environment file (.env.local) not found',
       })
     }
-    const env = createEnv(logger)
-
-    const config = await loadConfig(logger, argv.flags.root, argv.flags.config)
 
     try {
+      const env = createEnv(logger)
+
+      const config = await loadConfig(
+        logger,
+        argv.flags.root,
+        argv.flags.config
+      )
+
       const dbContext = createDatabase({
         env,
         schema: { ...config.schema, ...InternalSchema.schema },
@@ -48,7 +53,7 @@ export const dev: Command = command(
 
       await runMigrations({
         dbContext,
-        drizzleFolder: config.drizzleFolder,
+        folder: path.resolve(argv.flags.root, config.drizzleFolder),
         logger,
       })
 
@@ -57,13 +62,12 @@ export const dev: Command = command(
 
       const [api, indexer] = await Promise.all([
         bootstrapApiServer({
-          env,
           db: dbContext.db,
           config,
           logger,
+          port: argv.flags.port,
         }),
         bootstrapIndexer({
-          env,
           logger,
           db: dbContext.db,
           registry,

@@ -26,18 +26,3 @@ export const datasets = pgTable(
     }).onDelete('cascade'),
   ]
 )
-
-// {
-//   dataSetId: bigint
-//   providerId: bigint
-//   pdpRailId: bigint
-//   cacheMissRailId: bigint
-//   cdnRailId: bigint
-//   payer: `0x${string}`
-//   serviceProvider: `0x${string}`
-//   payee: `0x${string}`
-//   metadataKeys: readonly
-//   string[];
-//   metadataValues: readonly
-//   string[];
-// }

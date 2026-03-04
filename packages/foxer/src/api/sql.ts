@@ -8,7 +8,7 @@ import {
 import type { Visitor } from '@pgsql/traverse'
 import { walk } from '@pgsql/traverse'
 import type { QueryWithTypings } from 'drizzle-orm'
-import postgres from 'postgres'
+import { Pool } from 'pg'
 import type { Database } from '../db/client'
 import type { MaybeResult } from '../types'
 
@@ -119,26 +119,31 @@ export async function executeSql({
   db: Database
   query: QueryWithTypings
 }): Promise<MaybeResult<unknown>> {
-  let dbResult: unknown | undefined
-  if (db.$client instanceof PGlite) {
-    dbResult = await db._.session
-      .prepareQuery(query, undefined, undefined, false)
-      .execute()
-  }
-  if (db.$client instanceof postgres) {
-    dbResult = await db.transaction(
-      (tx) => {
-        return tx._.session
-          .prepareQuery(query, undefined, undefined, false)
-          .execute()
-      },
-      { accessMode: 'read only' }
-    )
-  }
+  try {
+    let dbResult: unknown | undefined
+    if (db.$client instanceof PGlite) {
+      dbResult = await db._.session
+        .prepareQuery(query, undefined, undefined, false)
+        .execute()
+    }
+    if (db.$client instanceof Pool) {
+      dbResult = await db.transaction(
+        (tx) => {
+          return tx._.session
+            .prepareQuery(query, undefined, undefined, false)
+            .execute()
+        },
+        { accessMode: 'read only' }
+      )
+    }
 
-  if (dbResult == null) {
-    return { error: new Error('Failed to execute SQL') }
+    if (dbResult == null) {
+      return { error: new Error('Empty result') }
+    }
+    return { result: dbResult }
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error : new Error('Unknown error'),
+    }
   }
-
-  return { result: dbResult }
 }

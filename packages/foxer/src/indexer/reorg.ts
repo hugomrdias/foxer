@@ -54,14 +54,13 @@ export async function ensureParentContinuity(args: {
     }
 
     // 2) Read chain block at the same height.
-    const blockResult = await safeGetBlock(client, cursor)
-    if (blockResult.status === 'null_round') {
-      cursor -= 1n
-      continue
-    }
+    const chainBlock = await safeGetBlock({ client, blockNumber: cursor, db })
+    // if (blockResult.status === 'null_round') {
+    //   cursor -= 1n
+    //   continue
+    // }
 
     // 3) Found the last common ancestor. Rewind to the first divergent height.
-    const chainBlock = blockResult.block
     if (hashEquals(chainBlock.hash, dbBlock.hash)) {
       const rewindTo = cursor
       await deleteBlocksFrom(db, rewindTo)
@@ -85,34 +84,28 @@ export async function verifyRecentBlocks(args: {
   logger: Logger
   db: Database
   client: PublicClient
-  depth: number
+  depth: bigint
 }): Promise<void> {
   const { logger, db, client, depth } = args
   const endClock = startClock()
   const latest =
     (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
+
   if (latest == null) return
 
-  const start = latest - BigInt(depth) >= 0n ? latest - BigInt(depth) : 0n
+  const start = latest - depth >= 0n ? latest - depth : 0n
   let blockNumber = start
   while (blockNumber <= latest) {
     const dbBlock = (
       await db.$prepared.getBlockById.execute({ blockNumber })
     )[0]
+
     if (!dbBlock) {
       blockNumber += 1n
       continue
     }
-    const blockResult = await safeGetBlock(client, blockNumber)
-    if (blockResult.status === 'null_round') {
-      logger.warn(
-        { blockNumber: blockNumber.toString() },
-        'startup sanity check hit null round'
-      )
-      await deleteBlocksFrom(db, blockNumber)
-      return
-    }
-    const chainBlock = blockResult.block
+    const chainBlock = await safeGetBlock({ client, blockNumber, db })
+
     if (!hashEquals(chainBlock.hash, dbBlock.hash)) {
       logger.warn(
         { blockNumber: blockNumber.toString() },

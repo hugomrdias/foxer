@@ -18,6 +18,7 @@ import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { createRpcClients, type RpcClients } from '../rpc/client.ts'
 import type { UnknownObject } from '../types.ts'
+import type { Logger } from '../utils/logger.ts'
 import type {
   ContractConfig,
   ContractsConfig,
@@ -34,6 +35,7 @@ export type HonoConfig<
   TSchema extends UnknownRecord = UnknownRecord,
   TRelations extends AnyRelations = EmptyRelations,
 > = (options: {
+  logger: Logger
   db: Database<TSchema, TRelations>
 }) => Hono<BlankEnv, BlankSchema, '/'>
 
@@ -65,13 +67,48 @@ export type Config<
   TSchema extends UnknownRecord,
   TRelations extends AnyRelations = EmptyRelations,
 > = {
-  drizzleFolder: string
+  /**
+   * The batch size for the backfill. How many blocks to process at a time.
+   * @default 100
+   */
+  batchSize?: number
+  /**
+   * The finality of the chain.
+   * @default 30
+   */
+  finality?: number
+  /**
+   * The folder where the drizzle schema is stored.
+   * @default './drizzle'
+   */
+  drizzleFolder?: string
+  /**
+   * The database configuration.
+   */
   database?: DatabaseConfig
+  /**
+   * The contracts to index.
+   */
   contracts: ContractsConfig<Narrow<contracts>>
+  /**
+   * The RPC clients configuration.
+   */
   client: ClientConfig
+  /**
+   * The Hono configuration.
+   */
   hono: HonoConfig<TSchema, TRelations>
+  /**
+   * The drizzle schema.
+   */
   schema: TSchema
+  /**
+   * The drizzle relations.
+   */
   relations?: TRelations
+  /**
+   * The hooks configuration.
+   */
   hooks: HooksConfig<contracts, TSchema, TRelations>
 }
 
@@ -79,6 +116,8 @@ export type InternalConfig<
   TSchema extends UnknownRecord = UnknownRecord,
   TRelations extends AnyRelations = EmptyRelations,
 > = {
+  batchSize: bigint
+  finality: bigint
   drizzleFolder: string
   contracts: { [contractName: string]: GetContract }
   database?: DatabaseConfig
@@ -121,6 +160,9 @@ export function createConfig<
 
   return {
     ...config,
+    batchSize: BigInt(config.batchSize ?? 100),
+    finality: BigInt(config.finality ?? 30),
+    drizzleFolder: config.drizzleFolder ?? './drizzle',
     relations: config.relations ? config.relations : ({} as TRelations),
     startBlockNumber,
     contractsForLive,

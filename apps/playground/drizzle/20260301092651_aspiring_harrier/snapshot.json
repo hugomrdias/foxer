@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "7f6dc51b-cb12-40a5-a3aa-221b2681c9c5",
+  "id": "1680b41a-be02-4e82-8498-3a119c102d63",
   "prevIds": [
-    "61259dfc-3b01-46a2-b2e3-126667388b17"
+    "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
@@ -381,6 +381,19 @@
       "default": null,
       "generated": null,
       "identity": null,
+      "name": "max_piece_size_in_bytes",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "providers"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
       "name": "storage_price_per_tib_per_day",
       "entityType": "columns",
       "schema": "public",
@@ -478,19 +491,6 @@
       "table": "providers"
     },
     {
-      "type": "json",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "capabilities",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "providers"
-    },
-    {
       "type": "bigint",
       "typeSchema": null,
       "notNull": true,
@@ -517,7 +517,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -530,7 +530,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -543,7 +543,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(514)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -608,7 +608,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(18)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -621,7 +621,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -634,7 +634,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -647,7 +647,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -660,7 +660,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -673,7 +673,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -725,7 +725,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -738,7 +738,7 @@
       "table": "blocks"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -777,7 +777,7 @@
       "table": "transactions"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -816,7 +816,7 @@
       "table": "transactions"
     },
     {
-      "type": "varchar",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -855,7 +855,7 @@
       "table": "transactions"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -868,7 +868,7 @@
       "table": "transactions"
     },
     {
-      "type": "varchar(66)",
+      "type": "bytea",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1042,23 +1042,6 @@
       "entityType": "fks",
       "schema": "public",
       "table": "providers"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        "block_number"
-      ],
-      "schemaTo": "public",
-      "tableTo": "blocks",
-      "columnsTo": [
-        "number"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "transactions_block_fk",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "transactions"
     },
     {
       "columns": [
