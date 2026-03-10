@@ -2,6 +2,7 @@
 
 import { gte } from 'drizzle-orm'
 import type { PublicClient } from 'viem'
+import type { FilteredContracts } from '../../config/config.ts'
 import { safeGetBlock } from '../../rpc/get-block.ts'
 import type {
   EncodedBlockWithTransactions,
@@ -77,15 +78,41 @@ export async function getBlocksInRange(
   logger: Logger,
   db: Database<typeof schema, typeof relations>,
   blockNumbers: bigint[],
-  client: PublicClient
+  client: PublicClient,
+  contracts: FilteredContracts
 ): Promise<Map<bigint, EncodedBlockWithTransactions>> {
   const endClock = startClock()
   const firstBlockNumber = blockNumbers[0]!
   const lastBlockNumber = blockNumbers[blockNumbers.length - 1]!
 
-  const r = await db.$prepared.getBlocksInRange.execute({
-    firstBlockNumber,
-    lastBlockNumber,
+  // const r = await db.$prepared.getBlocksInRange.execute({
+  //   firstBlockNumber,
+  //   lastBlockNumber,
+  //   contractAddresses: contracts.addresses,
+  // })
+
+  const r = await db.query.blocks.findMany({
+    with: {
+      transactions: {
+        where: {
+          AND: [
+            { blockNumber: { gte: firstBlockNumber } },
+            { blockNumber: { lte: lastBlockNumber } },
+            {
+              to: {
+                in: contracts.addresses,
+              },
+            },
+          ],
+        },
+      },
+    },
+    where: {
+      AND: [
+        { number: { gte: firstBlockNumber } },
+        { number: { lte: lastBlockNumber } },
+      ],
+    },
   })
 
   const blocksByNumber = new Map<bigint, EncodedBlockWithTransactions>()

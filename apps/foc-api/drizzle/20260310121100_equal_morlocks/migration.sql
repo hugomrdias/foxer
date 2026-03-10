@@ -43,11 +43,27 @@ CREATE TABLE "providers" (
 	"block_number" bigint NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "sessionKeyPermissions" (
+	"signer" varchar(42),
+	"permission" varchar(66),
+	"expiry" bigint,
+	CONSTRAINT "sessionKeyPermissions_pkey" PRIMARY KEY("signer","permission")
+);
+--> statement-breakpoint
+CREATE TABLE "sessionKeys" (
+	"signer" varchar(42) PRIMARY KEY,
+	"identity" varchar(42) NOT NULL,
+	"origin" text NOT NULL,
+	"block_number" bigint NOT NULL,
+	"created_at" bigint,
+	"updated_at" bigint
+);
+--> statement-breakpoint
 CREATE TABLE "blocks" (
 	"number" bigint PRIMARY KEY,
 	"timestamp" bigint NOT NULL,
-	"hash" bytea NOT NULL,
-	"parent_hash" bytea NOT NULL,
+	"hash" varchar(66) NOT NULL,
+	"parent_hash" varchar(66) NOT NULL,
 	"logs_bloom" bytea NOT NULL,
 	"miner" varchar(42) NOT NULL,
 	"gas_used" numeric(78,0) NOT NULL,
@@ -66,10 +82,10 @@ CREATE TABLE "blocks" (
 );
 --> statement-breakpoint
 CREATE TABLE "transactions" (
-	"hash" bytea PRIMARY KEY,
+	"hash" varchar(66) PRIMARY KEY,
 	"block_number" bigint NOT NULL,
 	"transaction_index" integer NOT NULL,
-	"block_hash" bytea NOT NULL,
+	"block_hash" varchar(66) NOT NULL,
 	"from" varchar(42) NOT NULL,
 	"to" varchar(42),
 	"input" bytea NOT NULL,
@@ -86,7 +102,7 @@ CREATE TABLE "transactions" (
 	"access_list" jsonb
 );
 --> statement-breakpoint
+CREATE INDEX "sessionKeys_identity_index" ON "sessionKeys" ("identity");--> statement-breakpoint
 CREATE INDEX "transactions_block_number_index" ON "transactions" ("block_number");--> statement-breakpoint
-ALTER TABLE "datasets" ADD CONSTRAINT "datasets_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "pieces" ADD CONSTRAINT "datasets_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "providers" ADD CONSTRAINT "datasets_block_fk" FOREIGN KEY ("block_number") REFERENCES "blocks"("number") ON DELETE CASCADE;
+CREATE INDEX "transactions_to_index" ON "transactions" ("to");--> statement-breakpoint
+ALTER TABLE "sessionKeyPermissions" ADD CONSTRAINT "sessionKeyPermissions_signer_fk" FOREIGN KEY ("signer") REFERENCES "sessionKeys"("signer") ON DELETE CASCADE;

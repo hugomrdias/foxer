@@ -70,7 +70,7 @@ export async function runBackfill(args: {
     }
 
     const [blocksByNumber, logsByBlock] = await Promise.all([
-      getBlocksInRange(logger, db, batchBlockNumbers, client),
+      getBlocksInRange(logger, db, batchBlockNumbers, client, windowContracts),
       getLogsInRange({
         logger,
         client,
@@ -96,11 +96,10 @@ export async function runBackfill(args: {
           client,
           registry,
           blockNumber,
-          prefetchedLogs: logsByBlock.get(blockNumber) ?? [],
-          prefetchedBlock,
-          skipParentContinuityCheck: true,
-          disableTransaction: true,
-          filteredContracts: windowContracts,
+          logs: logsByBlock.get(blockNumber) ?? [],
+          block: prefetchedBlock,
+          type: 'backfill',
+          contracts: windowContracts,
         })
         blockIndex += 1
       }

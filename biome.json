@@ -5,7 +5,6 @@
     "ignoreUnknown": true,
     "includes": [
       "!**/node_modules",
-      "!**/.ponder",
       "!**/drizzle",
       "!**/generated",
       "!**/dist",

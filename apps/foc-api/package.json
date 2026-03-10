@@ -22,6 +22,7 @@
   ],
   "scripts": {
     "dev": "foxer dev",
+    "generate": "drizzle-kit generate",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "biome check",
     "typecheck": "tsc --noEmit",

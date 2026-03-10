@@ -1,11 +1,11 @@
 import { pgTable } from 'drizzle-orm/pg-core'
-import { address, bigint, bytea, numeric78 } from '../column-types.ts'
+import { address, bigint, bytea, hash, numeric78 } from '../column-types.ts'
 
 export const blocks = pgTable('blocks', {
   number: bigint().notNull().primaryKey(),
   timestamp: bigint().notNull(),
-  hash: bytea().notNull(),
-  parentHash: bytea().notNull(),
+  hash: hash().notNull(),
+  parentHash: hash().notNull(),
   logsBloom: bytea().notNull(),
   miner: address().notNull(),
   gasUsed: numeric78().notNull(),

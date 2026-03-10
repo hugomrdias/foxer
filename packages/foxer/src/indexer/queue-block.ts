@@ -1,6 +1,6 @@
 import type { Logger } from 'pino'
 import type { PublicClient } from 'viem'
-import type { InternalConfig } from '../config/config.ts'
+import { filterContracts, type InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { startClock } from '../utils/timer.ts'
@@ -31,6 +31,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
 
   const endClock = startClock()
   try {
+    const contracts = filterContracts(config, blockNumber, blockNumber)
     const result = await processBlock({
       logger,
       config,
@@ -38,6 +39,8 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
       client,
       registry,
       blockNumber,
+      type: 'live',
+      contracts,
     })
 
     if (result.status === 'reorg') {
@@ -49,17 +52,6 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
         'reorg detected during live processing; rewinding'
       )
       onRewind(result.rewindTo)
-      return
-    }
-
-    if (result.status === 'skipped_null_round') {
-      logger.info(
-        {
-          blockNumber: blockNumber.toString(),
-          queueSize,
-        },
-        'skipped null round block'
-      )
       return
     }
 

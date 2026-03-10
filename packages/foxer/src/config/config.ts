@@ -187,7 +187,7 @@ export function filterContracts(
   const eventNames: Set<string> = new Set()
   const contractNameByAddress: Record<Address, string> = {}
   for (const [contractName, contract] of Object.entries(config.contracts)) {
-    const address = getAddress(contract.address)
+    const address = contract.address.toLowerCase() as `0x${string}`
     const startBlock = contract.startBlock ?? 0n
 
     if (startBlock > toBlock) {

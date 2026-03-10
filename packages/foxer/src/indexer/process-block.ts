@@ -1,9 +1,5 @@
 import { type AbiEvent, getAddress, type Log, type PublicClient } from 'viem'
-import {
-  type FilteredContracts,
-  filterContracts,
-  type InternalConfig,
-} from '../config/config.ts'
+import type { FilteredContracts, InternalConfig } from '../config/config.ts'
 import { cacheBlockAndTransactions } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
 import { withTransaction } from '../db/transaction.ts'
@@ -15,7 +11,6 @@ import { ensureParentContinuity } from './reorg.ts'
 
 export type ProcessBlockResult =
   | { status: 'processed' }
-  | { status: 'skipped_null_round' }
   | { status: 'reorg'; rewindTo: bigint }
 
 /**
@@ -28,11 +23,10 @@ export async function processBlock(args: {
   client: PublicClient
   registry: HookRegistry<NonNullable<unknown>>
   blockNumber: bigint
-  prefetchedLogs?: Log<bigint, number, false, AbiEvent>[]
-  prefetchedBlock?: EncodedBlockWithTransactions
-  skipParentContinuityCheck?: boolean
-  disableTransaction?: boolean
-  filteredContracts?: FilteredContracts
+  logs?: Log<bigint, number, false, AbiEvent>[]
+  block?: EncodedBlockWithTransactions
+  type: 'backfill' | 'live'
+  contracts: FilteredContracts
 }): Promise<ProcessBlockResult> {
   const {
     logger,
@@ -41,14 +35,12 @@ export async function processBlock(args: {
     client,
     registry,
     blockNumber,
-    prefetchedBlock,
-    prefetchedLogs,
+    block: prefetchedBlock,
+    logs: prefetchedLogs,
+    type,
+    contracts,
   } = args
-  const skipParentContinuityCheck = args.skipParentContinuityCheck ?? false
-  const disableTransaction = args.disableTransaction ?? false
   const transactionByHash = new Map<`0x${string}`, EncodedTransaction>()
-  const filteredContracts =
-    args.filteredContracts ?? filterContracts(config, blockNumber, blockNumber)
 
   let block: EncodedBlockWithTransactions | undefined
   let logs: Log<bigint, number, false, AbiEvent>[] | undefined
@@ -63,8 +55,8 @@ export async function processBlock(args: {
     const [blockResult, logsResult] = await Promise.all([
       safeGetBlock({ client, blockNumber, db }),
       client.getLogs({
-        address: filteredContracts.addresses,
-        events: filteredContracts.eventAbis,
+        address: contracts.addresses,
+        events: contracts.eventAbis,
         fromBlock: blockNumber,
         toBlock: blockNumber,
       }),
@@ -78,7 +70,7 @@ export async function processBlock(args: {
     transactionByHash.set(tx.hash, tx)
   }
 
-  if (!skipParentContinuityCheck) {
+  if (type === 'live') {
     const rewindTo = await ensureParentContinuity({
       logger,
       db,
@@ -91,7 +83,7 @@ export async function processBlock(args: {
   }
 
   const write = async (tx: Database) => {
-    if (!skipParentContinuityCheck) {
+    if (type === 'live') {
       await cacheBlockAndTransactions({
         db: tx,
         block,
@@ -99,8 +91,8 @@ export async function processBlock(args: {
     }
 
     for (const log of logs) {
-      const contractName =
-        filteredContracts.contractNameByAddress[getAddress(log.address)]
+      const contractName = contracts.contractNameByAddress[log.address]
+
       if (!contractName) {
         logger.trace(
           { address: log.address },
@@ -109,10 +101,12 @@ export async function processBlock(args: {
         continue
       }
       const eventName = log.eventName
-      if (!filteredContracts.eventNames.has(eventName)) {
+
+      if (!contracts.eventNames.has(eventName)) {
         continue
       }
       const transaction = transactionByHash.get(log.transactionHash)
+
       if (!transaction) {
         logger.trace(
           { transactionHash: log.transactionHash },
@@ -136,7 +130,7 @@ export async function processBlock(args: {
     }
   }
 
-  if (disableTransaction) {
+  if (type === 'backfill') {
     await write(db)
   } else {
     await withTransaction(db, write)

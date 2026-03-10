@@ -161,7 +161,13 @@ function generatePrepared(
   const getBlocksInRange = db.query.blocks
     .findMany({
       with: {
-        transactions: true,
+        transactions: {
+          where: {
+            to: {
+              in: sql.placeholder('contractAddresses'),
+            },
+          },
+        },
       },
       where: {
         AND: [
