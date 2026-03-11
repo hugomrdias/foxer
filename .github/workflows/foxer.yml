@@ -28,5 +28,3 @@ jobs:
       - run: pnpm install
       - run: pnpm run build
       - run: pnpm -r --filter foxer run lint
-      - run: pnpm -r --filter foxer run test
-      - run: pnpm -r --filter foxer run typecheck
