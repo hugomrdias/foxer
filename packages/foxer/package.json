@@ -4,6 +4,10 @@
   "version": "0.1.2",
   "author": "Hugo Dias <hugomrdias@gmail.com>",
   "license": "Apache-2.0 OR MIT",
+  "repository": {
+    "url": "hugomrdias/foxer",
+    "directory": "packages/foxer"
+  },
   "type": "module",
   "sideEffects": false,
   "bin": {
@@ -74,5 +78,9 @@
   "peerDependencies": {
     "hono": ">=4.5",
     "viem": ">=2"
+  },
+  "publishConfig": {
+    "provenance": true,
+    "access": "public"
   }
 }

@@ -3,8 +3,8 @@
   "version": "0.0.4",
   "description": "React hooks for interacting with Filecoin Onchain Cloud smart contracts",
   "repository": {
-    "type": "git",
-    "url": "git+https://github.com/hugomrdias/foxer.git"
+    "url": "hugomrdias/foxer",
+    "directory": "packages/foxer-react"
   },
   "keywords": [
     "filecoin",
@@ -55,6 +55,7 @@
     "viem": "2.47.1"
   },
   "publishConfig": {
+    "provenance": true,
     "access": "public"
   },
   "peerDependencies": {
