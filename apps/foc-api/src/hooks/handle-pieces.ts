@@ -1,7 +1,7 @@
+import * as Piece from '@filoz/synapse-core/piece'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { Registry } from '../../foxer.config.ts'
 import { schema } from '../schema/index.ts'
-
 // TODO add contract to the context
 
 export function handlePieces(registry: Registry) {
@@ -24,13 +24,16 @@ export function handlePieces(registry: Registry) {
     }
 
     const piecesToInsert = args.pieceIds.map((pieceId, index) => {
-      const pieceCid = args.pieceCids[index]?.data ?? null
+      const hexCid = args.pieceCids[index]?.data ?? null
+      const cid = Piece.hexToPieceCID(hexCid)
+      const size = BigInt(Piece.getSizeFromPieceCID(cid))
       return {
         id: pieceId,
         blockNumber: event.block.number,
         datasetId: args.setId,
         address: dataset.payer,
-        cid: pieceCid,
+        size,
+        cid: cid.toString(),
       }
     })
 

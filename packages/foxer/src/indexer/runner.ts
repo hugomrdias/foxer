@@ -2,7 +2,6 @@ import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { relations, schema } from '../db/schema/index.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
-import { noop } from '../utils/common.ts'
 import type { Logger } from '../utils/logger.ts'
 import { runBackfill } from './backfill.ts'
 import { startLiveSync } from './live.ts'
@@ -33,5 +32,4 @@ export async function bootstrapIndexer(options: {
   })
 
   return live
-  // return { stop: noop }
 }

@@ -8,6 +8,7 @@ export const pieces = pgTable(
     datasetId: bigint().notNull(),
     address: address().notNull(),
     cid: text('cid').notNull(),
+    size: bigint(),
     blockNumber: bigint().notNull(),
   },
   (table) => [

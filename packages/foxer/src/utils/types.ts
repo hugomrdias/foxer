@@ -1,5 +1,4 @@
 import type { Abi, ExtractAbiEvent, ExtractAbiEventNames } from 'abitype'
-import type { AccessList, Block, Transaction } from 'viem'
 import type { UnknownObject } from '../types'
 
 export type EnsureUniqueTuple<

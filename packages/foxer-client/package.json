@@ -6,6 +6,7 @@
     "type": "git",
     "url": "git+https://github.com/hugomrdias/foxer.git"
   },
+  "sideEffects": false,
   "keywords": [
     "filecoin",
     "synapse",
@@ -39,8 +40,7 @@
   ],
   "scripts": {
     "build": "tsc --build",
-    "lint": "tsc --build && biome check .",
-    "lint:fix": "biome check --fix ."
+    "lint": "tsc --build && biome check ."
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-beta.15-859cf75",

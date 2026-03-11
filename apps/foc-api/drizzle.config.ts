@@ -6,9 +6,4 @@ export default defineConfig({
   schema: ['./src/schema/*.ts', ...schemaFiles],
   dialect: 'postgresql',
   casing: 'snake_case',
-  dbCredentials: {
-    url:
-      process.env.DATABASE_URL ??
-      'postgres://postgres:postgres@localhost:5432/drizzle_indexer',
-  },
 })

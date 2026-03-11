@@ -35,7 +35,7 @@ function orderSelectedFields<TColumn extends AnyColumn>(
         result.push({ path: newPath, field })
       } else if (is(field, Table)) {
         result.push(
-          // @ts-ignore
+          // @ts-expect-error
           ...orderSelectedFields(field[Table.Symbol.Columns], newPath)
         )
       } else {
@@ -84,7 +84,6 @@ type ClientDb<
     | 'delete'
     | 'transaction'
     | 'refreshMaterializedView'
-    | '_'
     | '_query'
   >
 >
@@ -147,6 +146,7 @@ export function createClient<
       }
     ),
     live: (queryFn, onData, onError) => {
+      // biome-ignore lint/suspicious/noExplicitAny: fix later
       let result: any
       const passThroughDatabase = drizzle(
         (_, __, method) => {

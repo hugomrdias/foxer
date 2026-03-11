@@ -20,6 +20,7 @@ CREATE TABLE "pieces" (
 	"dataset_id" bigint,
 	"address" varchar(42) NOT NULL,
 	"cid" text NOT NULL,
+	"size" bigint,
 	"block_number" bigint NOT NULL,
 	CONSTRAINT "pieces_pkey" PRIMARY KEY("dataset_id","id")
 );

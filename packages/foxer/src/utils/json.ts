@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noExplicitAny: its ok */
 type Reviver = (key: string, value: any) => any
 
 export function deserialize<type>(value: string, reviver?: Reviver): type {

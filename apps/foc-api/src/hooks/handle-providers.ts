@@ -113,7 +113,7 @@ export function handleProviders(registry: Registry) {
 }
 
 function decodeRegisterProvider(input: `0x${string}`) {
-  const { functionName, args } = decodeFunctionData({
+  const { args } = decodeFunctionData({
     abi: calibration.contracts.serviceProviderRegistry.abi,
     data: input,
   })

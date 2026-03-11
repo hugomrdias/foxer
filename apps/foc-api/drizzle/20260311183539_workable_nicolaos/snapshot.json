@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "7a7b2019-8928-4862-922d-9b72e7e4b77f",
+  "id": "8bac51b8-3982-47ad-ac1f-2871f0fedb4a",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -277,6 +277,19 @@
       "generated": null,
       "identity": null,
       "name": "cid",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "pieces"
+    },
+    {
+      "type": "bigint",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "size",
       "entityType": "columns",
       "schema": "public",
       "table": "pieces"

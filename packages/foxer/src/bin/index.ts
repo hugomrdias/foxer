@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { cli } from 'cleye'
+import { create } from './create.ts'
 import { dev } from './dev.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -15,7 +16,7 @@ const packageJson = JSON.parse(
 const argv = cli({
   name: 'foxer',
   version: packageJson.version,
-  commands: [dev],
+  commands: [dev, create],
   help: {
     version: packageJson.version,
   },

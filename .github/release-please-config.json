@@ -1,0 +1,8 @@
+{
+  "separate-pull-requests": true,
+  "packages": {
+    "packages/foxer": {},
+    "packages/foxer-client": {},
+    "packages/foxer-react": {}
+  }
+}
