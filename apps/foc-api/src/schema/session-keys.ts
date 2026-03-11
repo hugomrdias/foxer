@@ -17,7 +17,10 @@ export const sessionKeys = pgTable(
     createdAt: bigint(),
     updatedAt: bigint(),
   },
-  (table) => [index('sessionKeys_identity_index').on(table.identity)]
+  (table) => [
+    index('sessionKeys_identity_index').on(table.identity),
+    index('sessionKeys_block_number_index').on(table.blockNumber),
+  ]
 )
 
 export const sessionKeyPermissions = pgTable(

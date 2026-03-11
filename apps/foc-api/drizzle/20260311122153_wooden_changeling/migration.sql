@@ -102,7 +102,11 @@ CREATE TABLE "transactions" (
 	"access_list" jsonb
 );
 --> statement-breakpoint
+CREATE INDEX "datasets_block_number_index" ON "datasets" ("block_number");--> statement-breakpoint
+CREATE INDEX "pieces_block_number_index" ON "pieces" ("block_number");--> statement-breakpoint
+CREATE INDEX "providers_block_number_index" ON "providers" ("block_number");--> statement-breakpoint
 CREATE INDEX "sessionKeys_identity_index" ON "sessionKeys" ("identity");--> statement-breakpoint
+CREATE INDEX "sessionKeys_block_number_index" ON "sessionKeys" ("block_number");--> statement-breakpoint
 CREATE INDEX "transactions_block_number_index" ON "transactions" ("block_number");--> statement-breakpoint
 CREATE INDEX "transactions_to_index" ON "transactions" ("to");--> statement-breakpoint
 ALTER TABLE "sessionKeyPermissions" ADD CONSTRAINT "sessionKeyPermissions_signer_fk" FOREIGN KEY ("signer") REFERENCES "sessionKeys"("signer") ON DELETE CASCADE;

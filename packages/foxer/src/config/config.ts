@@ -8,7 +8,6 @@ import {
   type Address,
   type FallbackTransport,
   getAbiItem,
-  getAddress,
   type HttpTransport,
   type Narrow,
   type PublicClientConfig,

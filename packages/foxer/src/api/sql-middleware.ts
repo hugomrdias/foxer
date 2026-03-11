@@ -2,6 +2,7 @@ import type { QueryWithTypings } from 'drizzle-orm'
 import { createMiddleware } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import postgres from 'postgres'
+import { PUBLICATION_NAME } from '../contants.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
 import { executeSql, validateSql } from './sql.ts'
@@ -17,14 +18,12 @@ export function sqlMiddleware({
   logger: Logger
 }) {
   let pg: postgres.Sql | undefined
+  const databaseUrl = process.env.DATABASE_URL
 
-  if (
-    process.env.DATABASE_URL &&
-    typeof process.env.DATABASE_URL === 'string'
-  ) {
+  if (databaseUrl && typeof databaseUrl === 'string') {
     // TODO: kill gracefully
-    pg = postgres(process.env.DATABASE_URL!, {
-      publications: 'alltables',
+    pg = postgres(databaseUrl, {
+      publications: PUBLICATION_NAME,
     })
   }
 

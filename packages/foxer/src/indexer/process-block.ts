@@ -87,6 +87,7 @@ export async function processBlock(args: {
       await cacheBlockAndTransactions({
         db: tx,
         block,
+        logger,
       })
     }
 

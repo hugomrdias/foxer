@@ -12,8 +12,6 @@ export async function getLogsInRange(args: {
 }): Promise<Map<bigint, Log<bigint, number, false, AbiEvent>[]>> {
   const { logger, client, addresses, events, fromBlock, toBlock } = args
 
-  // console.log('🚀 ~ getLogsInRange ~ events:', events)
-
   const endClock = startClock()
 
   const logsByBlock = new Map<bigint, Log<bigint, number, false, AbiEvent>[]>()

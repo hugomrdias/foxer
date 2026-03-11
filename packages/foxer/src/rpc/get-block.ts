@@ -24,7 +24,6 @@ export async function safeGetBlock(options: {
     return encodeBlockWithTransactions(block)
   } catch (error) {
     if (isNullRoundRpcError(error)) {
-      // console.warn('null round rpc error', blockNumber)
       let previousBlock:
         | { number: bigint; hash: Hash; parentHash: Hash }
         | undefined
@@ -36,7 +35,7 @@ export async function safeGetBlock(options: {
       )[0]
 
       let previousBlockNumber = blockNumber - 1n
-      // good to the chain and loop back until a full block is found
+      // go to the chain and loop back until a full block is found
       if (!previousBlock) {
         while (!previousBlock) {
           try {

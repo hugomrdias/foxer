@@ -1,4 +1,4 @@
-import { pgTable, primaryKey, text } from 'drizzle-orm/pg-core'
+import { index, pgTable, primaryKey, text } from 'drizzle-orm/pg-core'
 import { address, bigint } from 'foxer'
 
 export const pieces = pgTable(
@@ -10,5 +10,8 @@ export const pieces = pgTable(
     cid: text('cid').notNull(),
     blockNumber: bigint().notNull(),
   },
-  (table) => [primaryKey({ columns: [table.datasetId, table.id] })]
+  (table) => [
+    primaryKey({ columns: [table.datasetId, table.id] }),
+    index('pieces_block_number_index').on(table.blockNumber),
+  ]
 )

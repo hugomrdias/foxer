@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "277aca20-5ee7-4088-9a40-c24edb57dcbf",
+  "id": "7a7b2019-8928-4862-922d-9b72e7e4b77f",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -1104,6 +1104,69 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "block_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "datasets_block_number_index",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "datasets"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "block_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "pieces_block_number_index",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "pieces"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "block_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "providers_block_number_index",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "providers"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "identity",
           "isExpression": false,
           "asc": true,
@@ -1117,6 +1180,27 @@
       "method": "btree",
       "concurrently": false,
       "name": "sessionKeys_identity_index",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "sessionKeys"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "block_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "sessionKeys_block_number_index",
       "entityType": "indexes",
       "schema": "public",
       "table": "sessionKeys"
