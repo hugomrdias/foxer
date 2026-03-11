@@ -1,5 +1,5 @@
 {
-  "name": "foxer",
+  "name": "@hugomrdias/foxer",
   "description": "Foxer is a all-in-one application server for Filecoin.",
   "version": "0.0.1",
   "author": "Hugo Dias <hugomrdias@gmail.com>",

@@ -1,5 +1,5 @@
 {
-  "name": "foxer-client",
+  "name": "@hugomrdias/foxer-client",
   "version": "0.0.1",
   "description": "React hooks for interacting with Filecoin Onchain Cloud smart contracts",
   "repository": {

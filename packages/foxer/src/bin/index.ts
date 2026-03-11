@@ -8,7 +8,7 @@ import { create } from './create.ts'
 import { dev } from './dev.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const packageJsonPath = resolve(__dirname, '../../package.json')
+const packageJsonPath = resolve(__dirname, '../../../package.json')
 const packageJson = JSON.parse(
   readFileSync(packageJsonPath, { encoding: 'utf8' })
 )
