@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/suspicious/noConsole: its ok */
 import * as p from '@clack/prompts'
+import { createClient } from '@hugomrdias/foxer-client'
 import { type Command, command } from 'cleye'
 import { Schema } from 'foc-api'
-import { createClient } from 'foxer-client'
 import { privateKeyClient } from '../client.ts'
 import { globalFlags } from '../flags.ts'
 
