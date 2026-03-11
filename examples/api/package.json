@@ -21,7 +21,7 @@
     "dist/src/**/*.d.ts.map"
   ],
   "scripts": {
-    "dev": "@hugomrdias/foxer dev",
+    "dev": "foxer dev",
     "generate": "drizzle-kit generate",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "tsc --noEmit && biome check",

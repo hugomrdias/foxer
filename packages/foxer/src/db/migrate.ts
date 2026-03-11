@@ -23,6 +23,13 @@ export async function runMigrations({
   const { db, driver } = dbContext
   // apply migrations
   if (driver === 'postgres') {
+    // check if wal is enabled
+    const wal = await isWalEnabled(db)
+    if (!wal) {
+      throw new Error(
+        'WAL is not enabled, set wal_level=logical in your postgresql.conf or pass -c wal_level=logical to the postgres client'
+      )
+    }
     await migratePostgresJs(db, { migrationsFolder: folder })
   } else {
     await migratePglite(db, { migrationsFolder: folder })
@@ -34,14 +41,6 @@ export async function runMigrations({
   )
   // assert tables have blockNumber column and index
   assertTablesHaveBlockNumberIndex(dbContext.db._.fullSchema, tables)
-
-  // check if wal is enabled
-  const wal = await isWalEnabled(db)
-  if (!wal) {
-    throw new Error(
-      'WAL is not enabled, set wal_level=logical in your postgresql.conf or pass -c wal_level=logical to the postgres client'
-    )
-  }
 
   // create publications
   await createPublications(db, tables)
