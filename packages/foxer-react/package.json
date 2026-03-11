@@ -44,15 +44,15 @@
     "lint:fix": "biome check --fix ."
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-beta.15-859cf75",
-    "@hugomrdias/foxer-client": "workspace:^"
+    "@hugomrdias/foxer-client": "workspace:^",
+    "drizzle-orm": "1.0.0-beta.15-859cf75"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.5",
-    "@types/node": "25.3.3",
+    "@biomejs/biome": "2.4.6",
+    "@types/node": "25.4.0",
     "@types/react": "^19.2.14",
     "typescript": "5.9.3",
-    "viem": "2.46.3"
+    "viem": "2.47.1"
   },
   "publishConfig": {
     "access": "public"
