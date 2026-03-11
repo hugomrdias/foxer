@@ -13,7 +13,7 @@
     "lint": "pnpm -r --if-present run lint",
     "build": "pnpm -r --if-present run build",
     "lint:fix": "biome check --write .",
-    "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules} apps/*/{dist,node_modules}"
+    "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules} apps/*/{dist,node_modules} examples/*/{dist,node_modules}"
   },
   "keywords": [],
   "author": "Hugo Dias <hugomrdias@gmail.com>",
