@@ -2,6 +2,7 @@
   "name": "cli",
   "version": "1.0.0",
   "description": "",
+  "private": true,
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
