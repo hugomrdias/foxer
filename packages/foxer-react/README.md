@@ -1,31 +1,31 @@
 # foxer-react
 
-`foxer-react` adds React bindings for `foxer-client`, including context wiring and live query hooks powered by React Query.
+`@hugomrdias/foxer-react` adds React bindings for `@hugomrdias/foxer-client`, including provider wiring and typed query hooks powered by React Query.
 
-## Features
+## What it includes
 
-- `FoxerProvider` for app-level client context.
-- `useFoxerClient` to access the typed client.
-- `useFoxerQuery` for typed queries with optional live updates.
-- `useFoxerQueryOptions` helper for custom query integration.
+- `FoxerProvider` for app-level client context
+- `useFoxerClient()` to access the typed client
+- `useFoxerQuery()` for typed queries with optional live updates
+- `useFoxerQueryOptions()` for custom React Query integrations
 
 ## Install
 
 ```bash
-npm install foxer-react foxer-client @tanstack/react-query react
+npm install @hugomrdias/foxer-react @hugomrdias/foxer-client @tanstack/react-query react wagmi viem
 ```
 
-## Entrypoint
+## Package entrypoint
 
-- Package root: `foxer-react`
+- Package: `@hugomrdias/foxer-react`
 - Main exports: `FoxerProvider`, `useFoxerClient`, `useFoxerQuery`, `useFoxerQueryOptions`
 
 ## Usage
 
 ```tsx
+import { createClient } from '@hugomrdias/foxer-client'
+import { FoxerProvider, useFoxerQuery } from '@hugomrdias/foxer-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createClient } from 'foxer-client'
-import { FoxerProvider, useFoxerQuery } from 'foxer-react'
 
 const queryClient = new QueryClient()
 const foxer = createClient({
@@ -36,7 +36,6 @@ const foxer = createClient({
 
 function SessionKeys() {
   const { data, isPending } = useFoxerQuery({
-    live: true,
     queryFn: (db) =>
       db.query.sessionKeys.findMany({
         limit: 10,
@@ -58,3 +57,20 @@ export function App() {
   )
 }
 ```
+
+`useFoxerQuery()` enables live updates by default. Pass `live: false` if you only want a normal React Query request.
+
+## Type registration
+
+If you want `useFoxerQuery()` and `useFoxerClient()` to infer your schema globally, augment the package `Register` interface:
+
+```ts
+declare module '@hugomrdias/foxer-react' {
+  interface Register {
+    schema: typeof schema
+    relations: typeof relations
+  }
+}
+```
+
+As with `client.live()`, your query function should return a Drizzle query builder and not call `.execute()`.

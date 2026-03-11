@@ -1,33 +1,49 @@
 # foxer
 
-`foxer` is the core package for defining and running a Filecoin indexing/API service.
+`foxer` is the core package for building a Filecoin indexing service with a typed config, a Hono API, and a built-in development runtime.
 
-## Features
+## What it includes
 
-- Typed config via `createConfig`.
-- Contract/event indexing with hook registration.
-- Drizzle schema and relation support.
-- Runtime support for API + indexer bootstrap via CLI.
-- Exposes API and schema helpers through subpath exports.
+- `createConfig()` for strongly typed project configuration
+- Contract and event indexing with hook registration
+- Drizzle schema and relations support
+- A `foxer` CLI for project scaffolding and local development
+- Subpath exports for API and schema helpers
 
 ## Install
 
 ```bash
-npm install foxer
+npm install @hugomrdias/foxer hono viem
 ```
 
-## Entrypoint
+## Package entrypoints
 
-- Package root: `foxer`
-- Subpath exports: `foxer/api`, `foxer/schema`
+- Package: `@hugomrdias/foxer`
+- Subpath exports: `@hugomrdias/foxer/api`, `@hugomrdias/foxer/schema`
 - CLI binary: `foxer`
 
-## Usage
+## Quick start
 
-### Define config
+### Scaffold a new project
+
+Use the CLI to create a new workspace with starter app templates:
+
+```bash
+npx @hugomrdias/foxer create my-foxer-app
+```
+
+You can also choose the template explicitly:
+
+```bash
+npx @hugomrdias/foxer create my-foxer-app --template app
+```
+
+## Create a config
+
+Create a `foxer.config.ts` file in your project root:
 
 ```ts
-import { createConfig } from 'foxer'
+import { createConfig } from '@hugomrdias/foxer'
 import { http } from 'viem'
 
 export const config = createConfig({
@@ -37,10 +53,10 @@ export const config = createConfig({
     chain: /* your viem chain */,
   },
   contracts: {
-    // contract definitions
+    // contract definitions keyed by name
   },
   hooks: ({ registry }) => {
-    // registry.on(...) handlers
+    // register event handlers
   },
   hono: ({ db, logger }) => {
     // return your Hono app
@@ -49,8 +65,66 @@ export const config = createConfig({
 })
 ```
 
-### Run locally
+`createConfig()` accepts a few optional runtime settings in addition to the required `client`, `contracts`, `hooks`, `hono`, and `schema` fields:
+
+- `batchSize` for backfill block batch size
+- `finality` for chain finality
+- `drizzleFolder` for migration output location
+- `database` for choosing `postgres` or `pglite`
+- `relations` for Drizzle relations
+
+## Run locally
+
+The `dev` command loads `foxer.config.ts`, runs migrations, starts the API server, and boots the indexer.
 
 ```bash
 foxer dev
 ```
+
+Useful flags:
+
+```bash
+foxer dev --port 4200
+foxer dev --root .
+foxer dev --config ./foxer.config.ts
+```
+
+The dev server also looks for `.env.local` in the project root.
+
+## Example
+
+```ts
+import { createConfig } from '@hugomrdias/foxer'
+import { http } from 'viem'
+
+export const config = createConfig({
+  batchSize: 500,
+  client: {
+    transport: http(process.env.RPC_URL, {
+      batch: { batchSize: 10 },
+    }),
+    realtimeTransport: http(process.env.RPC_LIVE_URL),
+    chain: /* calibration, mainnet, etc */,
+  },
+  contracts: {
+    myContract: {
+      address: '0x...',
+      abi: [],
+      events: ['Transfer'],
+      startBlock: 0n,
+    },
+  },
+  hooks: ({ registry }) => {
+    // registry.on(...)
+  },
+  hono: ({ db, logger }) => {
+    // build and return your Hono app
+  },
+  schema: {},
+})
+```
+
+## Related packages
+
+- `@hugomrdias/foxer-client` for consuming the SQL/API layer from clients
+- `@hugomrdias/foxer-react` for React integration helpers
