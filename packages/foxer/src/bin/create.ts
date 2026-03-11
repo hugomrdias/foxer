@@ -149,7 +149,10 @@ export const create: Command = command(
     p.log.step(`Scaffolding project in ${root}...`)
 
     const pkg = JSON.parse(
-      readFileSync(resolve(__dirname, `../../template/package.json`), 'utf-8')
+      readFileSync(
+        resolve(__dirname, `../../../template/package.json`),
+        'utf-8'
+      )
     )
 
     pkg.name = packageName
@@ -161,17 +164,17 @@ export const create: Command = command(
 
     if (pm === 'pnpm') {
       copy(
-        resolve(__dirname, `../../template/pnpm-workspace.yaml`),
+        resolve(__dirname, `../../../template/pnpm-workspace.yaml`),
         resolve(root, 'pnpm-workspace.yaml')
       )
     }
 
     copy(
-      resolve(__dirname, `../../template/biome.json`),
+      resolve(__dirname, `../../../template/biome.json`),
       resolve(root, 'biome.json')
     )
     copy(
-      resolve(__dirname, `../../template/tsconfig.json`),
+      resolve(__dirname, `../../../template/tsconfig.json`),
       resolve(root, 'tsconfig.json')
     )
 
