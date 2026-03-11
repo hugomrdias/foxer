@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.2...foxer-v0.1.3) (2026-03-11)
+
+
+### Bug Fixes
+
+* update package.json files for foxer components to include repository details and publish configuration ([6f4dcac](https://github.com/hugomrdias/foxer/commit/6f4dcacd9b998f08a540561b97e8306e8051a843))
+
 ## [0.1.2](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.1...foxer-v0.1.2) (2026-03-11)
 
 
