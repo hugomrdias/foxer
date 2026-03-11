@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",
-    "@filoz/synapse-core": "^0.2.2",
+    "@filoz/synapse-core": "^0.3.0",
     "cleye": "^2.2.1",
     "conf": "^15.1.0",
     "@hugomrdias/foxer-client": "workspace:*",
