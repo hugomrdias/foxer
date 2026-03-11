@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.0...foxer-v0.1.1) (2026-03-11)
+
+
+### Bug Fixes
+
+* update README to include Hono middleware support for SQL over HTTP ([20c19b9](https://github.com/hugomrdias/foxer/commit/20c19b925e8da49076f21fa9bd4ee0e93885f8dd))
+
 ## [0.1.0](https://github.com/hugomrdias/foxer/compare/foxer-v0.0.7...foxer-v0.1.0) (2026-03-11)
 
 
