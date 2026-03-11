@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.1...foxer-v0.1.2) (2026-03-11)
+
+
+### Bug Fixes
+
+* update README to include support for live queries ([d4101b2](https://github.com/hugomrdias/foxer/commit/d4101b2b019f0ee6628e60fdcef6441f7ba84d73))
+
 ## [0.1.1](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.0...foxer-v0.1.1) (2026-03-11)
 
 
