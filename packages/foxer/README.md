@@ -6,6 +6,7 @@
 
 - `createConfig()` for strongly typed project configuration
 - Contract and event indexing with hook registration
+- Hono middleware with support for SQL over HTTP
 - Drizzle schema and relations support
 - A `foxer` CLI for project scaffolding and local development
 - Subpath exports for API and schema helpers
