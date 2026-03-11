@@ -170,7 +170,7 @@ export const create: Command = command(
     }
 
     copy(
-      resolve(__dirname, `../../../template/biome.json`),
+      resolve(__dirname, `../../../template/biome.template.json`),
       resolve(root, 'biome.json')
     )
     copy(
