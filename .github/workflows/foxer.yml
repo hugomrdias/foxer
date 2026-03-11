@@ -5,7 +5,7 @@ env:
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - "packages/foxer/**"
       - .github/workflows/foxer.yml
