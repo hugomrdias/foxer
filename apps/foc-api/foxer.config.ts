@@ -9,7 +9,7 @@ import { handleProviders } from './src/hooks/handle-providers.ts'
 import { handleSessionKeys } from './src/hooks/handle-session-keys.ts'
 import { relations, schema } from './src/schema/index.ts'
 
-const START_BLOCK = 3140755n // service provider registry start block
+const START_BLOCK = 3140755n + 379_000n // service provider registry start block
 
 export type Database = FoxerDatabase<typeof schema, typeof relations>
 

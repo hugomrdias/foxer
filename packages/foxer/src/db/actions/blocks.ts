@@ -194,6 +194,7 @@ export async function insertBlocksInChunks(args: {
   blocks: EncodedBlockWithTransactions[]
 }): Promise<void> {
   const { db, blocks } = args
+  if (blocks.length === 0) return
 
   const batchSize = Math.floor(MAX_QUERY_PARAMS / Object.keys(blocks[0]).length)
   for (let i = 0; i < blocks.length; i += batchSize) {

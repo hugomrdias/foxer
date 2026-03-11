@@ -75,7 +75,6 @@ export function sqlMiddleware({
       if (dbResult.error) {
         return sseError(c, dbResult.error.message)
       }
-      liveQueryCount++
 
       if (!pg) {
         return sseError(
@@ -85,13 +84,14 @@ export function sqlMiddleware({
       }
 
       const subscriptions: (() => void)[] = []
+      liveQueryCount++
 
       return streamSSE(
         c,
         async (stream) => {
           stream.onAbort(() => {
             liveQueryCount--
-            logger.debug('stream aborted')
+            logger.trace('stream aborted')
             subscriptions.forEach((unsubscribe) => {
               unsubscribe()
             })
@@ -102,22 +102,13 @@ export function sqlMiddleware({
           })
 
           for (const table of tables) {
-            const { unsubscribe } = await pg.subscribe(
-              table,
-              async () => {
-                const dbResult = await executeSql({ db, query })
-                stream.writeSSE({
-                  data: JSON.stringify(dbResult.result),
-                })
-              },
-              () => {
-                logger.debug(`subscribed to ${table}`)
-              },
-              () => {
-                logger.warn(`unsubscribed from ${table}`)
-              }
-            )
-            subscriptions.push(unsubscribe)
+            const sub = await pg.subscribe(`*:${table}`, async () => {
+              const dbResult = await executeSql({ db, query })
+              stream.writeSSE({
+                data: JSON.stringify(dbResult.result),
+              })
+            })
+            subscriptions.push(sub.unsubscribe)
           }
 
           while (stream.closed === false && stream.aborted === false) {

@@ -2,6 +2,7 @@ import PQueue from 'p-queue'
 import type { PublicClient } from 'viem'
 import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
+import type { relations, schema } from '../db/schema/index.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { noop } from '../utils/common.ts'
 import type { Logger } from '../utils/logger.ts'
@@ -13,7 +14,7 @@ import { queueBlock } from './queue-block.ts'
 export function startLiveSync(args: {
   logger: Logger
   config: InternalConfig
-  db: Database
+  db: Database<typeof schema, typeof relations>
   client: PublicClient
   registry: HookRegistry
   initialCursor: bigint

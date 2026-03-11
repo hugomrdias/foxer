@@ -1,7 +1,8 @@
-import { type AbiEvent, getAddress, type Log, type PublicClient } from 'viem'
+import type { AbiEvent, Log, PublicClient } from 'viem'
 import type { FilteredContracts, InternalConfig } from '../config/config.ts'
 import { cacheBlockAndTransactions } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
+import type { relations, schema } from '../db/schema/index.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { safeGetBlock } from '../rpc/get-block.ts'
@@ -19,7 +20,7 @@ export type ProcessBlockResult =
 export async function processBlock(args: {
   logger: Logger
   config: InternalConfig
-  db: Database
+  db: Database<typeof schema, typeof relations>
   client: PublicClient
   registry: HookRegistry<NonNullable<unknown>>
   blockNumber: bigint
@@ -82,7 +83,7 @@ export async function processBlock(args: {
     }
   }
 
-  const write = async (tx: Database) => {
+  const write = async (tx: Database<typeof schema, typeof relations>) => {
     if (type === 'live') {
       await cacheBlockAndTransactions({
         db: tx,

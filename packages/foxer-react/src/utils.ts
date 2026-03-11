@@ -14,7 +14,6 @@ export function getFoxerQueryOptions<T>(
   queryFn: () => T
 } {
   const queryPromise = queryFn(client.db)
-
   // @ts-expect-error
   if ('getSQL' in queryPromise === false) {
     throw new Error(

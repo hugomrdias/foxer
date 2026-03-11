@@ -2,6 +2,7 @@ import type { Logger } from 'pino'
 import type { PublicClient } from 'viem'
 import { filterContracts, type InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
+import type { relations, schema } from '../db/schema/index.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { startClock } from '../utils/timer.ts'
 import { processBlock } from './process-block.ts'
@@ -11,7 +12,7 @@ export type QueueBlockArgs = {
   blockNumber: bigint
   onRewind: (rewindTo: bigint) => void
   config: InternalConfig
-  db: Database
+  db: Database<typeof schema, typeof relations>
   client: PublicClient
   registry: HookRegistry
   queueSize: number
