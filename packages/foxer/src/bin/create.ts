@@ -1,14 +1,28 @@
-import { existsSync, readdirSync } from 'node:fs'
-import { basename, resolve } from 'node:path'
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { basename, dirname, relative, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { downloadTemplate } from '@bluwy/giget-core'
 import * as p from '@clack/prompts'
 import { type Command, command } from 'cleye'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 const possibleTemplates = ['app', 'cli'] as const
 type Templates = (typeof possibleTemplates)[number]
 
 const Template = (template: Templates) => {
   if (!possibleTemplates.includes(template)) {
-    throw new Error(`Invalid template: "${template}"`)
+    throw new Error(
+      `Invalid template: "${template}" (must be one of ${possibleTemplates.join(', ')})`
+    )
   }
   return template
 }
@@ -55,6 +69,44 @@ function toValidPackageName(projectName: string) {
     .replace(/[^a-z\d\-~]+/g, '-')
 }
 
+function copy(src: string, dest: string) {
+  const stat = statSync(src)
+  if (stat.isDirectory()) {
+    copyDir(src, dest)
+  } else {
+    copyFileSync(src, dest)
+  }
+}
+
+function copyDir(srcDir: string, destDir: string) {
+  mkdirSync(destDir, { recursive: true })
+  for (const file of readdirSync(srcDir)) {
+    const srcFile = resolve(srcDir, file)
+    const destFile = resolve(destDir, file)
+    copy(srcFile, destFile)
+  }
+}
+
+function getInstallCommand(agent: string) {
+  if (agent === 'yarn') {
+    return [agent]
+  }
+  return [agent, 'install']
+}
+
+function getRunCommand(agent: string, script: string) {
+  switch (agent) {
+    case 'yarn':
+    case 'pnpm':
+    case 'bun':
+      return [agent, script]
+    case 'deno':
+      return [agent, 'task', script]
+    default:
+      return [agent, 'run', script]
+  }
+}
+
 export const create: Command = command(
   {
     name: 'create',
@@ -71,17 +123,12 @@ export const create: Command = command(
       examples: [`foxer create <name>`],
     },
   },
-  (argv) => {
+  async (argv) => {
     const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent)
     const pm = pkgInfo ? pkgInfo.name : 'npm'
     const targetDir = formatTargetDir(argv._.name)
     const cwd = process.cwd()
     const root = resolve(cwd, targetDir)
-
-    console.log('🚀 ~ root:', root)
-
-    console.log('🚀 ~ targetDir:', targetDir)
-    console.log('🚀 ~ pm:', pkgInfo)
 
     if (existsSync(root) && !isEmpty(root)) {
       p.log.error('Directory already exists and is not empty')
@@ -92,6 +139,61 @@ export const create: Command = command(
     if (!isValidPackageName(packageName)) {
       packageName = toValidPackageName(packageName)
     }
-    console.log('🚀 ~ packageName:', packageName)
+
+    let template = argv.flags.template
+    if (!possibleTemplates.includes(template as Templates)) {
+      template = 'app'
+    }
+
+    mkdirSync(root, { recursive: true })
+    p.log.step(`Scaffolding project in ${root}...`)
+
+    const pkg = JSON.parse(
+      readFileSync(resolve(__dirname, `../../template/package.json`), 'utf-8')
+    )
+
+    pkg.name = packageName
+
+    writeFileSync(
+      resolve(root, 'package.json'),
+      `${JSON.stringify(pkg, null, 2)}\n`
+    )
+
+    if (pm === 'pnpm') {
+      copy(
+        resolve(__dirname, `../../template/pnpm-workspace.yaml`),
+        resolve(root, 'pnpm-workspace.yaml')
+      )
+    }
+
+    copy(
+      resolve(__dirname, `../../template/biome.json`),
+      resolve(root, 'biome.json')
+    )
+    copy(
+      resolve(__dirname, `../../template/tsconfig.json`),
+      resolve(root, 'tsconfig.json')
+    )
+
+    // copy apps/foc-api
+    await downloadTemplate('hugomrdias/foxer/examples/api', {
+      dir: resolve(root, 'apps/api'),
+    })
+
+    await downloadTemplate('hugomrdias/foxer/examples/app', {
+      dir: resolve(root, 'apps/app'),
+    })
+
+    let doneMessage = ''
+    const cdProjectName = relative(cwd, root)
+    doneMessage += `Done. Now run:\n`
+    if (root !== cwd) {
+      doneMessage += `\n  cd ${
+        cdProjectName.includes(' ') ? `"${cdProjectName}"` : cdProjectName
+      }`
+    }
+    doneMessage += `\n  ${getInstallCommand(pm).join(' ')}`
+    doneMessage += `\n  ${getRunCommand(pm, 'dev').join(' ')}`
+    p.outro(doneMessage)
   }
 )

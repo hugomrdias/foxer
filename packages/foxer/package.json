@@ -41,6 +41,7 @@
     "lint": "tsc --build && biome check ."
   },
   "dependencies": {
+    "@bluwy/giget-core": "^0.1.6",
     "@clack/prompts": "^1.1.0",
     "@electric-sql/pglite": "^0.3.8",
     "@hono/node-server": "^1.19.5",

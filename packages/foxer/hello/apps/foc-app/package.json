@@ -1,0 +1,39 @@
+{
+  "name": "eip191",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "tsc --build && biome check --no-errors-on-unmatched --files-ignore-unknown=true .",
+    "preview": "pnpm run build && vite preview",
+    "deploy": "pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.90.12",
+    "filsnap-adapter": "^3.3.8",
+    "iso-base": "workspace:*",
+    "iso-did": "workspace:*",
+    "iso-kv": "workspace:*",
+    "iso-signatures": "workspace:*",
+    "iso-ucan": "workspace:*",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "viem": "~2.43.3",
+    "wagmi": "^3.1.0",
+    "zod": "^4.2.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.19.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "globals": "^16.5.0",
+    "hono": "^4.11.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.0",
+    "wrangler": "^4.56.0"
+  }
+}

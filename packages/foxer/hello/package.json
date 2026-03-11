@@ -1,0 +1,22 @@
+{
+  "name": "hello",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "pnpm -r --if-present run lint",
+    "build": "pnpm -r --if-present run build",
+    "lint:fix": "biome check --write ."
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.5"
+  }
+}
