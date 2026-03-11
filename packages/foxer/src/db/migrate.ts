@@ -214,8 +214,12 @@ function hasCascadeForeignKeyToBlockNumberTable(
  * @returns True if WAL is enabled, false otherwise
  */
 export async function isWalEnabled(db: Database) {
-  const wal = await db
-    .execute('SHOW WAL_LEVEL')
-    .then((result) => result.rows[0].wal_level)
-  return wal === 'logical'
+  try {
+    const wal = await db
+      .execute('SHOW WAL_LEVEL')
+      .then((result) => result.rows[0].wal_level)
+    return wal === 'logical'
+  } catch (error) {
+    throw new Error('Failed to check if WAL is enabled', { cause: error })
+  }
 }
