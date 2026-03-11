@@ -1,9 +1,9 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: its ok */
 
 import { calibration, mainnet } from '@filoz/synapse-core/chains'
+import { createClient } from '@hugomrdias/foxer-client'
+import { FoxerProvider } from '@hugomrdias/foxer-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createClient } from 'foxer-client'
-import { FoxerProvider } from 'foxer-react'
 import { NuqsAdapter } from 'nuqs/adapters/react'
 import { createRoot } from 'react-dom/client'
 import { Schema } from '../../foc-api/src/index.ts'
@@ -36,7 +36,7 @@ declare module 'wagmi' {
   }
 }
 
-declare module 'foxer-react' {
+declare module '@hugomrdias/foxer-react' {
   interface Register {
     schema: typeof Schema.schema
     relations: typeof Schema.relations

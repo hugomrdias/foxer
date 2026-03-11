@@ -1,7 +1,7 @@
 /** biome-ignore-all assist/source/useSortedAttributes: false positive */
 /** biome-ignore-all lint/style/noNonNullAssertion: its ok */
 import * as SessionKey from '@filoz/synapse-core/session-key'
-import { useFoxerQuery } from 'foxer-react'
+import { useFoxerQuery } from '@hugomrdias/foxer-react'
 import { toast } from 'sonner'
 import { generatePrivateKey } from 'viem/accounts'
 import { useConnection, useConnectorClient } from 'wagmi'

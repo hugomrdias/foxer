@@ -1,4 +1,4 @@
-import { buildConflictUpdateColumns } from 'foxer'
+import { buildConflictUpdateColumns } from '@hugomrdias/foxer'
 import type { Registry } from '../../foxer.config.ts'
 import { schema } from '../schema/index.ts'
 

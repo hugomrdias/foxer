@@ -22,7 +22,7 @@
     "@filoz/synapse-core": "^0.2.2",
     "cleye": "^2.2.1",
     "conf": "^15.1.0",
-    "foxer-client": "latest",
+    "@hugomrdias/foxer-client": "latest",
     "foc-api": "workspace:*",
     "terminal-link": "^5.0.0",
     "viem": "^2.46.3"

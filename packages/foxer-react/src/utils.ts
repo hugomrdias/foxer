@@ -1,5 +1,5 @@
+import { type Client, compileQuery } from '@hugomrdias/foxer-client'
 import type { QueryKey } from '@tanstack/react-query'
-import { type Client, compileQuery } from 'foxer-client'
 import { stringify } from 'viem'
 import type { ResolvedSchema } from './index.js'
 

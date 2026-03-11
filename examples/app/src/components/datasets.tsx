@@ -1,4 +1,4 @@
-import { useFoxerQuery } from 'foxer-react'
+import { useFoxerQuery } from '@hugomrdias/foxer-react'
 import { useState } from 'react'
 import { useConnection } from 'wagmi'
 import {

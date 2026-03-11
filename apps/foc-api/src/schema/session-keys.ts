@@ -1,3 +1,4 @@
+import { address, bigint, hash } from '@hugomrdias/foxer'
 import {
   foreignKey,
   index,
@@ -5,7 +6,6 @@ import {
   primaryKey,
   text,
 } from 'drizzle-orm/pg-core'
-import { address, bigint, hash } from 'foxer'
 
 export const sessionKeys = pgTable(
   'sessionKeys',

@@ -1,5 +1,5 @@
+import { address, bigint } from '@hugomrdias/foxer'
 import { index, integer, pgTable, text, varchar } from 'drizzle-orm/pg-core'
-import { address, bigint } from 'foxer'
 
 export const providers = pgTable(
   'providers',

@@ -1,5 +1,6 @@
 'use client'
 
+import type { Client } from '@hugomrdias/foxer-client'
 import {
   type DefaultError,
   type QueryKey,
@@ -9,7 +10,6 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import type { EmptyRelations } from 'drizzle-orm/relations'
-import type { Client } from 'foxer-client'
 import {
   createContext,
   createElement,

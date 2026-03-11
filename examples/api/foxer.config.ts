@@ -1,6 +1,6 @@
 import { calibration } from '@filoz/synapse-core/chains'
-import type { Database as FoxerDatabase, HookRegistry } from 'foxer'
-import { createConfig } from 'foxer'
+import type { Database as FoxerDatabase, HookRegistry } from '@hugomrdias/foxer'
+import { createConfig } from '@hugomrdias/foxer'
 import { http } from 'viem'
 import { buildApp } from './src/app.ts'
 import { handleDatasets } from './src/hooks/handle-datasets.ts'

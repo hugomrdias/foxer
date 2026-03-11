@@ -1,5 +1,5 @@
+import { address, bigint } from '@hugomrdias/foxer'
 import { index, pgTable, primaryKey, text } from 'drizzle-orm/pg-core'
-import { address, bigint } from 'foxer'
 
 export const pieces = pgTable(
   'pieces',
