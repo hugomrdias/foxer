@@ -52,7 +52,7 @@
     "@types/node": "25.3.3",
     "@types/react": "^19.2.14",
     "typescript": "5.9.3",
-    "viem": "2.46.3"
+    "viem": "2.47.1"
   },
   "publishConfig": {
     "access": "public"

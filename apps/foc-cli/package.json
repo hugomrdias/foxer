@@ -25,6 +25,6 @@
     "@hugomrdias/foxer-client": "workspace:*",
     "foc-api": "workspace:*",
     "terminal-link": "^5.0.0",
-    "viem": "^2.46.3"
+    "viem": "^2.47.1"
   }
 }
