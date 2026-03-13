@@ -5,7 +5,7 @@ import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
 import { createApiServer } from './server.ts'
 
-export function bootstrapApiServer(options: {
+export function createApi(options: {
   db: Database
   config: InternalConfig
   logger: Logger

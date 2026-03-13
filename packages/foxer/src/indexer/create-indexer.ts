@@ -7,7 +7,7 @@ import { runBackfill } from './backfill.ts'
 import { startLiveSync } from './live.ts'
 import { verifyRecentBlocks } from './reorg.ts'
 
-export async function bootstrapIndexer(options: {
+export async function createIndexer(options: {
   logger: Logger
   db: Database<typeof schema, typeof relations>
   registry: HookRegistry

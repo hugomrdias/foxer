@@ -39,7 +39,7 @@ export type DatabaseContext<
         $prepared: ReturnType<typeof generatePrepared>
       }
       driver: 'postgres'
-      close: () => Promise<void>
+      stop: () => Promise<void>
     }
   | {
       db: PgliteDatabase<TSchema, TRelations> & {
@@ -47,7 +47,7 @@ export type DatabaseContext<
         $prepared: ReturnType<typeof generatePrepared>
       }
       driver: 'pglite'
-      close: () => Promise<void>
+      stop: () => Promise<void>
     }
 
 /**
@@ -80,6 +80,7 @@ export function createDatabase<
     options = config.options
   }
 
+  // Postgres
   if (driver === 'postgres' && url) {
     const pool = new Pool({
       ...options,
@@ -101,12 +102,13 @@ export function createDatabase<
     return {
       db,
       driver: 'postgres',
-      close: async () => {
+      stop: async () => {
         await pool.end()
       },
     }
   }
 
+  // PGlite
   const client = new PGlite(
     config?.driver === 'pglite' && config.directory
       ? config.directory
@@ -128,7 +130,7 @@ export function createDatabase<
   return {
     db,
     driver: 'pglite',
-    close: async () => {
+    stop: async () => {
       await client.close()
     },
   }

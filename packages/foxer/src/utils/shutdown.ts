@@ -8,15 +8,16 @@ export function createExit({
   logger: Logger
   stop: () => Promise<void>
 }) {
+  registerUnhandled({ logger })
   asyncExitHook(
     async () => {
       logger.warn('shutting down...')
       await stop()
       logger.info('shutdown complete')
-      process.exit(0)
+      // process.exit(0)
     },
     {
-      wait: 300,
+      wait: 1000,
     }
   )
 }

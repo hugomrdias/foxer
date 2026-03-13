@@ -1,37 +1,31 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { type Command, command } from 'cleye'
 import { gracefulExit } from 'exit-hook'
 import { createApi } from '../api/create-api.ts'
 import { createEnv } from '../config/env.ts'
 import { createDatabase } from '../db/client.ts'
-import { runMigrations } from '../db/migrate.ts'
 import * as InternalSchema from '../db/schema/index.ts'
-import { createRegistry } from '../hooks/registry.ts'
-import { createIndexer } from '../indexer/create-indexer.ts'
 import { createLogger } from '../utils/logger.ts'
 import { createExit } from '../utils/shutdown.ts'
 import { globalFlags } from './flags.ts'
 import { loadConfig } from './utils.ts'
 
-export const dev: Command = command(
+export const serve: Command = command(
   {
-    name: 'dev',
+    name: 'serve',
     flags: { ...globalFlags },
     help: {
-      description: 'Start the development server',
+      description: 'Serve the production HTTP API and without the indexer',
     },
   },
   async (argv) => {
     const logger = createLogger({
       level: argv.flags.logLevel,
-      mode: argv.flags.logMode,
+      mode: 'json',
     })
 
-    if (!fs.existsSync(path.join(argv.flags.root, '.env.local'))) {
-      logger.warn({
-        msg: 'Local environment file (.env.local) not found',
-      })
+    if (process.env.DATABASE_URL == null) {
+      logger.error('DATABASE_URL environment variable is not set')
+      gracefulExit(1)
     }
 
     try {
@@ -48,39 +42,22 @@ export const dev: Command = command(
         relations: { ...config.relations, ...InternalSchema.relations },
       })
 
-      await runMigrations({
-        dbContext,
-        folder: path.resolve(argv.flags.root, config.drizzleFolder),
+      const api = createApi({
+        db: dbContext.db,
+        config,
         logger,
+        port: argv.flags.port,
       })
-
-      const registry = createRegistry({ config })
-
-      const [api, indexer] = await Promise.all([
-        createApi({
-          db: dbContext.db,
-          config,
-          logger,
-          port: argv.flags.port,
-        }),
-        createIndexer({
-          logger,
-          db: dbContext.db,
-          registry,
-          config,
-        }),
-      ])
 
       createExit({
         logger,
         stop: async () => {
-          indexer.stop()
           api.stop()
           await dbContext.stop()
         },
       })
     } catch (error) {
-      logger.error({ error }, 'dev server failed')
+      logger.error({ error }, 'HTTP API server failed')
       gracefulExit(1)
     }
   }

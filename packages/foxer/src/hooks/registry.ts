@@ -1,5 +1,6 @@
 import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
 import type { GetEventArgs, Log } from 'viem'
+import type { InternalConfig } from '../config/config'
 import type { Database } from '../db/client'
 import type { EncodedBlockWithTransactions, EncodedTransaction } from '../types'
 import type { Logger } from '../utils/logger'
@@ -104,4 +105,14 @@ export class HookRegistry<
       event,
     })
   }
+}
+
+export function createRegistry({
+  config,
+}: {
+  config: InternalConfig
+}): HookRegistry {
+  const registry = new HookRegistry()
+  config.hooks({ registry })
+  return registry
 }

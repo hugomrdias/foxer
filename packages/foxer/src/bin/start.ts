@@ -1,4 +1,3 @@
-import fs from 'node:fs'
 import path from 'node:path'
 import { type Command, command } from 'cleye'
 import { gracefulExit } from 'exit-hook'
@@ -14,24 +13,23 @@ import { createExit } from '../utils/shutdown.ts'
 import { globalFlags } from './flags.ts'
 import { loadConfig } from './utils.ts'
 
-export const dev: Command = command(
+export const start: Command = command(
   {
-    name: 'dev',
+    name: 'start',
     flags: { ...globalFlags },
     help: {
-      description: 'Start the development server',
+      description: 'Start the production server',
     },
   },
   async (argv) => {
     const logger = createLogger({
       level: argv.flags.logLevel,
-      mode: argv.flags.logMode,
+      mode: 'json',
     })
 
-    if (!fs.existsSync(path.join(argv.flags.root, '.env.local'))) {
-      logger.warn({
-        msg: 'Local environment file (.env.local) not found',
-      })
+    if (process.env.DATABASE_URL != null) {
+      logger.error('DATABASE_URL environment variable is not set')
+      gracefulExit(1)
     }
 
     try {
@@ -80,7 +78,7 @@ export const dev: Command = command(
         },
       })
     } catch (error) {
-      logger.error({ error }, 'dev server failed')
+      logger.error({ error }, 'start server failed')
       gracefulExit(1)
     }
   }

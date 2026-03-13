@@ -4,6 +4,7 @@ import type { Logger } from '../utils/logger'
 
 dotenv.config({
   path: '.env.local',
+  quiet: true,
 })
 
 export type Env = z.infer<typeof envSchema>
