@@ -40,7 +40,7 @@ export async function runBackfill(args: {
   }
 
   const batchSize = config.batchSize
-  logger.debug(
+  logger.info(
     {
       fromBlock: cursor.toString(),
       toBlock: safeHead.toString(),
@@ -54,14 +54,6 @@ export async function runBackfill(args: {
     const toBlock = windowEnd(cursor, batchSize, safeHead)
     const windowContracts = filterContracts(config, cursor, toBlock)
 
-    logger.debug(
-      {
-        batchFromBlock: cursor.toString(),
-        batchToBlock: toBlock.toString(),
-        streamCount: windowContracts.addresses.length,
-      },
-      'processing backfill batch'
-    )
     const batchBlockNumbers: bigint[] = []
     let blockNumber = cursor
     while (blockNumber <= toBlock) {
@@ -104,7 +96,7 @@ export async function runBackfill(args: {
         blockIndex += 1
       }
     })
-    logger.info(
+    logger.debug(
       { duration: endClockBatch() },
       'batch block and events processed'
     )
@@ -118,6 +110,7 @@ export async function runBackfill(args: {
       {
         indexedUpTo: toBlock.toString(),
         duration: batchElapsedMs,
+        contracts: windowContracts.addresses.length,
         throughput: Number(blocksPerSecond.toFixed(2)),
       },
       'backfill batch completed'

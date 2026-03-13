@@ -10,7 +10,7 @@ import { schema } from '../schema/index.ts'
 
 export function handleDatasets(registry: Registry) {
   registry.on('storage:DataSetCreated', async ({ context, event }) => {
-    context.logger.debug({ event: event.args }, 'DataSetCreated')
+    context.logger.silent({ event: event.args }, 'DataSetCreated')
     const ds = event.args
 
     const metadata = metadataArrayToObject([ds.metadataKeys, ds.metadataValues])
@@ -36,7 +36,7 @@ export function handleDatasets(registry: Registry) {
       })
   })
   registry.on('storage:ServiceTerminated', async ({ context, event }) => {
-    context.logger.debug({ event: event.args }, 'DataSetDeleted')
+    context.logger.silent({ event: event.args }, 'DataSetDeleted')
     const ds = event.args
     await context.db
       .delete(schema.datasets)

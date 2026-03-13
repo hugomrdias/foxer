@@ -27,7 +27,7 @@ export async function getLogsInRange(args: {
     byBlock.push(log)
     logsByBlock.set(log.blockNumber, byBlock)
   }
-  logger.info(
+  logger.trace(
     {
       logs: logsByBlock.size,
       duration: endClock(),

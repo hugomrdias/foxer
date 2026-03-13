@@ -15,7 +15,7 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProviderRegistered',
     async ({ context, event }) => {
-      context.logger.debug({ event: event.args }, 'ProviderRegistered')
+      context.logger.silent({ event: event.args }, 'ProviderRegistered')
       const args = event.args
 
       const decoded = decodeRegisterProvider(
@@ -50,7 +50,7 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProviderRemoved',
     async ({ context, event }) => {
-      context.logger.debug({ event: event.args }, 'ProviderRemoved')
+      context.logger.silent({ event: event.args }, 'ProviderRemoved')
       const args = event.args
       await context.db
         .delete(schema.providers)
@@ -61,7 +61,7 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProviderInfoUpdated',
     async ({ context, event }) => {
-      context.logger.debug({ event: event.args }, 'ProviderInfoUpdated')
+      context.logger.silent({ event: event.args }, 'ProviderInfoUpdated')
       const args = event.args
 
       const decoded = decodeUpdateProviderInfo(
@@ -88,7 +88,7 @@ export function handleProviders(registry: Registry) {
   registry.on(
     'serviceProviderRegistry:ProductUpdated',
     async ({ context, event }) => {
-      context.logger.debug({ event: event.args }, 'ProductUpdated')
+      context.logger.silent({ event: event.args }, 'ProductUpdated')
       const args = event.args
 
       const capabilities = decodePDPCapabilities(

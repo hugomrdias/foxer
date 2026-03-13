@@ -175,7 +175,7 @@ export async function getBlocksInRange(
     })
   })
 
-  logger.info(
+  logger.trace(
     {
       blocks: blocksByNumber.size,
       missing: missingBlockNumbers.length,

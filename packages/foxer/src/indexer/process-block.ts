@@ -96,7 +96,7 @@ export async function processBlock(args: {
       const contractName = contracts.contractNameByAddress[log.address]
 
       if (!contractName) {
-        logger.trace(
+        logger.debug(
           { address: log.address },
           'contract not found in contract name by address'
         )
@@ -110,7 +110,7 @@ export async function processBlock(args: {
       const transaction = transactionByHash.get(log.transactionHash)
 
       if (!transaction) {
-        logger.trace(
+        logger.debug(
           { transactionHash: log.transactionHash },
 
           'transaction not found in block transaction list'

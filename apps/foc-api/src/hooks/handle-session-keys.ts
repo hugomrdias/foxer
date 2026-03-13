@@ -8,7 +8,7 @@ export function handleSessionKeys(registry: Registry) {
   registry.on(
     'sessionKeyRegistry:AuthorizationsUpdated',
     async ({ context, event }) => {
-      context.logger.warn(
+      context.logger.silent(
         { event: event.args, transaction: event.transaction.hash },
 
         'AuthorizationsUpdated'
