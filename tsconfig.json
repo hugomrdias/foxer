@@ -34,7 +34,7 @@
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    // "erasableSyntaxOnly": true,
+    "erasableSyntaxOnly": true,
 
     /* Type Checking */
     "strict": true,

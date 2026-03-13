@@ -16,8 +16,7 @@
     "moduleDetection": "force",
 
     // Modules
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "preserve",
     "resolveJsonModule": true,
     "rewriteRelativeImportExtensions": true,
 

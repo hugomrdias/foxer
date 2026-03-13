@@ -27,10 +27,9 @@
   "scripts": {
     "dev": "foxer dev",
     "generate": "drizzle-kit generate",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "tsc --noEmit && biome check",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc -p ./tsconfig.client.json"
+    "check": "vp lint && vp fmt",
+    "build": "tsc -p ./tsconfig.client.json",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@filoz/synapse-core": "^0.3.0",

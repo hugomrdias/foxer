@@ -4,9 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vp dev",
-    "build": "tsc && vp build",
-    "lint": "biome check --fix .",
     "preview": "vp preview"
   },
   "dependencies": {

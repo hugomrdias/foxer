@@ -12,8 +12,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "pnpm -r --if-present run lint",
-    "build": "pnpm -r --if-present run build",
-    "lint:fix": "biome check --write ."
+    "check": "vp run --cache -r check",
+    "build": "vp run --cache -r build",
+    "prepare": "vp config"
+  },
+  "devDependencies": {
+    "vite-plus": "latest"
   }
 }

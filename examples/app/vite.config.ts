@@ -12,4 +12,24 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  lint: {
+    options: { typeAware: true, typeCheck: true },
+    plugins: ['promise', 'import', 'react', 'react-perf'],
+  },
+  run: {
+    tasks: {
+      check: {
+        command: 'vp lint && vp fmt',
+      },
+      dev: {
+        command: 'vp dev',
+        dependsOn: ['check'],
+        cache: false,
+      },
+      build: {
+        command: 'vp build',
+        dependsOn: ['check'],
+      },
+    },
+  },
 })

@@ -162,7 +162,7 @@ export const create: Command = command(
       )
     }
 
-    copy(resolve(__dirname, `../../../template/biome.template.json`), resolve(root, 'biome.json'))
+    copy(resolve(__dirname, `../../../template/vite.config.ts`), resolve(root, 'vite.config.ts'))
     copy(resolve(__dirname, `../../../template/tsconfig.json`), resolve(root, 'tsconfig.json'))
 
     // copy apps/foc-api

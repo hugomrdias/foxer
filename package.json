@@ -8,20 +8,20 @@
   "author": "Hugo Dias <hugomrdias@gmail.com>",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "ready": "vp run build -r && vp check",
+    "ready": "vp run build -r && vp check --fix",
     "check": "vp run --cache -r check",
     "build": "vp run --cache -r build",
     "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules} apps/*/{dist,node_modules} examples/*/{dist,node_modules}",
     "prepare": "vp config"
   },
   "devDependencies": {
-    "@hugomrdias/configs": "^1.1.2",
     "vite-plus": "catalog:"
   },
   "packageManager": "pnpm@10.30.1"

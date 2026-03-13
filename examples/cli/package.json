@@ -10,7 +10,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "tsc --build && biome check"
+    "check": "vp lint && vp fmt"
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",
@@ -25,6 +25,5 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "typescript": "^5.9.3"
-  },
-  "packageManager": "pnpm@10.30.1"
+  }
 }
