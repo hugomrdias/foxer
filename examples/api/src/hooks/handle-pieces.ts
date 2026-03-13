@@ -1,5 +1,6 @@
 import * as Piece from '@filoz/synapse-core/piece'
 import { and, eq, inArray } from 'drizzle-orm'
+
 import type { Registry } from '../../foxer.config.ts'
 import { schema } from '../schema/index.ts'
 // TODO add contract to the context
@@ -37,10 +38,7 @@ export function handlePieces(registry: Registry) {
       }
     })
 
-    await context.db
-      .insert(schema.pieces)
-      .values(piecesToInsert)
-      .onConflictDoNothing()
+    await context.db.insert(schema.pieces).values(piecesToInsert).onConflictDoNothing()
   })
 
   registry.on('pdpVerifier:PiecesRemoved', async ({ context, event }) => {
@@ -52,11 +50,6 @@ export function handlePieces(registry: Registry) {
 
     await context.db
       .delete(schema.pieces)
-      .where(
-        and(
-          eq(schema.pieces.datasetId, args.setId),
-          inArray(schema.pieces.id, args.pieceIds)
-        )
-      )
+      .where(and(eq(schema.pieces.datasetId, args.setId), inArray(schema.pieces.id, args.pieceIds)))
   })
 }

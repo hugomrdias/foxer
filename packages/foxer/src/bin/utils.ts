@@ -1,6 +1,8 @@
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+
 import { type LilconfigResult, lilconfig } from 'lilconfig'
+
 import type { InternalConfig } from '../config/config'
 import type { Logger } from '../utils/logger'
 
@@ -18,11 +20,7 @@ const configLoaders = {
   '.mts': loadEsm,
 }
 
-export async function loadConfig(
-  logger: Logger,
-  root: string,
-  filePath?: string
-) {
+export async function loadConfig(logger: Logger, root: string, filePath?: string) {
   let configFile: LilconfigResult | undefined
 
   try {

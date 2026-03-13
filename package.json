@@ -1,26 +1,28 @@
 {
   "name": "foxer-repo",
   "version": "0.0.0",
-  "description": "",
-  "main": "index.js",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "Hugo Dias <hugomrdias@gmail.com>",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "type": "module",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "pnpm -r --if-present run lint",
-    "build": "pnpm -r --if-present run build",
-    "lint:fix": "biome check --write .",
-    "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules} apps/*/{dist,node_modules} examples/*/{dist,node_modules}"
+    "ready": "vp run build -r && vp check",
+    "check": "vp run --cache -r check",
+    "build": "vp run --cache -r build",
+    "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules} apps/*/{dist,node_modules} examples/*/{dist,node_modules}",
+    "prepare": "vp config"
   },
-  "keywords": [],
-  "author": "Hugo Dias <hugomrdias@gmail.com>",
-  "license": "MIT",
-  "packageManager": "pnpm@10.30.1",
   "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
-    "@hugomrdias/configs": "^1.1.2"
-  }
+    "@hugomrdias/configs": "^1.1.2",
+    "vite-plus": "catalog:"
+  },
+  "packageManager": "pnpm@10.30.1"
 }

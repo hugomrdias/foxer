@@ -2,6 +2,7 @@ import type { QueryWithTypings } from 'drizzle-orm'
 import { createMiddleware } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import postgres from 'postgres'
+
 import { PUBLICATION_NAME } from '../contants.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
@@ -10,13 +11,7 @@ import { sseError } from './sse.ts'
 
 const MAX_LIVE_QUERIES = 1000
 
-export function sqlMiddleware({
-  db,
-  logger,
-}: {
-  db: Database
-  logger: Logger
-}) {
+export function sqlMiddleware({ db, logger }: { db: Database; logger: Logger }) {
   let pg: postgres.Sql | undefined
   const databaseUrl = process.env.DATABASE_URL
 
@@ -79,7 +74,7 @@ export function sqlMiddleware({
       if (!pg) {
         return sseError(
           c,
-          'Database connection not established. Please check your DATABASE_URL environment variable.'
+          'Database connection not established. Please check your DATABASE_URL environment variable.',
         )
       }
 
@@ -97,18 +92,18 @@ export function sqlMiddleware({
             })
           })
 
-          stream.writeSSE({
+          await stream.writeSSE({
             data: JSON.stringify(dbResult.result),
           })
 
           for (const table of tables) {
             const sub = await pg.subscribe(`*:${table}`, async () => {
               const dbResult = await executeSql({ db, query })
-              stream.writeSSE({
+              await stream.writeSSE({
                 data: JSON.stringify(dbResult.result),
               })
             })
-            subscriptions.push(sub.unsubscribe)
+            subscriptions.push(() => sub.unsubscribe())
           }
 
           while (stream.closed === false && stream.aborted === false) {
@@ -122,7 +117,7 @@ export function sqlMiddleware({
             unsubscribe()
           })
           return Promise.resolve(undefined)
-        }
+        },
       )
     }
 

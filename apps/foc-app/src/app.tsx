@@ -1,8 +1,9 @@
 import { useConnection } from 'wagmi'
+
 import { Toaster } from '@/components/ui/sonner.tsx'
+
 import { ConnectSection } from './components/connect-section'
 import { Connected } from './components/connected'
-
 import * as Icons from './components/icons'
 import { NetworkSelector } from './components/network-selector'
 export function App() {

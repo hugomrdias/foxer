@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { cli } from 'cleye'
+
 import { create } from './commands/create.ts'
 import { fund } from './commands/fund.ts'
 import { init } from './commands/init.ts'

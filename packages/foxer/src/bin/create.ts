@@ -9,6 +9,7 @@ import {
 } from 'node:fs'
 import { basename, dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
 import { downloadTemplate } from '@bluwy/giget-core'
 import * as p from '@clack/prompts'
 import { type Command, command } from 'cleye'
@@ -21,7 +22,7 @@ type Templates = (typeof possibleTemplates)[number]
 const Template = (template: Templates) => {
   if (!possibleTemplates.includes(template)) {
     throw new Error(
-      `Invalid template: "${template}" (must be one of ${possibleTemplates.join(', ')})`
+      `Invalid template: "${template}" (must be one of ${possibleTemplates.join(', ')})`,
     )
   }
   return template
@@ -55,9 +56,7 @@ function isEmpty(path: string) {
 }
 
 function isValidPackageName(projectName: string) {
-  return /^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(
-    projectName
-  )
+  return /^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(projectName)
 }
 
 function toValidPackageName(projectName: string) {
@@ -149,34 +148,22 @@ export const create: Command = command(
     p.log.step(`Scaffolding project in ${root}...`)
 
     const pkg = JSON.parse(
-      readFileSync(
-        resolve(__dirname, `../../../template/package.json`),
-        'utf-8'
-      )
+      readFileSync(resolve(__dirname, `../../../template/package.json`), 'utf-8'),
     )
 
     pkg.name = packageName
 
-    writeFileSync(
-      resolve(root, 'package.json'),
-      `${JSON.stringify(pkg, null, 2)}\n`
-    )
+    writeFileSync(resolve(root, 'package.json'), `${JSON.stringify(pkg, null, 2)}\n`)
 
     if (pm === 'pnpm') {
       copy(
         resolve(__dirname, `../../../template/pnpm-workspace.yaml`),
-        resolve(root, 'pnpm-workspace.yaml')
+        resolve(root, 'pnpm-workspace.yaml'),
       )
     }
 
-    copy(
-      resolve(__dirname, `../../../template/biome.template.json`),
-      resolve(root, 'biome.json')
-    )
-    copy(
-      resolve(__dirname, `../../../template/tsconfig.json`),
-      resolve(root, 'tsconfig.json')
-    )
+    copy(resolve(__dirname, `../../../template/biome.template.json`), resolve(root, 'biome.json'))
+    copy(resolve(__dirname, `../../../template/tsconfig.json`), resolve(root, 'tsconfig.json'))
 
     // copy apps/foc-api
     await downloadTemplate('hugomrdias/foxer/examples/api', {
@@ -191,12 +178,10 @@ export const create: Command = command(
     const cdProjectName = relative(cwd, root)
     doneMessage += `Done. Now run:\n`
     if (root !== cwd) {
-      doneMessage += `\n  cd ${
-        cdProjectName.includes(' ') ? `"${cdProjectName}"` : cdProjectName
-      }`
+      doneMessage += `\n  cd ${cdProjectName.includes(' ') ? `"${cdProjectName}"` : cdProjectName}`
     }
     doneMessage += `\n  ${getInstallCommand(pm).join(' ')}`
     doneMessage += `\n  ${getRunCommand(pm, 'dev').join(' ')}`
     p.outro(doneMessage)
-  }
+  },
 )

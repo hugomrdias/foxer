@@ -1,13 +1,11 @@
 import type { Abi, ExtractAbiEvent, ExtractAbiEventNames } from 'abitype'
+
 import type { UnknownObject } from '../types'
 
 export type EnsureUniqueTuple<
   tuple extends readonly unknown[],
   seen = never,
-> = tuple extends readonly [
-  infer head,
-  ...infer tail extends readonly unknown[],
-]
+> = tuple extends readonly [infer head, ...infer tail extends readonly unknown[]]
   ? head extends seen
     ? never
     : readonly [head, ...EnsureUniqueTuple<tail, seen | head>]
@@ -26,8 +24,7 @@ export type MergedContractEvents<
 
 export interface ContractConfig<
   abi extends Abi,
-  events extends
-    readonly ExtractAbiEventNames<abi>[] = readonly ExtractAbiEventNames<abi>[],
+  events extends readonly ExtractAbiEventNames<abi>[] = readonly ExtractAbiEventNames<abi>[],
 > {
   /** Contract application byte interface. */
   abi: abi
@@ -66,8 +63,9 @@ export type EventKey = `${string}:${string}`
 export type ContractNameFromEventKey<C extends EventKey> =
   C extends `${infer ContractName}:${string}` ? ContractName : never
 
-export type EventNameFromEventKey<K extends string> =
-  K extends `${string}:${infer EventName}` ? EventName : never
+export type EventNameFromEventKey<K extends string> = K extends `${string}:${infer EventName}`
+  ? EventName
+  : never
 
 export type ContractAbiByEventKey<
   C extends ContractsConfig<NonNullable<unknown>>,
@@ -81,7 +79,4 @@ export type ContractAbiByEventKey<
 export type ContractAbiEventByEventKey<
   C extends ContractsConfig<NonNullable<unknown>>,
   Event extends EventKey,
-> = ExtractAbiEvent<
-  ContractAbiByEventKey<C, Event>,
-  EventNameFromEventKey<Event>
->
+> = ExtractAbiEvent<ContractAbiByEventKey<C, Event>, EventNameFromEventKey<Event>>

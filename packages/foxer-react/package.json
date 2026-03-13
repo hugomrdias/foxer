@@ -2,35 +2,24 @@
   "name": "@hugomrdias/foxer-react",
   "version": "0.0.4",
   "description": "React hooks for interacting with Filecoin Onchain Cloud smart contracts",
-  "repository": {
-    "url": "hugomrdias/foxer",
-    "directory": "packages/foxer-react"
-  },
   "keywords": [
     "filecoin",
-    "synapse",
-    "filecoin pay",
     "filecoin onchain cloud",
-    "web3",
+    "filecoin pay",
+    "hooks",
     "react",
-    "hooks"
+    "synapse",
+    "web3"
   ],
-  "author": "Hugo Dias <hugomrdias@gmail.com>",
-  "license": "Apache-2.0 OR MIT",
+  "homepage": "https://github.com/hugomrdias/foxer/tree/main/packages/foxer-react",
   "bugs": {
     "url": "https://github.com/hugomrdias/foxer/issues"
   },
-  "homepage": "https://github.com/hugomrdias/foxer/tree/main/packages/foxer-react",
-  "type": "module",
-  "main": "dist/src/index.js",
-  "module": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
-  "sideEffects": false,
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
-    }
+  "license": "Apache-2.0 OR MIT",
+  "author": "Hugo Dias <hugomrdias@gmail.com>",
+  "repository": {
+    "url": "hugomrdias/foxer",
+    "directory": "packages/foxer-react"
   },
   "files": [
     "src",
@@ -38,29 +27,38 @@
     "dist/src/**/*.d.ts",
     "dist/src/**/*.d.ts.map"
   ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/src/index.js",
+  "module": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
+    "check": "vp lint && vp fmt",
     "build": "tsc --build",
-    "lint": "tsc --build && biome check .",
-    "lint:fix": "biome check --fix ."
+    "prepublishOnly": "vp run build"
   },
   "dependencies": {
     "@hugomrdias/foxer-client": "workspace:^",
     "drizzle-orm": "1.0.0-beta.15-859cf75"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.6",
-    "@types/node": "25.4.0",
+    "@types/node": "25.5.0",
     "@types/react": "^19.2.14",
     "typescript": "5.9.3",
-    "viem": "2.47.1"
-  },
-  "publishConfig": {
-    "provenance": true,
-    "access": "public"
+    "viem": "catalog:"
   },
   "peerDependencies": {
     "@tanstack/react-query": "5.x",
-    "@wagmi/core": "3.x",
     "react": ">=18",
     "viem": "2.x",
     "wagmi": "3.x"

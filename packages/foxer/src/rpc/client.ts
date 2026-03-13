@@ -1,4 +1,5 @@
 import { createPublicClient, type PublicClient } from 'viem'
+
 import type { ClientConfig } from '../config/config.ts'
 
 export type RpcClients = {

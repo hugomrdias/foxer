@@ -10,26 +10,19 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import type { EmptyRelations } from 'drizzle-orm/relations'
-import {
-  createContext,
-  createElement,
-  useContext,
-  useEffect,
-  useMemo,
-} from 'react'
+import { createContext, createElement, useContext, useEffect, useMemo } from 'react'
+
 import { getFoxerQueryOptions } from './utils'
 
-export const FoxerContext = createContext<
-  Client<ResolvedSchema, ResolvedRelations> | undefined
->(undefined)
+export const FoxerContext = createContext<Client<ResolvedSchema, ResolvedRelations> | undefined>(
+  undefined,
+)
 
 type FoxerProviderProps = {
   client: Client<ResolvedSchema, ResolvedRelations>
 }
 
-export function FoxerProvider(
-  parameters: React.PropsWithChildren<FoxerProviderProps>
-) {
+export function FoxerProvider(parameters: React.PropsWithChildren<FoxerProviderProps>) {
   const { children, client } = parameters
   const props = { value: client }
   return createElement(FoxerContext.Provider, props, children)
@@ -56,7 +49,7 @@ export type ResolvedRelations = Register extends { relations: infer relations }
   : EmptyRelations
 
 export function useFoxerQueryOptions<T>(
-  queryFn: (db: Client<ResolvedSchema, ResolvedRelations>['db']) => T
+  queryFn: (db: Client<ResolvedSchema, ResolvedRelations>['db']) => T,
 ): {
   queryKey: QueryKey
   queryHash: string
@@ -66,27 +59,18 @@ export function useFoxerQueryOptions<T>(
   return getFoxerQueryOptions(client, queryFn)
 }
 
-export function useFoxerQuery<
-  queryFnData = unknown,
-  error = DefaultError,
-  data = queryFnData,
->(
+export function useFoxerQuery<queryFnData = unknown, error = DefaultError, data = queryFnData>(
   params: {
-    queryFn: (
-      db: Client<ResolvedSchema, ResolvedRelations>['db']
-    ) => Promise<queryFnData>
+    queryFn: (db: Client<ResolvedSchema, ResolvedRelations>['db']) => Promise<queryFnData>
     live?: boolean
-  } & Omit<UseQueryOptions<queryFnData, error, data>, 'queryFn' | 'queryKey'>
+  } & Omit<UseQueryOptions<queryFnData, error, data>, 'queryFn' | 'queryKey'>,
 ): UseQueryResult<data, error> {
   const live = params.live ?? true
   const queryClient = useQueryClient()
 
   const client = useFoxerClient()
 
-  const queryOptions = useMemo(
-    () => getFoxerQueryOptions(client, params.queryFn),
-    [params.queryFn]
-  )
+  const queryOptions = useMemo(() => getFoxerQueryOptions(client, params.queryFn), [params.queryFn])
 
   useEffect(() => {
     if (live === false || params.enabled === false) return
@@ -101,8 +85,6 @@ export function useFoxerQuery<
     ...params,
     queryKey: queryOptions.queryKey,
     queryFn: queryOptions.queryFn,
-    staleTime: live
-      ? (params.staleTime ?? Number.POSITIVE_INFINITY)
-      : params.staleTime,
+    staleTime: live ? (params.staleTime ?? Number.POSITIVE_INFINITY) : params.staleTime,
   })
 }

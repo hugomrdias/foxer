@@ -1,5 +1,6 @@
 import { index, integer, jsonb, pgEnum, pgTable } from 'drizzle-orm/pg-core'
 import type { AccessList } from 'viem'
+
 import { address, bigint, bytea, hash, numeric78 } from '../column-types.ts'
 
 export const transactionTypeEnum = pgEnum('transaction_type', [
@@ -35,5 +36,5 @@ export const transactions = pgTable(
   (table) => [
     index('transactions_block_number_index').on(table.blockNumber),
     index('transactions_to_index').on(table.to),
-  ]
+  ],
 )

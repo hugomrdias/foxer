@@ -1,5 +1,6 @@
 import dotenv from 'dotenv'
 import { z } from 'zod'
+
 import type { Logger } from '../utils/logger'
 
 dotenv.config({
@@ -10,9 +11,7 @@ dotenv.config({
 export type Env = z.infer<typeof envSchema>
 const envSchema = z.object({
   DATABASE_URL: z.url().optional(),
-  LOG_LEVEL: z
-    .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
   LOG_MODE: z.enum(['pretty', 'json']).default('pretty'),
 })
 
@@ -20,9 +19,7 @@ export function createEnv(logger: Logger) {
   const parsed = envSchema.safeParse(process.env)
 
   if (!parsed.success) {
-    throw new Error(
-      `Failed to parse environment variables: \n ${z.flattenError(parsed.error)}`
-    )
+    throw new Error(`Failed to parse environment variables: \n ${z.prettifyError(parsed.error)}`)
   }
   logger.debug({ env: parsed.data }, 'env parsed')
   return parsed.data

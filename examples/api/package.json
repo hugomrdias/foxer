@@ -1,13 +1,22 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "",
+  "files": [
+    "src",
+    "dist/src",
+    "dist/src/**/*.d.ts",
+    "dist/src/**/*.d.ts.map"
+  ],
   "type": "module",
+  "sideEffects": false,
   "main": "dist/src/index.js",
   "module": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
@@ -15,12 +24,6 @@
       "default": "./dist/src/index.js"
     }
   },
-  "files": [
-    "src",
-    "dist/src",
-    "dist/src/**/*.d.ts",
-    "dist/src/**/*.d.ts.map"
-  ],
   "scripts": {
     "dev": "foxer dev",
     "generate": "drizzle-kit generate",
@@ -29,20 +32,18 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc -p ./tsconfig.client.json"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@filoz/synapse-core": "^0.3.0",
     "@hono/standard-validator": "^0.2.2",
     "@hugomrdias/foxer": "latest",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "hono": "^4.12.1",
-    "viem": "^2.46.2",
+    "viem": "2.47.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^25.4.0",
+    "@types/node": "^25.5.0",
+    "drizzle-kit": "^0.31.9",
     "typescript": "^5.9.3"
   }
 }

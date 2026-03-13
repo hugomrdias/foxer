@@ -13,16 +13,13 @@ import {
   type PublicClientConfig,
   type WebSocketTransport,
 } from 'viem'
+
 import type { Database } from '../db/client.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
 import { createRpcClients, type RpcClients } from '../rpc/client.ts'
 import type { UnknownObject } from '../types.ts'
 import type { Logger } from '../utils/logger.ts'
-import type {
-  ContractConfig,
-  ContractsConfig,
-  GetContract,
-} from '../utils/types.ts'
+import type { ContractConfig, ContractsConfig, GetContract } from '../utils/types.ts'
 
 export type ClientConfig = Simplify<
   SetRequired<PublicClientConfig, 'chain'> & {
@@ -43,11 +40,7 @@ export type HooksConfig<
   TSchema extends UnknownRecord,
   TRelations extends AnyRelations,
 > = (context: {
-  registry: HookRegistry<
-    ContractsConfig<Narrow<contracts>>,
-    TSchema,
-    TRelations
-  >
+  registry: HookRegistry<ContractsConfig<Narrow<contracts>>, TSchema, TRelations>
 }) => void
 
 export type DatabaseConfig =
@@ -139,7 +132,7 @@ export function createConfig<
   const contractsForLive: ContractConfig<Abi, readonly string[]>[] = []
 
   for (const contract of Object.values(
-    config.contracts as { [contractName: string]: GetContract }
+    config.contracts as { [contractName: string]: GetContract },
   )) {
     if (contract.endBlock == null) {
       contractsForLive.push(contract)
@@ -176,11 +169,7 @@ export type FilteredContracts = {
   contractNameByAddress: Record<Address, string>
 }
 
-export function filterContracts(
-  config: InternalConfig,
-  fromBlock: bigint,
-  toBlock: bigint
-) {
+export function filterContracts(config: InternalConfig, fromBlock: bigint, toBlock: bigint) {
   const eventAbis: AbiEvent[] = []
   const addresses: Address[] = []
   const eventNames: Set<string> = new Set()

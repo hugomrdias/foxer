@@ -1,6 +1,7 @@
 import { useFoxerQuery } from '@hugomrdias/foxer-react'
 import { useState } from 'react'
 import { useConnection } from 'wagmi'
+
 import {
   Table,
   TableBody,
@@ -11,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatBytes } from '@/lib/utils'
+
 import { Button } from './ui/button'
 
 type PieceRow = {
@@ -83,14 +85,10 @@ export function Pieces() {
             </TableRow>
           ) : (
             rows.map((row, index) => (
-              <TableRow
-                key={`${String(row.datasetId)}-${String(row.id)}-${String(index)}`}
-              >
+              <TableRow key={`${String(row.datasetId)}-${String(row.id)}-${String(index)}`}>
                 <TableCell className="font-medium">{String(row.id)}</TableCell>
                 <TableCell>{String(row.datasetId)}</TableCell>
-                <TableCell className="max-w-[320px] truncate">
-                  {row.cid}
-                </TableCell>
+                <TableCell className="max-w-[320px] truncate">{row.cid}</TableCell>
                 <TableCell>{formatSize(row.size)}</TableCell>
               </TableRow>
             ))

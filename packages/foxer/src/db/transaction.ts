@@ -6,14 +6,11 @@ import type { relations, schema } from './schema/index.ts'
  */
 export function withTransaction<T>(
   db: Database<typeof schema, typeof relations>,
-  run: (tx: Database<typeof schema, typeof relations>) => Promise<T>
+  run: (tx: Database<typeof schema, typeof relations>) => Promise<T>,
 ): Promise<T> {
-  const executor = db as unknown as Database<
-    typeof schema,
-    typeof relations
-  > & {
+  const executor = db as unknown as Database<typeof schema, typeof relations> & {
     transaction: <R>(
-      fn: (tx: Database<typeof schema, typeof relations>) => Promise<R>
+      fn: (tx: Database<typeof schema, typeof relations>) => Promise<R>,
     ) => Promise<R>
   }
   return executor.transaction(run)

@@ -3,6 +3,7 @@ import { intro, log, outro, text } from '@clack/prompts'
 import { type Command, command } from 'cleye'
 import type { Hash } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+
 import { config, name } from '../config.ts'
 
 export const init: Command = command(
@@ -55,5 +56,5 @@ export const init: Command = command(
     }
     config.set('privateKey', privateKeyInput)
     outro(`You're all set!`)
-  }
+  },
 )

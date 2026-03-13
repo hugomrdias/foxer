@@ -1,4 +1,5 @@
 import type { PgAsyncTransaction, PgQueryResultHKT } from 'drizzle-orm/pg-core'
+
 import { MAX_QUERY_PARAMS } from '../../contants.ts'
 import type { EncodedTransaction } from '../../types.ts'
 import { schema } from '../schema/index.ts'
@@ -15,9 +16,7 @@ export async function insertTransactionsInChunks(args: {
     return
   }
 
-  const batchSize = Math.floor(
-    MAX_QUERY_PARAMS / Object.keys(transactions[0]).length
-  )
+  const batchSize = Math.floor(MAX_QUERY_PARAMS / Object.keys(transactions[0]).length)
 
   for (let i = 0; i < transactions.length; i += batchSize) {
     const chunk = transactions.slice(i, i + batchSize)

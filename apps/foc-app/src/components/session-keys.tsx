@@ -5,6 +5,7 @@ import { useFoxerQuery } from '@hugomrdias/foxer-react'
 import { toast } from 'sonner'
 import { generatePrivateKey } from 'viem/accounts'
 import { useConnection, useConnectorClient } from 'wagmi'
+
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -85,9 +86,7 @@ export function SessionKeys() {
       </div>
 
       <Table>
-        <TableCaption>
-          Recent session key authorizations for your address.
-        </TableCaption>
+        <TableCaption>Recent session key authorizations for your address.</TableCaption>
         <TableHeader>
           <TableRow>
             <TableHead>Signer</TableHead>
@@ -108,33 +107,24 @@ export function SessionKeys() {
           ) : (
             rows.map((row, index) => (
               <TableRow key={`${row.signer}-${row.identity}-${String(index)}`}>
-                <TableCell className="max-w-[260px] truncate font-medium">
-                  {row.signer}
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {row.origin ?? '-'}
-                </TableCell>
+                <TableCell className="max-w-[260px] truncate font-medium">{row.signer}</TableCell>
+                <TableCell className="max-w-[200px] truncate">{row.origin ?? '-'}</TableCell>
                 <TableCell className="max-w-[420px]">
                   {row.permissions && row.permissions.length > 0 ? (
                     <div className="flex flex-col items-start gap-1.5">
-                      {row.permissions.map(
-                        ({ permission, expiry }, permissionIndex) => (
-                          <div
-                            key={`${permission ?? 'unknown'}-${String(expiry)}-${permissionIndex}`}
-                            className="inline-flex w-fit max-w-full flex-col rounded-none border border-border/60 bg-muted/30 px-2 py-1"
-                          >
-                            <p className="max-w-full font-mono text-[11px] break-all whitespace-normal">
-                              {permission ?? '-'}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              Expiry:{' '}
-                              {expiry === null || expiry === undefined
-                                ? '-'
-                                : String(expiry)}
-                            </p>
-                          </div>
-                        )
-                      )}
+                      {row.permissions.map(({ permission, expiry }, permissionIndex) => (
+                        <div
+                          key={`${permission ?? 'unknown'}-${String(expiry)}-${permissionIndex}`}
+                          className="inline-flex w-fit max-w-full flex-col rounded-none border border-border/60 bg-muted/30 px-2 py-1"
+                        >
+                          <p className="max-w-full font-mono text-[11px] break-all whitespace-normal">
+                            {permission ?? '-'}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Expiry: {expiry === null || expiry === undefined ? '-' : String(expiry)}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     '-'

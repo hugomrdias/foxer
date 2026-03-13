@@ -1,9 +1,7 @@
 import type { Hash, PublicClient } from 'viem'
+
 import type { Database } from '../db/client.ts'
-import {
-  encodeBlockWithTransactions,
-  encodeNullRoundBlock,
-} from '../db/encode.ts'
+import { encodeBlockWithTransactions, encodeNullRoundBlock } from '../db/encode.ts'
 import type { EncodedBlockWithTransactions } from '../types.ts'
 
 /**
@@ -24,9 +22,7 @@ export async function safeGetBlock(options: {
     return encodeBlockWithTransactions(block)
   } catch (error) {
     if (isNullRoundRpcError(error)) {
-      let previousBlock:
-        | { number: bigint; hash: Hash; parentHash: Hash }
-        | undefined
+      let previousBlock: { number: bigint; hash: Hash; parentHash: Hash } | undefined
 
       previousBlock = (
         await db.$prepared.getBlockById.execute({
@@ -78,20 +74,14 @@ export function isNullRoundRpcError(error: unknown): boolean {
   }
 
   const details = (error as { details?: unknown }).details
-  if (
-    typeof details === 'string' &&
-    details.toLowerCase().includes('null round')
-  ) {
+  if (typeof details === 'string' && details.toLowerCase().includes('null round')) {
     return true
   }
 
   const cause = (error as { cause?: unknown }).cause
   if (cause && typeof cause === 'object') {
     const causeMessage = (cause as { message?: unknown }).message
-    if (
-      typeof causeMessage === 'string' &&
-      causeMessage.toLowerCase().includes('null round')
-    ) {
+    if (typeof causeMessage === 'string' && causeMessage.toLowerCase().includes('null round')) {
       return true
     }
   }

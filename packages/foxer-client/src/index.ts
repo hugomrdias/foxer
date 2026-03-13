@@ -22,7 +22,7 @@ import { stringify } from 'viem'
 
 function orderSelectedFields<TColumn extends AnyColumn>(
   fields: Record<string, unknown>,
-  pathPrefix?: string[]
+  pathPrefix?: string[],
 ): SelectedFieldsOrdered<TColumn> {
   return Object.entries(fields).reduce<SelectedFieldsOrdered<AnyColumn>>(
     (result, [name, field]) => {
@@ -36,24 +36,18 @@ function orderSelectedFields<TColumn extends AnyColumn>(
       } else if (is(field, Table)) {
         result.push(
           // @ts-expect-error
-          ...orderSelectedFields(field[Table.Symbol.Columns], newPath)
+          ...orderSelectedFields(field[Table.Symbol.Columns], newPath),
         )
       } else {
-        result.push(
-          ...orderSelectedFields(field as Record<string, unknown>, newPath)
-        )
+        result.push(...orderSelectedFields(field as Record<string, unknown>, newPath))
       }
       return result
     },
-    []
+    [],
   ) as SelectedFieldsOrdered<TColumn>
 }
 
-const getUrl = (
-  baseUrl: string,
-  method: 'live' | 'db',
-  query?: QueryWithTypings
-) => {
+const getUrl = (baseUrl: string, method: 'live' | 'db', query?: QueryWithTypings) => {
   const url = new URL(baseUrl)
   url.pathname = `${url.pathname}/${method}`
   if (query) {
@@ -79,12 +73,7 @@ type ClientDb<
 > = Simplify<
   Omit<
     PgRemoteDatabase<TSchema, TRelations>,
-    | 'insert'
-    | 'update'
-    | 'delete'
-    | 'transaction'
-    | 'refreshMaterializedView'
-    | '_query'
+    'insert' | 'update' | 'delete' | 'transaction' | 'refreshMaterializedView' | '_query'
   >
 >
 
@@ -97,7 +86,7 @@ export type Client<
   live: <result>(
     queryFn: (db: ClientDb<TSchema, TRelations>) => Promise<result>,
     onData: (result: result) => void,
-    onError?: (error: Error) => void
+    onError?: (error: Error) => void,
   ) => {
     unsubscribe: () => void
   }
@@ -143,7 +132,7 @@ export function createClient<
         relations: relations,
         schema: schema,
         casing: 'snake_case',
-      }
+      },
     ),
     live: (queryFn, onData, onError) => {
       // biome-ignore lint/suspicious/noExplicitAny: fix later
@@ -159,13 +148,13 @@ export function createClient<
 
           return Promise.resolve(result)
         },
-        { schema: schema, relations: relations, casing: 'snake_case' }
+        { schema: schema, relations: relations, casing: 'snake_case' },
       )
       const queryPromise = queryFn(passThroughDatabase)
 
       if ('getSQL' in queryPromise === false) {
         throw new Error(
-          '"queryFn" must return SQL. You may have to remove `.execute()` from your query.'
+          '"queryFn" must return SQL. You may have to remove `.execute()` from your query.',
         )
       }
       const queryBuilder = queryPromise as unknown as SQLWrapper
@@ -184,7 +173,7 @@ export function createClient<
               // @ts-expect-error - selectedFields is not typed
               orderSelectedFields(queryPromise._.selectedFields),
               undefined,
-              false
+              false,
             )
             .execute()
         } else if (queryBuilder instanceof PgRelationalQuery) {
@@ -192,27 +181,21 @@ export function createClient<
           const selection = queryBuilder._toSQL().query.selection
 
           data = await passThroughDatabase._.session
-            .prepareQuery(
-              query,
-              undefined,
-              undefined,
-              true,
-              (rawRows, mapColumnValue) => {
-                const rows = rawRows.map((row) => {
-                  const obj = {}
-                  row.forEach((value, index) => {
-                    // @ts-expect-error - selection is not typed
-                    obj[selection[index].key] = value
-                  })
-                  return mapRelationalRow(obj, selection, mapColumnValue)
+            .prepareQuery(query, undefined, undefined, true, (rawRows, mapColumnValue) => {
+              const rows = rawRows.map((row) => {
+                const obj = {}
+                row.forEach((value, index) => {
+                  // @ts-expect-error - selection is not typed
+                  obj[selection[index].key] = value
                 })
-                // @ts-expect-error - mode is not typed
-                if (queryBuilder.mode === 'first') {
-                  return rows[0]
-                }
-                return rows
+                return mapRelationalRow(obj, selection, mapColumnValue)
+              })
+              // @ts-expect-error - mode is not typed
+              if (queryBuilder.mode === 'first') {
+                return rows[0]
               }
-            )
+              return rows
+            })
             .execute()
         } else if (queryBuilder instanceof PgRaw) {
           data = await passThroughDatabase._.session

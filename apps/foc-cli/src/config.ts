@@ -1,4 +1,5 @@
 import Conf from 'conf'
+
 import packageJson from '../package.json' with { type: 'json' }
 
 const schema = {

@@ -6,11 +6,12 @@ import { FoxerProvider } from '@hugomrdias/foxer-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NuqsAdapter } from 'nuqs/adapters/react'
 import { createRoot } from 'react-dom/client'
-import { Schema } from '../../foc-api/src/index.ts'
-import './index.css'
-
 import { createConfig, http, WagmiProvider } from 'wagmi'
+
+import './index.css'
 import { injected } from 'wagmi/connectors'
+
+import { Schema } from '../../foc-api/src/index.ts'
 import App from './app.tsx'
 import { ThemeProvider } from './components/theme-provider.tsx'
 
@@ -21,13 +22,9 @@ export const config = createConfig({
   connectors: [injected()],
   transports: {
     [mainnet.id]: http(),
-    [calibration.id]: http(undefined, {
-      batch: false,
-    }),
+    [calibration.id]: http(),
   },
-  batch: {
-    multicall: false,
-  },
+  syncConnectedChain: true,
 })
 
 declare module 'wagmi' {
@@ -52,7 +49,7 @@ const foxer = createClient({
 createRoot(document.getElementById('root')!).render(
   // <StrictMode>
   <ThemeProvider defaultTheme="system" storageKey="foc-app-theme">
-    <WagmiProvider config={config}>
+    <WagmiProvider config={config} reconnectOnMount={true}>
       <QueryClientProvider client={queryClient}>
         <FoxerProvider client={foxer}>
           <NuqsAdapter>
@@ -61,6 +58,6 @@ createRoot(document.getElementById('root')!).render(
         </FoxerProvider>
       </QueryClientProvider>
     </WagmiProvider>
-  </ThemeProvider>
+  </ThemeProvider>,
   // </StrictMode>
 )

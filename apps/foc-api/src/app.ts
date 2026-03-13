@@ -6,6 +6,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { type Address, isAddress, stringify } from 'viem'
 import * as z from 'zod'
+
 import type { Database } from '../foxer.config.ts'
 import { schema } from './schema/index.ts'
 
@@ -47,7 +48,7 @@ export function buildApp({ db, logger }: { db: Database; logger: Logger }) {
         offset,
       }),
       200,
-      { 'Content-Type': 'application/json' }
+      { 'Content-Type': 'application/json' },
     )
   })
 
@@ -66,10 +67,7 @@ export function buildApp({ db, logger }: { db: Database; logger: Logger }) {
     }
 
     if (Object.keys(where).length === 0) {
-      return c.text(
-        'At least one filter is required: address and/or datasetId',
-        400
-      )
+      return c.text('At least one filter is required: address and/or datasetId', 400)
     }
 
     const rows = await db.query.pieces.findMany({
@@ -89,48 +87,44 @@ export function buildApp({ db, logger }: { db: Database; logger: Logger }) {
         offset,
       }),
       200,
-      { 'Content-Type': 'application/json' }
+      { 'Content-Type': 'application/json' },
     )
   })
 
   const totalsByAddressSchema = z.object({
     address: zHex,
   })
-  app.get(
-    '/totals-by-address',
-    sValidator('query', totalsByAddressSchema),
-    async (c) => {
-      const { address } = c.req.valid('query')
+  app.get('/totals-by-address', sValidator('query', totalsByAddressSchema), async (c) => {
+    const { address } = c.req.valid('query')
 
-      const datasetsCount = await db.$count(
-        db._.fullSchema.datasets,
-        eq(db._.fullSchema.datasets.payer, address)
-      )
-      const piecesCount = await db.$count(
-        db._.fullSchema.pieces,
-        eq(db._.fullSchema.pieces.address, address)
-      )
-      const piecesSize = await db
-        .select({ value: sum(schema.pieces.size) })
-        .from(schema.pieces)
-        .where(eq(schema.pieces.address, address))
-      const sessionKeysCount = await db.$count(
-        db._.fullSchema.sessionKeys,
-        eq(db._.fullSchema.sessionKeys.identity, address)
-      )
+    const datasetsCount = await db.$count(
+      db._.fullSchema.datasets,
+      eq(db._.fullSchema.datasets.payer, address),
+    )
+    const piecesCount = await db.$count(
+      db._.fullSchema.pieces,
+      eq(db._.fullSchema.pieces.address, address),
+    )
+    const piecesSize = await db
+      .select({ value: sum(schema.pieces.size) })
+      .from(schema.pieces)
+      .where(eq(schema.pieces.address, address))
+    const sessionKeysCount = await db.$count(
+      db._.fullSchema.sessionKeys,
+      eq(db._.fullSchema.sessionKeys.identity, address),
+    )
 
-      return c.text(
-        stringify({
-          datasets: datasetsCount,
-          pieces: piecesCount,
-          piecesSize: piecesSize[0]?.value ? BigInt(piecesSize[0].value) : 0n,
-          sessionKeys: sessionKeysCount,
-        }),
-        200,
-        { 'Content-Type': 'application/json' }
-      )
-    }
-  )
+    return c.text(
+      stringify({
+        datasets: datasetsCount,
+        pieces: piecesCount,
+        piecesSize: piecesSize[0]?.value ? BigInt(piecesSize[0].value) : 0n,
+        sessionKeys: sessionKeysCount,
+      }),
+      200,
+      { 'Content-Type': 'application/json' },
+    )
+  })
 
   return app
 }

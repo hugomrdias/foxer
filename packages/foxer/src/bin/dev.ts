@@ -1,7 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
+
 import { type Command, command } from 'cleye'
 import { gracefulExit } from 'exit-hook'
+
 import { createApi } from '../api/create-api.ts'
 import { createEnv } from '../config/env.ts'
 import { createDatabase } from '../db/client.ts'
@@ -36,11 +38,7 @@ export const dev: Command = command(
 
     try {
       const env = createEnv(logger)
-      const config = await loadConfig(
-        logger,
-        argv.flags.root,
-        argv.flags.config
-      )
+      const config = await loadConfig(logger, argv.flags.root, argv.flags.config)
 
       const dbContext = createDatabase({
         env,
@@ -83,5 +81,5 @@ export const dev: Command = command(
       logger.error({ error }, 'dev server failed')
       gracefulExit(1)
     }
-  }
+  },
 )

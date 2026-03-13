@@ -1,4 +1,5 @@
 import { pgTable } from 'drizzle-orm/pg-core'
+
 import { address, bigint, bytea, hash, numeric78 } from '../column-types.ts'
 
 export const blocks = pgTable('blocks', {

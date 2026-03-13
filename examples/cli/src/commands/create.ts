@@ -3,6 +3,7 @@ import * as SessionKey from '@filoz/synapse-core/session-key'
 import { type Command, command } from 'cleye'
 import { stringify } from 'viem'
 import { generatePrivateKey } from 'viem/accounts'
+
 import { privateKeyClient } from '../client.ts'
 import { globalFlags } from '../flags.ts'
 import { hashLink } from '../utils.ts'
@@ -36,5 +37,5 @@ export const create: Command = command(
       },
     })
     p.log.success(`Login event: ${stringify(loginEvent.args)}`)
-  }
+  },
 )

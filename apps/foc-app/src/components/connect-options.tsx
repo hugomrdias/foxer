@@ -2,7 +2,9 @@ import { useStore } from '@nanostores/react'
 import { useEffect, useState } from 'react'
 import { type Connector, useConnect, useConnectors } from 'wagmi'
 import { filecoin, filecoinCalibration } from 'wagmi/chains'
+
 import { store } from '@/lib/store.ts'
+
 import { Button } from './ui/button.tsx'
 
 export function ConnectOptions() {
@@ -22,8 +24,7 @@ export function ConnectOptions() {
         onClick={() => {
           connect({
             connector,
-            chainId:
-              network === 'mainnet' ? filecoin.id : filecoinCalibration.id,
+            chainId: network === 'mainnet' ? filecoin.id : filecoinCalibration.id,
           })
         }}
       />
@@ -43,7 +44,7 @@ function WalletOption({
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    ;(async () => {
+    void (async () => {
       const provider = await connector.getProvider()
       setReady(!!provider)
     })()

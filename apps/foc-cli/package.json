@@ -1,22 +1,16 @@
 {
   "name": "foc-cli",
   "version": "1.0.0",
-  "description": "",
-  "type": "module",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "",
+  "type": "module",
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "tsc --build && biome check"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
-  "packageManager": "pnpm@10.30.1",
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.6",
-    "@types/node": "^25.4.0",
-    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",
@@ -26,6 +20,11 @@
     "conf": "^15.1.0",
     "foc-api": "workspace:*",
     "terminal-link": "^5.0.0",
-    "viem": "^2.47.1"
-  }
+    "viem": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "pnpm@10.30.1"
 }

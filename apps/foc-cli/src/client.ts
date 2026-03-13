@@ -2,6 +2,7 @@ import * as p from '@clack/prompts'
 import { getChain } from '@filoz/synapse-core/chains'
 import { createPublicClient, createWalletClient, type Hex, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+
 import { config } from './config.ts'
 
 function privateKeyFromConfig() {

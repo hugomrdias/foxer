@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { type PinoLogger, pinoLogger } from 'hono-pino'
+
 import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
@@ -21,12 +22,11 @@ export function createApiServer({
   app.use(
     pinoLogger({
       pino: logger,
-    })
+    }),
   )
 
   app.get('/health', async (c) => {
-    const latest =
-      (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
+    const latest = (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
     return c.json({
       ok: true,
       latestIndexedBlock: latest?.toString() ?? null,

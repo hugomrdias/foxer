@@ -18,5 +18,5 @@ export const datasets = pgTable(
     createdAt: bigint(),
     updatedAt: bigint(),
   },
-  (table) => [index('datasets_block_number_index').on(table.blockNumber)]
+  (table) => [index('datasets_block_number_index').on(table.blockNumber)],
 )

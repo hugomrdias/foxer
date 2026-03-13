@@ -3,6 +3,7 @@ import { metadataArrayToObject } from '@filoz/synapse-core/utils'
 import type { Logger } from '@hugomrdias/foxer'
 import { eq } from 'drizzle-orm'
 import { type Address, decodeFunctionData, zeroAddress } from 'viem'
+
 import type { Registry } from '../../foxer.config.ts'
 import { schema } from '../schema/index.ts'
 
@@ -38,9 +39,7 @@ export function handleDatasets(registry: Registry) {
   registry.on('storage:ServiceTerminated', async ({ context, event }) => {
     context.logger.silent({ event: event.args }, 'DataSetDeleted')
     const ds = event.args
-    await context.db
-      .delete(schema.datasets)
-      .where(eq(schema.datasets.dataSetId, ds.dataSetId))
+    await context.db.delete(schema.datasets).where(eq(schema.datasets.dataSetId, ds.dataSetId))
   })
 }
 

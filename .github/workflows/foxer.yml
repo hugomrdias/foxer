@@ -7,12 +7,12 @@ on:
     branches:
       - master
     paths:
-      - "packages/foxer/**"
+      - 'packages/foxer/**'
       - .github/workflows/foxer.yml
       - pnpm-lock.yaml
   pull_request:
     paths:
-      - "packages/foxer/**"
+      - 'packages/foxer/**'
       - .github/workflows/foxer.yml
       - pnpm-lock.yaml
 jobs:

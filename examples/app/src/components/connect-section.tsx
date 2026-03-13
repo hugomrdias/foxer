@@ -9,6 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty.tsx'
+
 import { ConnectWallet } from './connect-wallet.tsx'
 export function ConnectSection() {
   return (
@@ -19,9 +20,7 @@ export function ConnectSection() {
             <HugeiconsIcon icon={Wallet02Icon} strokeWidth={2} />
           </EmptyMedia>
           <EmptyTitle>Foc App</EmptyTitle>
-          <EmptyDescription>
-            Connect your wallet to get started.
-          </EmptyDescription>
+          <EmptyDescription>Connect your wallet to get started.</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <div className="flex gap-2">

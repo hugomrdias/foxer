@@ -17,15 +17,7 @@ const LogMode = (logMode: LogModes) => {
   return logMode
 }
 
-const LogLevels = [
-  'trace',
-  'debug',
-  'info',
-  'warn',
-  'error',
-  'fatal',
-  'silent',
-] as const
+const LogLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const
 type LogLevels = (typeof LogLevels)[number]
 
 // Custom type function

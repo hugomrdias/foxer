@@ -2,6 +2,7 @@ import * as p from '@clack/prompts'
 import { claimTokens, formatBalance } from '@filoz/synapse-core/utils'
 import { type Command, command } from 'cleye'
 import { getBalance, waitForTransactionReceipt } from 'viem/actions'
+
 import { privateKeyClient } from '../client.ts'
 import { globalFlags } from '../flags.ts'
 
@@ -48,5 +49,5 @@ export const fund: Command = command(
       spinner.stop()
       process.exit(0)
     }
-  }
+  },
 )

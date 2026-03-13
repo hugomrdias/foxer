@@ -4,6 +4,7 @@ import * as SessionKey from '@filoz/synapse-core/session-key'
 import { createClient } from '@hugomrdias/foxer-client'
 import { type Command, command } from 'cleye'
 import { Schema } from 'foc-api'
+
 import { privateKeyClient } from '../client.ts'
 import { globalFlags } from '../flags.ts'
 import { hashLink } from '../utils.ts'
@@ -57,8 +58,7 @@ export const revoke: Command = command(
           label: `#${sessionKey.signer} ${sessionKey.permissions
             .filter(
               (permission) =>
-                permission.expiry &&
-                permission.expiry > BigInt(Math.floor(Date.now() / 1000))
+                permission.expiry && permission.expiry > BigInt(Math.floor(Date.now() / 1000)),
             )
             .map((permission) => permission.permission)
             .join(', ')}`,
@@ -86,5 +86,5 @@ export const revoke: Command = command(
       }
       process.exit(1)
     }
-  }
+  },
 )

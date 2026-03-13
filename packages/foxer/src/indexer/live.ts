@@ -1,5 +1,6 @@
 import PQueue from 'p-queue'
 import type { PublicClient } from 'viem'
+
 import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { relations, schema } from '../db/schema/index.ts'
@@ -25,9 +26,7 @@ export function startLiveSync(args: {
   const contracts = config.contractsForLive
 
   if (contracts.length === 0) {
-    logger.info(
-      'all configured contracts have endBlock set; live sync disabled'
-    )
+    logger.info('all configured contracts have endBlock set; live sync disabled')
     return { stop: noop }
   }
 
@@ -44,7 +43,7 @@ export function startLiveSync(args: {
     onBlockNumber: (head) => {
       while (nextBlockToQueue <= head) {
         const blockNumber = nextBlockToQueue
-        pqueue.add(async () => {
+        void pqueue.add(async () => {
           await queueBlock({
             logger,
             blockNumber,
@@ -67,10 +66,7 @@ export function startLiveSync(args: {
     },
   })
 
-  logger.info(
-    { startBlock: nextBlockToQueue.toString() },
-    'watching latest chain head'
-  )
+  logger.info({ startBlock: nextBlockToQueue.toString() }, 'watching latest chain head')
 
   return { stop: unwatch }
 }

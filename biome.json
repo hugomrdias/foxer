@@ -3,13 +3,7 @@
   "extends": ["@hugomrdias/configs/biome"],
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "!**/node_modules",
-      "!**/drizzle",
-      "!**/generated",
-      "!**/dist",
-      "!**/build"
-    ]
+    "includes": ["!**/node_modules", "!**/drizzle", "!**/generated", "!**/dist", "!**/build"]
   },
   "linter": {
     "rules": {

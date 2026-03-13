@@ -1,5 +1,6 @@
 import { serve } from '@hono/node-server'
 import shutdown from 'http-shutdown'
+
 import type { InternalConfig } from '../config/config.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
@@ -24,7 +25,7 @@ export function createApi(options: {
     },
     () => {
       options.logger.info({ port: options.port }, 'api server listening')
-    }
+    },
   )
 
   const _server = shutdown(server)

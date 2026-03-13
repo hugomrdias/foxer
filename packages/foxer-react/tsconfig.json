@@ -7,7 +7,7 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../foxer/tsconfig.json"
+      "path": "../foxer-client/tsconfig.json"
     }
   ]
 }

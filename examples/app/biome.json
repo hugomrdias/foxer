@@ -3,11 +3,7 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": "//",
   "files": {
-    "includes": [
-      "src/**/*.{js,jsx,ts,tsx,css}",
-      "!src/components/ui/*.tsx",
-      "vite.config.ts"
-    ]
+    "includes": ["src/**/*.{js,jsx,ts,tsx,css}", "!src/components/ui/*.tsx", "vite.config.ts"]
   },
   "css": {
     "parser": {

@@ -11,8 +11,7 @@ export const formatLogDuration = (ms: number) => {
   const hstr = h > 0 ? `${h}h ` : ''
   const mstr = m > 0 || h > 0 ? `${m < 10 && h > 0 ? '0' : ''}${m}m ` : ''
   // Add milliseconds fraction to the seconds string, e.g., 2.322s
-  const sstr =
-    s > 0 || m > 0 ? `${s < 10 && m > 0 ? '0' : ''}${secWithMs}s` : ''
+  const sstr = s > 0 || m > 0 ? `${s < 10 && m > 0 ? '0' : ''}${secWithMs}s` : ''
 
   return `${hstr}${mstr}${sstr}`
 }

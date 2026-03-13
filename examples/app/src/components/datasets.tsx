@@ -1,6 +1,7 @@
 import { useFoxerQuery } from '@hugomrdias/foxer-react'
 import { useState } from 'react'
 import { useConnection } from 'wagmi'
+
 import {
   Table,
   TableBody,
@@ -10,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+
 import { Button } from './ui/button'
 
 type DatasetRow = {
@@ -31,7 +33,7 @@ function formatMetadataValue(value: unknown) {
     return JSON.stringify(value)
   }
 
-  return String(value)
+  return '-'
 }
 
 export function Datasets() {
@@ -83,13 +85,9 @@ export function Datasets() {
           ) : (
             rows.map((row, index) => (
               <TableRow key={`${String(row.dataSetId)}-${String(index)}`}>
-                <TableCell className="font-medium">
-                  {String(row.dataSetId)}
-                </TableCell>
+                <TableCell className="font-medium">{String(row.dataSetId)}</TableCell>
                 <TableCell>{String(row.providerId)}</TableCell>
-                <TableCell className="max-w-[220px] truncate">
-                  {row.serviceProvider}
-                </TableCell>
+                <TableCell className="max-w-[220px] truncate">{row.serviceProvider}</TableCell>
                 <TableCell className="max-w-[320px]">
                   {row.metadata ? (
                     <div className="flex flex-col items-start gap-1.5">
@@ -99,9 +97,7 @@ export function Datasets() {
                               className="inline-flex w-fit max-w-full flex-col rounded-none border border-border/60 bg-muted/30 px-2 py-1"
                               key={key}
                             >
-                              <p className="text-[10px] text-muted-foreground">
-                                {key}
-                              </p>
+                              <p className="text-[10px] text-muted-foreground">{key}</p>
                               <p className="max-w-full font-mono text-[11px] break-all whitespace-normal">
                                 {formatMetadataValue(value)}
                               </p>

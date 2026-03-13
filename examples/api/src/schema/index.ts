@@ -1,4 +1,5 @@
 import { defineRelations } from 'drizzle-orm/relations'
+
 import { datasets } from './datasets.ts'
 import { pieces } from './pieces.ts'
 import { providers } from './providers.ts'
@@ -35,5 +36,5 @@ export const relations = defineRelations(
         }),
       },
     }
-  }
+  },
 )

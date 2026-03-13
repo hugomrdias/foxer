@@ -4,9 +4,7 @@ type SettingsValue = {
   network: 'mainnet' | 'calibration'
 }
 
-const isPlainObject = (
-  payload: unknown
-): payload is { [key: string]: unknown } => {
+const isPlainObject = (payload: unknown): payload is { [key: string]: unknown } => {
   if (typeof payload !== 'object' || payload === null) return false
   if (payload === Object.prototype) return false
   if (Object.getPrototypeOf(payload) === null) return true
@@ -22,6 +20,7 @@ export const store = persistentMap<SettingsValue>(
   {
     encode: (value) => {
       if (typeof value === 'boolean') {
+        // oxlint-disable-next-line typescript/restrict-template-expressions
         return `$$boolean:${value}`
       }
       if (isPlainObject(value)) {
@@ -45,5 +44,5 @@ export const store = persistentMap<SettingsValue>(
       }
       return value
     },
-  }
+  },
 )

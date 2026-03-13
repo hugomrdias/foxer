@@ -1,14 +1,10 @@
 import { PGlite } from '@electric-sql/pglite'
-import {
-  type A_Const,
-  type Node,
-  parse,
-  type RawStmt,
-} from '@libpg-query/parser'
+import { type A_Const, type Node, parse, type RawStmt } from '@libpg-query/parser'
 import type { Visitor } from '@pgsql/traverse'
 import { walk } from '@pgsql/traverse'
 import type { QueryWithTypings } from 'drizzle-orm'
 import { Pool } from 'pg'
+
 import type { Database } from '../db/client'
 import type { MaybeResult } from '../types'
 
@@ -16,7 +12,7 @@ import type { MaybeResult } from '../types'
 const getNodeType = (node: Node) => Object.keys(node)[0]!
 
 export async function parseSql(
-  sql: string
+  sql: string,
 ): Promise<MaybeResult<{ node: Node; tables: string[] }>> {
   let result: { stmts: RawStmt[] } | undefined
   const tables: string[] = []
@@ -52,9 +48,7 @@ export async function parseSql(
   return { result: { node, tables } }
 }
 
-export async function validateSql(
-  query: QueryWithTypings
-): Promise<MaybeResult<string[]>> {
+export async function validateSql(query: QueryWithTypings): Promise<MaybeResult<string[]>> {
   const { sql, params } = query
   const result = await parseSql(sql)
   if (result.error) {
@@ -120,20 +114,16 @@ export async function executeSql({
   query: QueryWithTypings
 }): Promise<MaybeResult<unknown>> {
   try {
-    let dbResult: unknown | undefined
+    let dbResult: unknown
     if (db.$client instanceof PGlite) {
-      dbResult = await db._.session
-        .prepareQuery(query, undefined, undefined, false)
-        .execute()
+      dbResult = await db._.session.prepareQuery(query, undefined, undefined, false).execute()
     }
     if (db.$client instanceof Pool) {
       dbResult = await db.transaction(
         (tx) => {
-          return tx._.session
-            .prepareQuery(query, undefined, undefined, false)
-            .execute()
+          return tx._.session.prepareQuery(query, undefined, undefined, false).execute()
         },
-        { accessMode: 'read only' }
+        { accessMode: 'read only' },
       )
     }
 

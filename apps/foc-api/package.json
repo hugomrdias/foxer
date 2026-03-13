@@ -1,13 +1,22 @@
 {
   "name": "foc-api",
   "version": "1.0.0",
-  "description": "",
-  "type": "module",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "MIT",
+  "author": "",
+  "files": [
+    "src",
+    "dist/src",
+    "dist/src/**/*.d.ts",
+    "dist/src/**/*.d.ts.map"
+  ],
+  "type": "module",
+  "sideEffects": false,
   "main": "dist/src/index.js",
   "module": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
-  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
@@ -15,34 +24,25 @@
       "default": "./dist/src/index.js"
     }
   },
-  "files": [
-    "src",
-    "dist/src",
-    "dist/src/**/*.d.ts",
-    "dist/src/**/*.d.ts.map"
-  ],
   "scripts": {
-    "dev": "foxer dev",
     "generate": "drizzle-kit generate",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "tsc --noEmit && biome check",
-    "typecheck": "tsc --noEmit",
+    "check": "vp lint && vp fmt",
     "build": "tsc -p ./tsconfig.client.json"
   },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@filoz/synapse-core": "^0.3.0",
     "@hono/standard-validator": "^0.2.2",
     "@hugomrdias/foxer": "workspace:*",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "hono": "^4.12.7",
-    "viem": "^2.47.1",
+    "viem": "catalog:",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^25.4.0",
-    "typescript": "^5.9.3"
+    "@types/node": "^25.5.0",
+    "drizzle-kit": "^0.31.9",
+    "typescript": "^5.9.3",
+    "vite-plus": "catalog:"
   }
 }

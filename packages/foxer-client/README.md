@@ -58,7 +58,7 @@ const { unsubscribe } = client.live(
   },
   (error) => {
     console.error(error)
-  }
+  },
 )
 
 // later

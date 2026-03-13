@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useConnection } from 'wagmi'
+
 import { Button } from '@/components/ui/button.tsx'
 import {
   Dialog,
@@ -9,6 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog.tsx'
+
 import { ConnectOptions } from './connect-options.tsx'
 
 export function ConnectWallet() {
@@ -27,9 +29,7 @@ export function ConnectWallet() {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Connect Wallet</DialogTitle>
-          <DialogDescription>
-            Connect your wallet to get started
-          </DialogDescription>
+          <DialogDescription>Connect your wallet to get started</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <ConnectOptions />

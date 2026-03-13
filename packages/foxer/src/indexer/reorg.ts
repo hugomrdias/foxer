@@ -1,4 +1,5 @@
 import type { PublicClient } from 'viem'
+
 import { deleteBlocksFrom } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
 import { safeGetBlock } from '../rpc/get-block.ts'
@@ -34,10 +35,7 @@ export async function ensureParentContinuity(args: {
     return null
   }
 
-  logger.warn(
-    { blockNumber: block.number.toString() },
-    'parent mismatch detected; rolling back'
-  )
+  logger.warn({ blockNumber: block.number.toString() }, 'parent mismatch detected; rolling back')
 
   // Walk backward from the immediate parent of the failing block until we find
   // a block number where DB and chain hashes agree again.
@@ -45,9 +43,7 @@ export async function ensureParentContinuity(args: {
 
   while (true) {
     // 1) Read the DB's canonical block at this height.
-    const dbBlock = (
-      await db.$prepared.getBlockById.execute({ blockNumber: cursor })
-    )[0]
+    const dbBlock = (await db.$prepared.getBlockById.execute({ blockNumber: cursor }))[0]
     if (!dbBlock) {
       cursor -= 1n
       continue
@@ -88,17 +84,14 @@ export async function verifyRecentBlocks(args: {
 }): Promise<void> {
   const { logger, db, client, depth } = args
   const endClock = startClock()
-  const latest =
-    (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
+  const latest = (await db.$prepared.getLatestBlock.execute())[0]?.number ?? null
 
   if (latest == null) return
 
   const start = latest - depth >= 0n ? latest - depth : 0n
   let blockNumber = start
   while (blockNumber <= latest) {
-    const dbBlock = (
-      await db.$prepared.getBlockById.execute({ blockNumber })
-    )[0]
+    const dbBlock = (await db.$prepared.getBlockById.execute({ blockNumber }))[0]
 
     if (!dbBlock) {
       blockNumber += 1n
@@ -107,10 +100,7 @@ export async function verifyRecentBlocks(args: {
     const chainBlock = await safeGetBlock({ client, blockNumber, db })
 
     if (!hashEquals(chainBlock.hash, dbBlock.hash)) {
-      logger.warn(
-        { blockNumber: blockNumber.toString() },
-        'startup sanity check mismatch detected'
-      )
+      logger.warn({ blockNumber: blockNumber.toString() }, 'startup sanity check mismatch detected')
       await deleteBlocksFrom(db, blockNumber)
       return
     }

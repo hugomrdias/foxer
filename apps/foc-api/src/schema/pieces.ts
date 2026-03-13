@@ -14,5 +14,5 @@ export const pieces = pgTable(
   (table) => [
     primaryKey({ columns: [table.datasetId, table.id] }),
     index('pieces_block_number_index').on(table.blockNumber),
-  ]
+  ],
 )
