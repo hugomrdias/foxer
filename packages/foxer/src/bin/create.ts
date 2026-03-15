@@ -148,7 +148,7 @@ export const create: Command = command(
     p.log.step(`Scaffolding project in ${root}...`)
 
     const pkg = JSON.parse(
-      readFileSync(resolve(__dirname, `../../../template/package.json`), 'utf-8'),
+      readFileSync(resolve(__dirname, `../../template/package.json.tpl`), 'utf-8'),
     )
 
     pkg.name = packageName
@@ -157,13 +157,13 @@ export const create: Command = command(
 
     if (pm === 'pnpm') {
       copy(
-        resolve(__dirname, `../../../template/pnpm-workspace.yaml`),
+        resolve(__dirname, `../../template/pnpm-workspace.yaml.tpl`),
         resolve(root, 'pnpm-workspace.yaml'),
       )
     }
 
-    copy(resolve(__dirname, `../../../template/vite.config.ts`), resolve(root, 'vite.config.ts'))
-    copy(resolve(__dirname, `../../../template/tsconfig.json`), resolve(root, 'tsconfig.json'))
+    copy(resolve(__dirname, `../../template/vite.config.js.tpl`), resolve(root, 'vite.config.ts'))
+    copy(resolve(__dirname, `../../template/tsconfig.json.tpl`), resolve(root, 'tsconfig.json'))
 
     // copy apps/foc-api
     await downloadTemplate('hugomrdias/foxer/examples/api', {

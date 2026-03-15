@@ -9,7 +9,8 @@
     "directory": "packages/foxer"
   },
   "bin": {
-    "foxer": "./dist/src/bin/index.js"
+    "foxer": "./dist/src/bin/index.js",
+    "foxer.src": "./src/bin/index.ts"
   },
   "type": "module",
   "sideEffects": false,
@@ -47,8 +48,7 @@
   "scripts": {
     "check": "vp lint && vp fmt",
     "build": "tsc --build",
-    "prepublishOnly": "vp run build",
-    "prepare": "vp run build"
+    "prepublishOnly": "vp run build"
   },
   "dependencies": {
     "@bluwy/giget-core": "^0.1.6",

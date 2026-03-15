@@ -12,7 +12,7 @@ import { serve } from './serve.ts'
 import { start } from './start.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const packageJsonPath = resolve(__dirname, '../../../package.json')
+const packageJsonPath = resolve(__dirname, '../../package.json')
 const packageJson = JSON.parse(readFileSync(packageJsonPath, { encoding: 'utf8' }))
 
 const argv = cli({

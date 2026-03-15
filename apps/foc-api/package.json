@@ -30,8 +30,8 @@
     "check": "vp lint && vp fmt",
     "build": "tsc -p ./tsconfig.client.json",
     "deploy": "cd ../.. && railway up",
-    "start": "foxer start",
-    "dev": "foxer dev"
+    "start": "foxer.src start",
+    "dev": "foxer.src dev"
   },
   "dependencies": {
     "@filoz/synapse-core": "^0.3.0",
