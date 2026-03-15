@@ -33,7 +33,7 @@ function formatMetadataValue(value: unknown) {
     return JSON.stringify(value)
   }
 
-  return '-'
+  return String(value)
 }
 
 export function Datasets() {
