@@ -7,24 +7,20 @@ on:
     branches:
       - master
     paths:
-      - 'packages/foxer-client/**'
+      - "packages/foxer-client/**"
       - .github/workflows/foxer-client.yml
-      - pnpm-lock.yaml
+      - bun.lock
   pull_request:
     paths:
-      - 'packages/foxer-client/**'
+      - "packages/foxer-client/**"
       - .github/workflows/foxer-client.yml
-      - pnpm-lock.yaml
+      - bun.lock
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-          cache: pnpm
-      - run: pnpm install
-      - run: pnpm run build
-      - run: pnpm -r --filter foxer-client run lint
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: turbo build --filter @hugomrdias/foxer-client
+      - run: turbo check --filter @hugomrdias/foxer-client
