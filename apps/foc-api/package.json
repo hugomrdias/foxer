@@ -28,7 +28,10 @@
     "generate": "drizzle-kit generate",
     "test": "echo \"Error: no test specified\" && exit 1",
     "check": "vp lint && vp fmt",
-    "build": "tsc -p ./tsconfig.client.json"
+    "build": "tsc -p ./tsconfig.client.json",
+    "deploy": "cd ../.. && railway up",
+    "start": "foxer start",
+    "dev": "foxer dev"
   },
   "dependencies": {
     "@filoz/synapse-core": "^0.3.0",
@@ -36,13 +39,17 @@
     "@hugomrdias/foxer": "workspace:*",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "hono": "^4.12.7",
-    "viem": "catalog:",
+    "viem": "2.47.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "drizzle-kit": "^0.31.9",
     "typescript": "^5.9.3",
-    "vite-plus": "catalog:"
-  }
+    "vite-plus": "0.1.11"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.30.1"
 }

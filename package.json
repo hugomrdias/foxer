@@ -18,11 +18,12 @@
     "ready": "vp run build -r && vp check --fix",
     "check": "vp run --cache -r check",
     "build": "vp run --cache -r build",
-    "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules} apps/*/{dist,node_modules} examples/*/{dist,node_modules}",
+    "clean": "rm -rf node_modules pnpm-lock.yaml packages/*/{dist,node_modules,.turbo} apps/*/{dist,node_modules,.turbo} examples/*/{dist,node_modules,.turbo}",
     "prepare": "vp config"
   },
   "devDependencies": {
-    "vite-plus": "catalog:"
+    "turbo": "^2.8.17",
+    "vite-plus": "0.1.11"
   },
   "packageManager": "pnpm@10.30.1"
 }

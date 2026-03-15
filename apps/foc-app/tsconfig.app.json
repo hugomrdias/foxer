@@ -5,7 +5,7 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"],
+    "types": ["vite-plus/client"],
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -24,7 +24,9 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@hugomrdias/foxer-client": ["../../packages/foxer-client/src"],
+      "@hugomrdias/foxer-react": ["../../packages/foxer-react/src"]
     }
   },
   "include": ["src"],

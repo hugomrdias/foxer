@@ -47,7 +47,8 @@
   "scripts": {
     "check": "vp lint && vp fmt",
     "build": "tsc --build",
-    "prepublishOnly": "vp run build"
+    "prepublishOnly": "vp run build",
+    "prepare": "vp run build"
   },
   "dependencies": {
     "@bluwy/giget-core": "^0.1.6",

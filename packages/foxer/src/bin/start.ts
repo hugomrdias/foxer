@@ -29,7 +29,7 @@ export const start: Command = command(
       mode: 'json',
     })
 
-    if (process.env.DATABASE_URL != null) {
+    if (process.env.DATABASE_URL == null) {
       logger.error('DATABASE_URL environment variable is not set')
       gracefulExit(1)
     }

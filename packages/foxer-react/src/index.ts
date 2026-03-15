@@ -70,7 +70,10 @@ export function useFoxerQuery<queryFnData = unknown, error = DefaultError, data 
 
   const client = useFoxerClient()
 
-  const queryOptions = useMemo(() => getFoxerQueryOptions(client, params.queryFn), [params.queryFn])
+  const queryOptions = useMemo(
+    () => getFoxerQueryOptions(client, params.queryFn),
+    [client, params.queryFn],
+  )
 
   useEffect(() => {
     if (live === false || params.enabled === false) return
@@ -79,6 +82,7 @@ export function useFoxerQuery<queryFnData = unknown, error = DefaultError, data 
       queryClient.setQueryData(queryOptions.queryKey, data)
     })
     return unsubscribe
+    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
   }, [live, params.enabled, client, queryClient, queryOptions.queryHash])
 
   return useQuery({

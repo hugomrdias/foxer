@@ -16,6 +16,7 @@ lerna-debug.log*
 
 # Build
 dist/
+.turbo/
 
 # Env files
 .zed

@@ -54,3 +54,16 @@ docker run --rm -it \
   -v postgres-data:/var/lib/postgresql/data \
   postgres:17 -c wal_level=logical
 ```
+
+### Railway
+
+#### wal_level
+
+```shell
+railway connect indexer-pg
+
+alter system set wal='logical';
+SELECT pg_reload_conf();
+```
+
+Restart pg

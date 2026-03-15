@@ -37,7 +37,7 @@
     "@hugomrdias/foxer": "latest",
     "drizzle-orm": "1.0.0-beta.15-859cf75",
     "hono": "^4.12.1",
-    "viem": "2.47.2",
+    "viem": "2.47.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {

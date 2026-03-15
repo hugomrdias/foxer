@@ -7,29 +7,13 @@ import { defineConfig } from 'vite-plus'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    exclude: ['@hugomrdias/foxer-client', '@hugomrdias/foxer-react'],
+  },
   resolve: {
+    tsconfigPaths: true,
     alias: {
       '@': path.resolve(__dirname, './src'),
-    },
-  },
-  lint: {
-    options: { typeAware: true, typeCheck: true },
-    plugins: ['promise', 'import', 'react', 'react-perf'],
-  },
-  run: {
-    tasks: {
-      check: {
-        command: 'vp lint && vp fmt',
-      },
-      dev: {
-        command: 'vp dev',
-        dependsOn: ['check', '@hugomrdias/foxer-client#build', '@hugomrdias/foxer-react#build'],
-        cache: false,
-      },
-      build: {
-        command: 'vp build',
-        dependsOn: ['check', '@hugomrdias/foxer-client#build', '@hugomrdias/foxer-react#build'],
-      },
     },
   },
 })
