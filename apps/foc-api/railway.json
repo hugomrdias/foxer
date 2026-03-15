@@ -6,7 +6,8 @@
     "watchPatterns": [
       "apps/foc-api/**/*.ts",
       "packages/foxer/**/*.ts",
-      "bun.lock"
+      "bun.lock",
+      "apps/foc-api/railway.json"
     ]
   },
   "deploy": {
