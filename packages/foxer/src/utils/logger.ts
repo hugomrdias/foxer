@@ -48,9 +48,6 @@ export function createLogger({
   } else {
     logger = pino({
       level,
-      serializers: {
-        error: errorSerializer,
-      },
       // Removes "pid" and "hostname" properties from the log.
       base: undefined,
     })

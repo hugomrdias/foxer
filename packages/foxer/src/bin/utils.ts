@@ -1,52 +1,47 @@
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
-
-import { type LilconfigResult, lilconfig } from 'lilconfig'
+import {
+  type LoadConfigResult,
+  loadConfig as unconfigLoadConfig,
+} from 'unconfig'
 
 import type { InternalConfig } from '../config/config'
 import type { Logger } from '../utils/logger'
 
 const CLI_NAME = 'foxer'
 
-const loadEsm = async (filepath: string) => {
-  const res = await import(pathToFileURL(filepath).href)
-  return res.default ?? res
-}
-
-const configLoaders = {
-  '.js': loadEsm,
-  '.mjs': loadEsm,
-  '.ts': loadEsm,
-  '.mts': loadEsm,
-}
-
 export async function loadConfig(
   logger: Logger,
   root: string,
   filePath?: string
 ) {
-  let configFile: LilconfigResult | undefined
+  let configFile: LoadConfigResult<{ config: InternalConfig }> | undefined
 
   try {
     if (filePath) {
       const configPath = path.resolve(root, filePath)
 
-      configFile = await lilconfig(configPath, {
-        loaders: configLoaders,
-        searchPlaces: [],
-      }).load(configPath)
+      configFile = await unconfigLoadConfig({
+        sources: [
+          {
+            files: configPath,
+          },
+        ],
+      })
     } else {
-      configFile = await lilconfig(CLI_NAME, {
-        loaders: configLoaders,
-        searchPlaces: [`${CLI_NAME}.config.ts`, `${CLI_NAME}.config.mts`],
-      }).search()
+      configFile = await unconfigLoadConfig({
+        sources: [
+          {
+            files: `${CLI_NAME}.config`,
+          },
+        ],
+      })
     }
   } catch (error) {
-    logger.error(error, 'config evaluation failed')
+    logger.error({ error }, 'config evaluation failed')
     // ignore
   }
 
-  if (!configFile || configFile.isEmpty) {
+  if (!configFile) {
     logger.error({
       msg: 'Config file not found',
     })
