@@ -48,7 +48,7 @@
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "drizzle-orm": "1.0.0-beta.18-5ffac6d",
     "eventsource": "^4.1.0"
   },
   "devDependencies": {
