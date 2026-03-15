@@ -6,15 +6,12 @@ WORKDIR /app
 # Install dependencies
 FROM base AS deps
 COPY package.json tsconfig.json ./
-COPY apps/foc-api/package.json apps/foc-api/package.json
-COPY packages/foxer/package.json packages/foxer/package.json
-
-RUN bun install --production
-
-# Copy source code
-FROM deps AS build
 COPY apps/foc-api apps/foc-api
 COPY packages/foxer packages/foxer
+
+RUN bun install
+WORKDIR /app/packages/foxer
+RUN bun run build
 
 # Production runner
 FROM base AS runner
@@ -23,7 +20,7 @@ ENV PORT=4200
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 foc-api
 
-COPY --from=build /app /app
+COPY --from=deps /app /app
 
 EXPOSE 4200
 USER foc-api
