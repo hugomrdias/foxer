@@ -27,5 +27,6 @@ COPY --from=build /app /app
 
 EXPOSE 4200
 USER foc-api
+WORKDIR /app/apps/foc-api
 
-CMD ["bun", "packages/foxer/src/bin/index.ts", "start", "--root", "apps/foc-api", "--config", "foxer.config.ts"]
+CMD ["bun", "run", "start"]
