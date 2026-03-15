@@ -2,10 +2,15 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "DOCKERFILE",
-    "dockerfilePath": "apps/foc-api/Dockerfile"
+    "dockerfilePath": "apps/foc-api/Dockerfile",
+    "watchPatterns": [
+      "apps/foc-api/**/*.ts",
+      "packages/foxer/**/*.ts",
+      "bun.lock"
+    ]
   },
   "deploy": {
-    "startCommand": "node packages/foxer/dist/src/bin/index.js start --root apps/foc-api --config foxer.config.ts",
+    "startCommand": "bun packages/foxer/dist/src/bin/index.js start --root apps/foc-api --config foxer.config.ts",
     "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 10
   }
