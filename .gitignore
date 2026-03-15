@@ -1,8 +1,5 @@
 # npm
 node_modules/
-package-lock.json
-yarn.lock
-bun.lock
 
 # Logs
 logs
