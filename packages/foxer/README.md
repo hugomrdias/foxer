@@ -4,13 +4,12 @@
 
 ## What it includes
 
-- `createConfig()` for strongly typed project configuration
-- Contract and event indexing with hook registration
-- Hono middleware with support for SQL over HTTP
-- Live queries support
-- Drizzle schema and relations support
+- End-to-end type safety & autocomplete with no codegen
+- Contract events indexing
+- Hono middleware with support for SQL over HTTP and Live queries
+- Database schema and relations powered by Drizzle
+- Local development server and database with PGlite
 - A `foxer` CLI for project scaffolding and local development
-- Subpath exports for API and schema helpers
 
 ## Install
 
