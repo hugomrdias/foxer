@@ -11,6 +11,7 @@
     ]
   },
   "deploy": {
+    "startCommand": "bun run start",
     "restartPolicyType": "ALWAYS",
     "restartPolicyMaxRetries": 10
   }
