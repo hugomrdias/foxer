@@ -1,5 +1,11 @@
 import { address, bigint, hash } from '@hugomrdias/foxer'
-import { foreignKey, index, pgTable, primaryKey, text } from 'drizzle-orm/pg-core'
+import {
+  foreignKey,
+  index,
+  pgTable,
+  primaryKey,
+  text,
+} from 'drizzle-orm/pg-core'
 
 export const sessionKeys = pgTable(
   'sessionKeys',
@@ -14,7 +20,7 @@ export const sessionKeys = pgTable(
   (table) => [
     index('sessionKeys_identity_index').on(table.identity),
     index('sessionKeys_block_number_index').on(table.blockNumber),
-  ],
+  ]
 )
 
 export const sessionKeyPermissions = pgTable(
@@ -31,5 +37,5 @@ export const sessionKeyPermissions = pgTable(
       foreignColumns: [sessionKeys.signer],
       name: 'sessionKeyPermissions_signer_fk',
     }).onDelete('cascade'),
-  ],
+  ]
 )

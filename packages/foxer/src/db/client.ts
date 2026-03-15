@@ -1,7 +1,13 @@
 import { PGlite } from '@electric-sql/pglite'
 import { desc, eq, sql } from 'drizzle-orm'
-import { drizzle as drizzleNodePostgres, type NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { drizzle as drizzlePglite, type PgliteDatabase } from 'drizzle-orm/pglite'
+import {
+  drizzle as drizzleNodePostgres,
+  type NodePgDatabase,
+} from 'drizzle-orm/node-postgres'
+import {
+  drizzle as drizzlePglite,
+  type PgliteDatabase,
+} from 'drizzle-orm/pglite'
 import type { AnyRelations, EmptyRelations } from 'drizzle-orm/relations'
 import { Pool, type PoolConfig } from 'pg'
 
@@ -105,7 +111,9 @@ export function createDatabase<
 
   // PGlite
   const client = new PGlite(
-    config?.driver === 'pglite' && config.directory ? config.directory : '.pglite',
+    config?.driver === 'pglite' && config.directory
+      ? config.directory
+      : '.pglite'
   )
   const db = drizzlePglite({
     client: client,
@@ -129,7 +137,9 @@ export function createDatabase<
   }
 }
 
-function generatePrepared(db: Omit<Database<typeof schema, typeof relations>, '$prepared'>) {
+function generatePrepared(
+  db: Omit<Database<typeof schema, typeof relations>, '$prepared'>
+) {
   const getLatestBlock = db
     .select({
       number: schema.blocks.number,

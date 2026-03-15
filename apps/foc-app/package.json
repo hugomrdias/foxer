@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "vp lint && vp fmt",
-    "preview": "vp preview",
-    "dev": "vp dev",
-    "build": "vp build"
+    "check": "tsc --noEmit && biome check .",
+    "preview": "vite preview",
+    "dev": "vite dev",
+    "build": "vite build"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
@@ -41,7 +41,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "globals": "^17.4.0",
-    "typescript": "~5.9.3",
-    "vite-plus": "0.1.11"
+    "typescript": "5.9.3",
+    "vite": "^8.0.0"
   }
 }

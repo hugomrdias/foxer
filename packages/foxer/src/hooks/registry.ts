@@ -52,7 +52,9 @@ export type EventHook<
  * Registry for strongly typed contract-event hooks.
  */
 export class HookRegistry<
-  C extends ContractsConfig<NonNullable<unknown>> = ContractsConfig<NonNullable<unknown>>,
+  C extends ContractsConfig<NonNullable<unknown>> = ContractsConfig<
+    NonNullable<unknown>
+  >,
   TSchema extends Record<string, unknown> = Record<string, unknown>,
   TRelations extends AnyRelations = EmptyRelations,
 > {
@@ -63,7 +65,7 @@ export class HookRegistry<
    */
   on<K extends MergedContractEvents<C>>(
     streamKey: K,
-    hook: EventHook<C, K, TSchema, TRelations>,
+    hook: EventHook<C, K, TSchema, TRelations>
   ): void {
     this.hooks.set(streamKey, hook)
   }
@@ -84,7 +86,12 @@ export class HookRegistry<
     context: HookContext<TSchema, TRelations>
   }): Promise<void> {
     const { key, args, log, block, transaction, context } = options
-    const hook = this.hooks.get(key) as unknown as EventHook<C, K, TSchema, TRelations>
+    const hook = this.hooks.get(key) as unknown as EventHook<
+      C,
+      K,
+      TSchema,
+      TRelations
+    >
     if (!hook) return
 
     const event = {
@@ -101,7 +108,11 @@ export class HookRegistry<
   }
 }
 
-export function createRegistry({ config }: { config: InternalConfig }): HookRegistry {
+export function createRegistry({
+  config,
+}: {
+  config: InternalConfig
+}): HookRegistry {
   const registry = new HookRegistry()
   config.hooks({ registry })
   return registry

@@ -10,7 +10,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "check": "vp lint && vp fmt"
+    "check": "tsc --noEmit && biome check ."
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",

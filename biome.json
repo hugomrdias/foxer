@@ -1,15 +1,9 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "extends": ["@hugomrdias/configs/biome"],
-  "files": {
-    "ignoreUnknown": true,
-    "includes": ["!**/node_modules", "!**/drizzle", "!**/generated", "!**/dist", "!**/build"]
-  },
-  "linter": {
-    "rules": {
-      "style": {
-        "noNamespace": "off"
-      }
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   }
 }

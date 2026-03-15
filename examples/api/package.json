@@ -27,7 +27,7 @@
   "scripts": {
     "dev": "foxer dev",
     "generate": "drizzle-kit generate",
-    "check": "vp lint && vp fmt",
+    "check": "tsc --noEmit && biome check .",
     "build": "tsc -p ./tsconfig.client.json",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

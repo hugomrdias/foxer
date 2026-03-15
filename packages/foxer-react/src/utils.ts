@@ -8,7 +8,7 @@ export type SQLWrapper = Exclude<Parameters<typeof compileQuery>[0], string>
 
 export function getFoxerQueryOptions<T>(
   client: Client<ResolvedSchema>,
-  queryFn: (db: Client<ResolvedSchema>['db']) => T,
+  queryFn: (db: Client<ResolvedSchema>['db']) => T
 ): {
   queryKey: QueryKey
   queryHash: string
@@ -18,7 +18,7 @@ export function getFoxerQueryOptions<T>(
   // @ts-expect-error
   if ('getSQL' in queryPromise === false) {
     throw new Error(
-      '"queryFn" must return SQL. You may have to remove `.execute()` from your query.',
+      '"queryFn" must return SQL. You may have to remove `.execute()` from your query.'
     )
   }
 

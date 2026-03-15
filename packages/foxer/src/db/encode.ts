@@ -55,14 +55,17 @@ export function encodeBlock(block: ChainBlock): EncodedBlock {
   }
 }
 
-export function encodeBlockWithTransactions(block: ChainBlock): EncodedBlockWithTransactions {
+export function encodeBlockWithTransactions(
+  block: ChainBlock
+): EncodedBlockWithTransactions {
   return {
     ...encodeBlock(block),
     transactions: block.transactions.map(encodeTransaction),
   }
 }
 
-const EMPTY_TRIE_HASH = '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'
+const EMPTY_TRIE_HASH =
+  '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'
 const EMPTY_LOGS_BLOOM =
   '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
 export function encodeNullRoundBlock(options: {
@@ -81,11 +84,13 @@ export function encodeNullRoundBlock(options: {
     gasLimit: 30_000_000n,
     baseFeePerGas: 1_000_000_000n,
     nonce: '0x0000000000000000',
-    mixHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    mixHash:
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
     stateRoot: EMPTY_TRIE_HASH,
     receiptsRoot: EMPTY_TRIE_HASH,
     transactionsRoot: EMPTY_TRIE_HASH,
-    sha3Uncles: '0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
+    sha3Uncles:
+      '0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
     size: 0n,
     difficulty: 0n,
     totalDifficulty: 0n,

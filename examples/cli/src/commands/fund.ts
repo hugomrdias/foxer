@@ -49,5 +49,5 @@ export const fund: Command = command(
       spinner.stop()
       process.exit(0)
     }
-  },
+  }
 )

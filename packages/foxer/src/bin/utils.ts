@@ -20,7 +20,11 @@ const configLoaders = {
   '.mts': loadEsm,
 }
 
-export async function loadConfig(logger: Logger, root: string, filePath?: string) {
+export async function loadConfig(
+  logger: Logger,
+  root: string,
+  filePath?: string
+) {
   let configFile: LilconfigResult | undefined
 
   try {

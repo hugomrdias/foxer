@@ -11,7 +11,13 @@ import { sseError } from './sse.ts'
 
 const MAX_LIVE_QUERIES = 1000
 
-export function sqlMiddleware({ db, logger }: { db: Database; logger: Logger }) {
+export function sqlMiddleware({
+  db,
+  logger,
+}: {
+  db: Database
+  logger: Logger
+}) {
   let pg: postgres.Sql | undefined
   const databaseUrl = process.env.DATABASE_URL
 
@@ -74,7 +80,7 @@ export function sqlMiddleware({ db, logger }: { db: Database; logger: Logger }) 
       if (!pg) {
         return sseError(
           c,
-          'Database connection not established. Please check your DATABASE_URL environment variable.',
+          'Database connection not established. Please check your DATABASE_URL environment variable.'
         )
       }
 
@@ -117,7 +123,7 @@ export function sqlMiddleware({ db, logger }: { db: Database; logger: Logger }) 
             unsubscribe()
           })
           return Promise.resolve(undefined)
-        },
+        }
       )
     }
 

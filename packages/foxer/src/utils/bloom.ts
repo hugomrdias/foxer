@@ -26,7 +26,11 @@ export const isInBloom = (bloomHex: Hex, value: Hex): boolean => {
   return true // PROBABLY in this block (could be a false positive)
 }
 
-export function isBlockInteresting(bloomHex: Hex, addresses: Hex[], topics: Hex[]): boolean {
+export function isBlockInteresting(
+  bloomHex: Hex,
+  addresses: Hex[],
+  topics: Hex[]
+): boolean {
   // Check if ANY of our target contracts might be in this block
   const hasContract = addresses.some((addr) => isInBloom(bloomHex, addr))
   if (!hasContract) return false

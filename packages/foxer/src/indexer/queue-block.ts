@@ -20,7 +20,16 @@ export type QueueBlockArgs = {
 }
 
 export async function queueBlock(args: QueueBlockArgs): Promise<void> {
-  const { config, db, client, registry, blockNumber, logger, onRewind, queueSize } = args
+  const {
+    config,
+    db,
+    client,
+    registry,
+    blockNumber,
+    logger,
+    onRewind,
+    queueSize,
+  } = args
 
   const endClock = startClock()
   try {
@@ -42,7 +51,7 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
           blockNumber: blockNumber.toString(),
           rewindTo: result.rewindTo.toString(),
         },
-        'reorg detected during live processing; rewinding',
+        'reorg detected during live processing; rewinding'
       )
       onRewind(result.rewindTo)
       return
@@ -54,12 +63,12 @@ export async function queueBlock(args: QueueBlockArgs): Promise<void> {
         blockNumber: blockNumber.toString(),
         queueSize,
       },
-      'processed live block',
+      'processed live block'
     )
   } catch (error) {
     logger.error(
       { error, blockNumber: blockNumber.toString() },
-      'block processing failed; rewinding',
+      'block processing failed; rewinding'
     )
     onRewind(blockNumber - 1n)
   }

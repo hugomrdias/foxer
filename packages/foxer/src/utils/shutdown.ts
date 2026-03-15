@@ -1,7 +1,13 @@
 import { asyncExitHook, gracefulExit } from 'exit-hook'
 import type { Logger } from 'pino'
 
-export function createExit({ logger, stop }: { logger: Logger; stop: () => Promise<void> }) {
+export function createExit({
+  logger,
+  stop,
+}: {
+  logger: Logger
+  stop: () => Promise<void>
+}) {
   registerUnhandled({ logger })
   asyncExitHook(
     async () => {
@@ -12,7 +18,7 @@ export function createExit({ logger, stop }: { logger: Logger; stop: () => Promi
     },
     {
       wait: 1000,
-    },
+    }
   )
 }
 

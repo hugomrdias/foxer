@@ -39,7 +39,9 @@ export function handleDatasets(registry: Registry) {
   registry.on('storage:ServiceTerminated', async ({ context, event }) => {
     context.logger.silent({ event: event.args }, 'DataSetDeleted')
     const ds = event.args
-    await context.db.delete(schema.datasets).where(eq(schema.datasets.dataSetId, ds.dataSetId))
+    await context.db
+      .delete(schema.datasets)
+      .where(eq(schema.datasets.dataSetId, ds.dataSetId))
   })
 }
 

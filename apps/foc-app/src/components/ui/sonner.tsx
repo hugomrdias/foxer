@@ -1,11 +1,11 @@
 'use client'
 
 import {
+  Alert02Icon,
   CheckmarkCircle02Icon,
   InformationCircleIcon,
-  Alert02Icon,
-  MultiplicationSignCircleIcon,
   Loading03Icon,
+  MultiplicationSignCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { useTheme } from 'next-themes'
@@ -16,17 +16,42 @@ const Toaster = ({ ...props }: ToasterProps) => {
 
   return (
     <Sonner
-      theme={theme as ToasterProps['theme']}
       className="toaster group"
       icons={{
-        success: <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-4" />,
-        info: <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="size-4" />,
-        warning: <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-4" />,
+        success: (
+          <HugeiconsIcon
+            className="size-4"
+            icon={CheckmarkCircle02Icon}
+            strokeWidth={2}
+          />
+        ),
+        info: (
+          <HugeiconsIcon
+            className="size-4"
+            icon={InformationCircleIcon}
+            strokeWidth={2}
+          />
+        ),
+        warning: (
+          <HugeiconsIcon
+            className="size-4"
+            icon={Alert02Icon}
+            strokeWidth={2}
+          />
+        ),
         error: (
-          <HugeiconsIcon icon={MultiplicationSignCircleIcon} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon
+            className="size-4"
+            icon={MultiplicationSignCircleIcon}
+            strokeWidth={2}
+          />
         ),
         loading: (
-          <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
+          <HugeiconsIcon
+            className="size-4 animate-spin"
+            icon={Loading03Icon}
+            strokeWidth={2}
+          />
         ),
       }}
       style={
@@ -37,6 +62,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           '--border-radius': 'var(--radius)',
         } as React.CSSProperties
       }
+      theme={theme as ToasterProps['theme']}
       toastOptions={{
         classNames: {
           toast: 'cn-toast',

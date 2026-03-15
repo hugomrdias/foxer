@@ -85,10 +85,14 @@ export function Pieces() {
             </TableRow>
           ) : (
             rows.map((row, index) => (
-              <TableRow key={`${String(row.datasetId)}-${String(row.id)}-${String(index)}`}>
+              <TableRow
+                key={`${String(row.datasetId)}-${String(row.id)}-${String(index)}`}
+              >
                 <TableCell className="font-medium">{String(row.id)}</TableCell>
                 <TableCell>{String(row.datasetId)}</TableCell>
-                <TableCell className="max-w-[320px] truncate">{row.cid}</TableCell>
+                <TableCell className="max-w-[320px] truncate">
+                  {row.cid}
+                </TableCell>
                 <TableCell>{formatSize(row.size)}</TableCell>
               </TableRow>
             ))

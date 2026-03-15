@@ -10,7 +10,13 @@ export type LogMode = 'pretty' | 'json'
 export type LogLevel = Simplify<LevelWithSilent>
 export type Logger = ReturnType<typeof createLogger>
 
-export function createLogger({ level, mode }: { level: LogLevel; mode: LogMode }) {
+export function createLogger({
+  level,
+  mode,
+}: {
+  level: LogLevel
+  mode: LogMode
+}) {
   const stream: DestinationStream = {
     write(logString: string) {
       const log = JSON.parse(logString) as Log
@@ -37,7 +43,7 @@ export function createLogger({ level, mode }: { level: LogLevel; mode: LogMode }
         // Removes "pid" and "hostname" properties from the log.
         base: undefined,
       },
-      stream,
+      stream
     )
   } else {
     logger = pino({
@@ -94,7 +100,8 @@ const format = (log: Log) => {
 
     for (const key of Object.keys(log)) {
       if (INTERNAL_KEYS.includes(key)) continue
-      const value = typeof log[key] === 'string' ? log[key] : stringify(log[key])
+      const value =
+        typeof log[key] === 'string' ? log[key] : stringify(log[key])
       keyText += ` ${key}=${value}`
     }
 
@@ -103,14 +110,17 @@ const format = (log: Log) => {
       durationText = ` ${pc.gray(`(${formatLogDuration(log.duration)})`)}`
     }
 
-    prettyLog = [`${pc.dim(time)} ${level} ${messageText}${pc.dim(keyText)}${durationText}`]
+    prettyLog = [
+      `${pc.dim(time)} ${level} ${messageText}${pc.dim(keyText)}${durationText}`,
+    ]
   } else {
     const level = levelObject.label
 
     let keyText = ''
     for (const key of Object.keys(log)) {
       if (INTERNAL_KEYS.includes(key)) continue
-      const value = typeof log[key] === 'string' ? log[key] : stringify(log[key])
+      const value =
+        typeof log[key] === 'string' ? log[key] : stringify(log[key])
       keyText += ` ${key}=${value}`
     }
 

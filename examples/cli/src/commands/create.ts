@@ -37,5 +37,5 @@ export const create: Command = command(
       },
     })
     p.log.success(`Login event: ${stringify(loginEvent.args)}`)
-  },
+  }
 )

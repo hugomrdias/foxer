@@ -33,7 +33,7 @@ export async function getLogsInRange(args: {
       logs: logsByBlock.size,
       duration: endClock(),
     },
-    'get logs',
+    'get logs'
   )
   return logsByBlock
 }

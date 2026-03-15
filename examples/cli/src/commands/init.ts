@@ -56,5 +56,5 @@ export const init: Command = command(
     }
     config.set('privateKey', privateKeyInput)
     outro(`You're all set!`)
-  },
+  }
 )

@@ -36,5 +36,5 @@ export const transactions = pgTable(
   (table) => [
     index('transactions_block_number_index').on(table.blockNumber),
     index('transactions_to_index').on(table.to),
-  ],
+  ]
 )

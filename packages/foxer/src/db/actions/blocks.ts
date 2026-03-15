@@ -13,7 +13,10 @@ import type { PublicClient } from 'viem'
 import type { FilteredContracts } from '../../config/config.ts'
 import { MAX_QUERY_PARAMS } from '../../contants.ts'
 import { safeGetBlock } from '../../rpc/get-block.ts'
-import type { EncodedBlockWithTransactions, EncodedTransaction } from '../../types.ts'
+import type {
+  EncodedBlockWithTransactions,
+  EncodedTransaction,
+} from '../../types.ts'
 import type { Logger } from '../../utils/logger.ts'
 import { startClock } from '../../utils/timer.ts'
 import type { Database } from '../client.ts'
@@ -23,12 +26,19 @@ import { insertTransactionsInChunks } from './transactions.ts'
 /**
  * Deletes canonical block rows from a specific block onward.
  */
-export async function deleteBlocksFrom(db: Database, fromBlock: bigint): Promise<void> {
-  const deleteTargets = getTablesWithBlockNumberColumn(db._.fullSchema as Record<string, unknown>)
+export async function deleteBlocksFrom(
+  db: Database,
+  fromBlock: bigint
+): Promise<void> {
+  const deleteTargets = getTablesWithBlockNumberColumn(
+    db._.fullSchema as Record<string, unknown>
+  )
 
   await db.transaction(async (tx) => {
     for (const target of deleteTargets) {
-      await tx.delete(target.table).where(gte(target.blockNumberColumn, fromBlock))
+      await tx
+        .delete(target.table)
+        .where(gte(target.blockNumberColumn, fromBlock))
     }
 
     // blocks uses `number` instead of blockNumber
@@ -43,7 +53,7 @@ function getTablesWithBlockNumberColumn(fullSchema: Record<string, unknown>) {
     const pgTable = table as PgTable
     const config = getTableConfig(pgTable)
     const blockNumberColumn = config.columns.find((column) =>
-      ['blockNumber', 'block_number'].includes(column.name),
+      ['blockNumber', 'block_number'].includes(column.name)
     )
     if (!blockNumberColumn) continue
 
@@ -95,7 +105,7 @@ export async function getBlocksInRange(
   db: Database<typeof schema, typeof relations>,
   blockNumbers: bigint[],
   client: PublicClient,
-  contracts: FilteredContracts,
+  contracts: FilteredContracts
 ): Promise<Map<bigint, EncodedBlockWithTransactions>> {
   const endClock = startClock()
   const firstBlockNumber = blockNumbers[0]!
@@ -124,7 +134,10 @@ export async function getBlocksInRange(
       },
     },
     where: {
-      AND: [{ number: { gte: firstBlockNumber } }, { number: { lte: lastBlockNumber } }],
+      AND: [
+        { number: { gte: firstBlockNumber } },
+        { number: { lte: lastBlockNumber } },
+      ],
     },
   })
 
@@ -149,7 +162,7 @@ export async function getBlocksInRange(
       if (transactions.length > 0) {
         newTransactions.push(...transactions)
       }
-    }),
+    })
   )
 
   await db.transaction(async (tx) => {
@@ -169,7 +182,7 @@ export async function getBlocksInRange(
       missing: missingBlockNumbers.length,
       duration: endClock(),
     },
-    'get blocks',
+    'get blocks'
   )
   return blocksByNumber
 }

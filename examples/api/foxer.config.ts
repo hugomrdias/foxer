@@ -60,7 +60,12 @@ export const config = createConfig({
     serviceProviderRegistry: {
       address: calibration.contracts.serviceProviderRegistry.address,
       abi: calibration.contracts.serviceProviderRegistry.abi,
-      events: ['ProviderRegistered', 'ProviderRemoved', 'ProviderInfoUpdated', 'ProductUpdated'],
+      events: [
+        'ProviderRegistered',
+        'ProviderRemoved',
+        'ProviderInfoUpdated',
+        'ProductUpdated',
+      ],
       startBlock: START_BLOCK,
     },
   },

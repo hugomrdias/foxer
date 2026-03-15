@@ -43,9 +43,9 @@
     "provenance": true
   },
   "scripts": {
-    "check": "vp lint && vp fmt",
-    "build": "tsc --build",
-    "prepublishOnly": "vp run build"
+    "check": "tsc -b --noEmit && biome check .",
+    "build": "tsc -b",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@hugomrdias/foxer-client": "workspace:^",

@@ -41,13 +41,29 @@ export function Filecoin(props: React.SVGProps<SVGSVGElement>) {
       {...props}
     >
       <title>Filecoin</title>
-      <style>{'.st1-logo{fill-rule:evenodd;clip-rule:evenodd;fill:#fff}'}</style>
+      <style>
+        {'.st1-logo{fill-rule:evenodd;clip-rule:evenodd;fill:#fff}'}
+      </style>
       <defs>
-        <filter filterUnits="userSpaceOnUse" height={40} id="a-logo" width={40} x={0} y={0}>
+        <filter
+          filterUnits="userSpaceOnUse"
+          height={40}
+          id="a-logo"
+          width={40}
+          x={0}
+          y={0}
+        >
           <feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0" />
         </filter>
       </defs>
-      <mask height={40} id="b-logo_1" maskUnits="userSpaceOnUse" width={40} x={0} y={0}>
+      <mask
+        height={40}
+        id="b-logo_1"
+        maskUnits="userSpaceOnUse"
+        width={40}
+        x={0}
+        y={0}
+      >
         <g filter="url(#a-logo)">
           <path className="st1-logo" d="M0 0h40v40H0z" id="a-logo_1" />
         </g>

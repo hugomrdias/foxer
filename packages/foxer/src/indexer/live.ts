@@ -26,7 +26,9 @@ export function startLiveSync(args: {
   const contracts = config.contractsForLive
 
   if (contracts.length === 0) {
-    logger.info('all configured contracts have endBlock set; live sync disabled')
+    logger.info(
+      'all configured contracts have endBlock set; live sync disabled'
+    )
     return { stop: noop }
   }
 
@@ -66,7 +68,10 @@ export function startLiveSync(args: {
     },
   })
 
-  logger.info({ startBlock: nextBlockToQueue.toString() }, 'watching latest chain head')
+  logger.info(
+    { startBlock: nextBlockToQueue.toString() },
+    'watching latest chain head'
+  )
 
   return { stop: unwatch }
 }

@@ -7,7 +7,7 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../../packages/foxer"
+      "path": "../../packages/foxer/tsconfig.json"
     },
     {
       "path": "../../apps/foc-api"

@@ -20,7 +20,9 @@ export function ConnectSection() {
             <HugeiconsIcon icon={Wallet02Icon} strokeWidth={2} />
           </EmptyMedia>
           <EmptyTitle>Foc App</EmptyTitle>
-          <EmptyDescription>Connect your wallet to get started.</EmptyDescription>
+          <EmptyDescription>
+            Connect your wallet to get started.
+          </EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <div className="flex gap-2">

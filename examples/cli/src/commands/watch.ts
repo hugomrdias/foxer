@@ -46,7 +46,9 @@ export const watch: Command = command(
       (result) => {
         p.log.info('Session keys:')
         result.forEach((sessionKey) => {
-          p.log.info(`${sessionKey.signer} (${sessionKey.identity}) ${sessionKey.origin}`)
+          p.log.info(
+            `${sessionKey.signer} (${sessionKey.identity}) ${sessionKey.origin}`
+          )
           sessionKey.permissions.forEach((permission) => {
             p.log.info(`  ${permission.permission} (${permission.expiry})`)
           })
@@ -55,7 +57,7 @@ export const watch: Command = command(
       (error) => {
         p.log.error((error as Error).message)
         process.exit(1)
-      },
+      }
     )
-  },
+  }
 )

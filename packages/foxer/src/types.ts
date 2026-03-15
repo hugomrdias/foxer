@@ -18,7 +18,12 @@ export type MaybeResult<ResultType = unknown, ErrorType = Error> =
 export type UnknownObject = NonNullable<unknown>
 
 export type ChainTransaction = Transaction<bigint, number, false>
-export type ChainBlock = Block<bigint, true, 'latest' | 'safe' | 'finalized', ChainTransaction>
+export type ChainBlock = Block<
+  bigint,
+  true,
+  'latest' | 'safe' | 'finalized',
+  ChainTransaction
+>
 export type EncodedBlock = Schema['blocks']['$inferInsert']
 export type EncodedTransaction = Schema['transactions']['$inferInsert']
 export type EncodedBlockWithTransactions = Simplify<

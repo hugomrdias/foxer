@@ -1,8 +1,7 @@
-import path from 'path'
-
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite-plus'
+import path from 'path'
+import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,26 +9,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    },
-  },
-  lint: {
-    options: { typeAware: true, typeCheck: true },
-    plugins: ['promise', 'import', 'react', 'react-perf'],
-  },
-  run: {
-    tasks: {
-      check: {
-        command: 'vp lint && vp fmt',
-      },
-      dev: {
-        command: 'vp dev',
-        dependsOn: ['check'],
-        cache: false,
-      },
-      build: {
-        command: 'vp build',
-        dependsOn: ['check'],
-      },
     },
   },
 })

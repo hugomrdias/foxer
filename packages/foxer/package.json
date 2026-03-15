@@ -9,14 +9,14 @@
     "directory": "packages/foxer"
   },
   "bin": {
-    "foxer": "./dist/src/bin/index.js",
+    "foxer": "./dist/bin/index.js",
     "foxer.src": "./src/bin/index.ts"
   },
   "type": "module",
   "sideEffects": false,
-  "main": "dist/src/index.js",
-  "module": "dist/src/index.js",
-  "types": "dist/src/index.d.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "typesVersions": {
     "*": {
       "api": [
@@ -29,16 +29,16 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./api": {
-      "types": "./dist/src/api/index.d.ts",
-      "default": "./dist/src/api/index.js"
+      "types": "./dist/api/index.d.ts",
+      "default": "./dist/api/index.js"
     },
     "./schema": {
-      "types": "./dist/src/schema.d.ts",
-      "default": "./dist/src/schema.js"
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
     }
   },
   "publishConfig": {
@@ -46,9 +46,9 @@
     "provenance": true
   },
   "scripts": {
-    "check": "vp lint && vp fmt",
-    "build": "tsc --build",
-    "prepublishOnly": "vp run build"
+    "check": "tsc -b --noEmit && biome check .",
+    "build": "tsc -b",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "@bluwy/giget-core": "^0.1.6",

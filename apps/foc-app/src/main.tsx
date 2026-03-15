@@ -58,6 +58,6 @@ createRoot(document.getElementById('root')!).render(
         </FoxerProvider>
       </QueryClientProvider>
     </WagmiProvider>
-  </ThemeProvider>,
+  </ThemeProvider>
   // </StrictMode>
 )

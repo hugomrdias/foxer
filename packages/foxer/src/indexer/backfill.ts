@@ -23,7 +23,8 @@ export async function runBackfill(args: {
   const { db, registry, config, logger } = args
   const client = config.clients.backfill
   const chainHead = await client.getBlockNumber()
-  const safeHead = chainHead > config.finality ? chainHead - config.finality : 0n
+  const safeHead =
+    chainHead > config.finality ? chainHead - config.finality : 0n
   let cursor = config.startBlockNumber
 
   if (cursor > safeHead) {
@@ -33,7 +34,7 @@ export async function runBackfill(args: {
         backfillHead: safeHead.toString(),
         head: chainHead.toString(),
       },
-      'no historical catch-up needed',
+      'no historical catch-up needed'
     )
     return cursor
   }
@@ -45,7 +46,7 @@ export async function runBackfill(args: {
       toBlock: safeHead.toString(),
       batchSize: batchSize.toString(),
     },
-    'starting backfill',
+    'starting backfill'
   )
 
   while (cursor <= safeHead) {
@@ -95,11 +96,16 @@ export async function runBackfill(args: {
         blockIndex += 1
       }
     })
-    logger.debug({ duration: endClockBatch() }, 'batch block and events processed')
+    logger.debug(
+      { duration: endClockBatch() },
+      'batch block and events processed'
+    )
     const batchElapsedMs = Date.now() - batchStartMs
     const blocksInRange = Number(toBlock - cursor + 1n)
     const blocksPerSecond =
-      batchElapsedMs > 0 ? blocksInRange / (batchElapsedMs / 1000) : blocksInRange
+      batchElapsedMs > 0
+        ? blocksInRange / (batchElapsedMs / 1000)
+        : blocksInRange
     logger.info(
       {
         indexedUpTo: toBlock.toString(),
@@ -107,14 +113,14 @@ export async function runBackfill(args: {
         contracts: windowContracts.addresses.length,
         throughput: Number(blocksPerSecond.toFixed(2)),
       },
-      'backfill batch completed',
+      'backfill batch completed'
     )
     cursor = toBlock + 1n
   }
 
   logger.info(
     { duration: endClock(), blocks: cursor - config.startBlockNumber },
-    'backfill completed',
+    'backfill completed'
   )
   return cursor
 }

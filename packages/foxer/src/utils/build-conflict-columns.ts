@@ -3,9 +3,12 @@ import type { PgTable } from 'drizzle-orm/pg-core'
 import { getColumns } from 'drizzle-orm/utils'
 import { snakeCase } from 'scule'
 
-export const buildConflictUpdateColumns = <T extends PgTable, Q extends keyof T['_']['columns']>(
+export const buildConflictUpdateColumns = <
+  T extends PgTable,
+  Q extends keyof T['_']['columns'],
+>(
   table: T,
-  columns?: Q[],
+  columns?: Q[]
 ) => {
   const cls = getColumns(table)
   const cols = columns ?? (Object.keys(cls) as Q[])
@@ -16,7 +19,7 @@ export const buildConflictUpdateColumns = <T extends PgTable, Q extends keyof T[
       acc[column] = sql.raw(`excluded.${colName}`)
       return acc
     },
-    {} as Record<Q, SQL>,
+    {} as Record<Q, SQL>
   )
 
   return r

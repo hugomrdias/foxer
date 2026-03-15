@@ -28,7 +28,7 @@ export async function runMigrations({
     const wal = await isWalEnabled(db)
     if (!wal) {
       throw new Error(
-        'WAL is not enabled, set wal_level=logical in your postgresql.conf or pass -c wal_level=logical to the postgres client',
+        'WAL is not enabled, set wal_level=logical in your postgresql.conf or pass -c wal_level=logical to the postgres client'
       )
     }
     await migratePostgresJs(db, { migrationsFolder: folder })
@@ -38,7 +38,7 @@ export async function runMigrations({
 
   // get tables to migrate
   const tables = Object.keys(dbContext.db._.fullSchema).filter(
-    (table) => !FOXER_TABLES.includes(table),
+    (table) => !FOXER_TABLES.includes(table)
   )
   // assert tables have blockNumber column and index
   assertTablesHaveBlockNumberIndex(dbContext.db._.fullSchema, tables)
@@ -62,22 +62,28 @@ export async function createPublications(db: Database, tables: string[]) {
 
   const quotedTables = tables.map((table) => `"${table.replaceAll('"', '""')}"`)
   const publication = await db.execute(
-    `SELECT puballtables FROM pg_publication WHERE pubname = '${PUBLICATION_NAME}'`,
+    `SELECT puballtables FROM pg_publication WHERE pubname = '${PUBLICATION_NAME}'`
   )
 
   if (publication.rows.length === 0) {
-    await db.execute(`CREATE PUBLICATION ${PUBLICATION_NAME} FOR TABLE ${quotedTables.join(', ')}`)
+    await db.execute(
+      `CREATE PUBLICATION ${PUBLICATION_NAME} FOR TABLE ${quotedTables.join(', ')}`
+    )
     return
   }
 
   const isForAllTables = Boolean(publication.rows[0].puballtables)
   if (isForAllTables) {
     await db.execute(`DROP PUBLICATION ${PUBLICATION_NAME}`)
-    await db.execute(`CREATE PUBLICATION ${PUBLICATION_NAME} FOR TABLE ${quotedTables.join(', ')}`)
+    await db.execute(
+      `CREATE PUBLICATION ${PUBLICATION_NAME} FOR TABLE ${quotedTables.join(', ')}`
+    )
     return
   }
 
-  await db.execute(`ALTER PUBLICATION ${PUBLICATION_NAME} SET TABLE ${quotedTables.join(', ')}`)
+  await db.execute(
+    `ALTER PUBLICATION ${PUBLICATION_NAME} SET TABLE ${quotedTables.join(', ')}`
+  )
 }
 
 /**
@@ -85,7 +91,7 @@ export async function createPublications(db: Database, tables: string[]) {
  */
 export function assertTablesHaveBlockNumberIndex(
   fullSchema: Record<string, unknown>,
-  tableNames: string[],
+  tableNames: string[]
 ) {
   const missingBlockNumberColumn: string[] = []
   const missingBlockNumberIndex: string[] = []
@@ -100,7 +106,9 @@ export function assertTablesHaveBlockNumberIndex(
     tableConfigs.set(tableName, config)
     tableHasBlockNumberColumn.set(
       tableName,
-      config.columns.some((column) => ['blockNumber', 'block_number'].includes(column.name)),
+      config.columns.some((column) =>
+        ['blockNumber', 'block_number'].includes(column.name)
+      )
     )
   }
 
@@ -108,18 +116,25 @@ export function assertTablesHaveBlockNumberIndex(
     const config = tableConfigs.get(tableName)
     if (!config) continue
     const blockNumberColumns = config.columns.filter((column) =>
-      ['blockNumber', 'block_number'].includes(column.name),
+      ['blockNumber', 'block_number'].includes(column.name)
     )
 
     if (blockNumberColumns.length === 0) {
-      if (hasCascadeForeignKeyToBlockNumberTable(config, tableHasBlockNumberColumn)) {
+      if (
+        hasCascadeForeignKeyToBlockNumberTable(
+          config,
+          tableHasBlockNumberColumn
+        )
+      ) {
         continue
       }
       missingBlockNumberColumn.push(tableName)
       continue
     }
 
-    const blockNumberColumnNames = new Set(blockNumberColumns.map((column) => column.name))
+    const blockNumberColumnNames = new Set(
+      blockNumberColumns.map((column) => column.name)
+    )
     const hasBlockNumberIndex = config.indexes.some((index) => {
       const indexColumns = index.config?.columns
 
@@ -136,7 +151,10 @@ export function assertTablesHaveBlockNumberIndex(
     }
   }
 
-  if (missingBlockNumberColumn.length > 0 || missingBlockNumberIndex.length > 0) {
+  if (
+    missingBlockNumberColumn.length > 0 ||
+    missingBlockNumberIndex.length > 0
+  ) {
     const missingColumnTables = missingBlockNumberColumn.sort()
     const missingIndexTables = missingBlockNumberIndex.sort()
     const lines = [
@@ -150,10 +168,14 @@ export function assertTablesHaveBlockNumberIndex(
     ]
 
     if (missingColumnTables.length > 0) {
-      lines.push(`Tables missing blockNumber column: ${missingColumnTables.join(', ')}`)
+      lines.push(
+        `Tables missing blockNumber column: ${missingColumnTables.join(', ')}`
+      )
     }
     if (missingIndexTables.length > 0) {
-      lines.push(`Tables missing blockNumber index: ${missingIndexTables.join(', ')}`)
+      lines.push(
+        `Tables missing blockNumber index: ${missingIndexTables.join(', ')}`
+      )
     }
 
     lines.push(
@@ -166,7 +188,7 @@ export function assertTablesHaveBlockNumberIndex(
       '}, (table) => [',
       '  // 2) Add an index on blockNumber',
       "  index('my_table_block_number_index').on(table.blockNumber),",
-      '])',
+      '])'
     )
 
     throw new Error(lines.join('\n'))
@@ -175,7 +197,7 @@ export function assertTablesHaveBlockNumberIndex(
 
 function hasCascadeForeignKeyToBlockNumberTable(
   tableConfig: ReturnType<typeof getTableConfig>,
-  tableHasBlockNumberColumn: Map<string, boolean>,
+  tableHasBlockNumberColumn: Map<string, boolean>
 ) {
   return tableConfig.foreignKeys.some((foreignKey) => {
     if (foreignKey.onDelete !== 'cascade') return false
@@ -194,7 +216,9 @@ function hasCascadeForeignKeyToBlockNumberTable(
  */
 export async function isWalEnabled(db: Database) {
   try {
-    const wal = await db.execute('SHOW WAL_LEVEL').then((result) => result.rows[0].wal_level)
+    const wal = await db
+      .execute('SHOW WAL_LEVEL')
+      .then((result) => result.rows[0].wal_level)
     return wal === 'logical'
   } catch (error) {
     throw new Error('Failed to check if WAL is enabled', { cause: error })

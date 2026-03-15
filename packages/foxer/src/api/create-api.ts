@@ -25,7 +25,7 @@ export function createApi(options: {
     },
     () => {
       options.logger.info({ port: options.port }, 'api server listening')
-    },
+    }
   )
 
   const _server = shutdown(server)

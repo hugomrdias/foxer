@@ -21,5 +21,5 @@ export const providers = pgTable(
     updatedAt: bigint(),
     blockNumber: bigint().notNull(),
   },
-  (table) => [index('providers_block_number_index').on(table.blockNumber)],
+  (table) => [index('providers_block_number_index').on(table.blockNumber)]
 )

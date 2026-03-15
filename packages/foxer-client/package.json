@@ -43,9 +43,9 @@
     "provenance": true
   },
   "scripts": {
-    "check": "vp lint && vp fmt",
+    "check": "tsc -b --noEmit && biome check .",
     "build": "tsc --build",
-    "prepublishOnly": "vp run build"
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-beta.15-859cf75",

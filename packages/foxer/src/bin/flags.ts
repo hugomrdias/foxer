@@ -17,7 +17,15 @@ const LogMode = (logMode: LogModes) => {
   return logMode
 }
 
-const LogLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'] as const
+const LogLevels = [
+  'trace',
+  'debug',
+  'info',
+  'warn',
+  'error',
+  'fatal',
+  'silent',
+] as const
 type LogLevels = (typeof LogLevels)[number]
 
 // Custom type function
@@ -47,7 +55,7 @@ export const globalFlags = {
   logMode: {
     type: LogMode,
     description: 'The log mode to use',
-    default: LogMode(process.env.NODE_ENV !== 'production' ? 'pretty' : 'json'),
+    default: LogMode(process.env.NODE_ENV === 'production' ? 'json' : 'pretty'),
   },
   port: {
     type: Number,

@@ -11,7 +11,9 @@ import type { EncodedBlockWithTransactions, EncodedTransaction } from '../types'
 import type { Logger } from '../utils/logger.ts'
 import { ensureParentContinuity } from './reorg.ts'
 
-export type ProcessBlockResult = { status: 'processed' } | { status: 'reorg'; rewindTo: bigint }
+export type ProcessBlockResult =
+  | { status: 'processed' }
+  | { status: 'reorg'; rewindTo: bigint }
 
 /**
  * Processes one block: continuity check, event writes, and optional cursor update.
@@ -95,7 +97,10 @@ export async function processBlock(args: {
       const contractName = contracts.contractNameByAddress[log.address]
 
       if (!contractName) {
-        logger.debug({ address: log.address }, 'contract not found in contract name by address')
+        logger.debug(
+          { address: log.address },
+          'contract not found in contract name by address'
+        )
         continue
       }
       const eventName = log.eventName
@@ -109,7 +114,7 @@ export async function processBlock(args: {
         logger.debug(
           { transactionHash: log.transactionHash },
 
-          'transaction not found in block transaction list',
+          'transaction not found in block transaction list'
         )
         continue
       }

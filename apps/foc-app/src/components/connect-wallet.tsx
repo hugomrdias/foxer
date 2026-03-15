@@ -29,7 +29,9 @@ export function ConnectWallet() {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Connect Wallet</DialogTitle>
-          <DialogDescription>Connect your wallet to get started</DialogDescription>
+          <DialogDescription>
+            Connect your wallet to get started
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <ConnectOptions />

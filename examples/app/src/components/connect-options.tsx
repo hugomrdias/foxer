@@ -24,7 +24,8 @@ export function ConnectOptions() {
         onClick={() => {
           connect({
             connector,
-            chainId: network === 'mainnet' ? filecoin.id : filecoinCalibration.id,
+            chainId:
+              network === 'mainnet' ? filecoin.id : filecoinCalibration.id,
           })
         }}
       />

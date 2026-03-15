@@ -36,7 +36,11 @@ export const start: Command = command(
 
     try {
       const env = createEnv(logger)
-      const config = await loadConfig(logger, argv.flags.root, argv.flags.config)
+      const config = await loadConfig(
+        logger,
+        argv.flags.root,
+        argv.flags.config
+      )
 
       const dbContext = createDatabase({
         env,
@@ -79,5 +83,5 @@ export const start: Command = command(
       logger.error({ error }, 'start server failed')
       gracefulExit(1)
     }
-  },
+  }
 )

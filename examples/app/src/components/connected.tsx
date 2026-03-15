@@ -44,7 +44,7 @@ export function Connected() {
   const { address } = useConnection()
   const [section, setSection] = useQueryState(
     'section',
-    parseAsStringLiteral(sectionValues).withDefault('datasets'),
+    parseAsStringLiteral(sectionValues).withDefault('datasets')
   )
   const { data, isPending } = useQuery<{
     datasets: number
@@ -54,11 +54,15 @@ export function Connected() {
   }>({
     queryKey: ['totals-by-address', address],
     queryFn: () =>
-      fetch(`http://localhost:4200/totals-by-address?address=${address}`).then((res) => res.json()),
+      fetch(`http://localhost:4200/totals-by-address?address=${address}`).then(
+        (res) => res.json()
+      ),
   })
 
   const piecesSize =
-    data && data.piecesSize !== undefined ? formatBytes(Number(data.piecesSize)) : '-'
+    data && data.piecesSize !== undefined
+      ? formatBytes(Number(data.piecesSize))
+      : '-'
 
   return (
     <div>
@@ -82,15 +86,21 @@ export function Connected() {
             </div>
             <div className="rounded-md border p-3">
               <p className="text-muted-foreground text-xs">Datasets</p>
-              <p className="text-lg font-semibold">{isPending ? '...' : (data?.datasets ?? '-')}</p>
+              <p className="text-lg font-semibold">
+                {isPending ? '...' : (data?.datasets ?? '-')}
+              </p>
             </div>
             <div className="rounded-md border p-3">
               <p className="text-muted-foreground text-xs">Pieces</p>
-              <p className="text-lg font-semibold">{isPending ? '...' : (data?.pieces ?? '-')}</p>
+              <p className="text-lg font-semibold">
+                {isPending ? '...' : (data?.pieces ?? '-')}
+              </p>
             </div>
             <div className="rounded-md border p-3">
               <p className="text-muted-foreground text-xs">Pieces Size</p>
-              <p className="text-lg font-semibold">{isPending ? '...' : piecesSize}</p>
+              <p className="text-lg font-semibold">
+                {isPending ? '...' : piecesSize}
+              </p>
             </div>
           </div>
           <Select

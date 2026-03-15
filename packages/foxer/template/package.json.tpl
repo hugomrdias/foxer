@@ -12,11 +12,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "check": "vp run --cache -r check",
-    "build": "vp run --cache -r build",
-    "prepare": "vp config"
+   "check": "turbo run check",
+    "build": "turbo run build",
+    "lint": "biome check ."
   },
   "devDependencies": {
-    "vite-plus": "latest"
+    "@biomejs/biome": "^2.4.7",
+    "@hugomrdias/configs": "^1.1.3",
+    "turbo": "^2.8.17"
   }
 }
