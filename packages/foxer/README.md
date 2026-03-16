@@ -99,6 +99,7 @@ import { createConfig } from '@hugomrdias/foxer'
 import { http } from 'viem'
 
 export const config = createConfig({
+  batchSize: 500,
   client: {
     transport: http(process.env.RPC_URL),
     realtimeTransport: http(process.env.RPC_LIVE_URL),
