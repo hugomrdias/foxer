@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.4...foxer-v0.1.5) (2026-03-16)
+
+
+### Bug Fixes
+
+* update check script in package.json files for foxer components ([9639807](https://github.com/hugomrdias/foxer/commit/96398072c86a8ff3d5ca4a2a8d2cb95418fba5ba))
+
 ## [0.1.4](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.3...foxer-v0.1.4) (2026-03-15)
 
 
