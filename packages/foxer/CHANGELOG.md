@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.8...foxer-v0.1.9) (2026-03-16)
+
+
+### Bug Fixes
+
+* enhance release workflow and update foxer configuration ([f6f3773](https://github.com/hugomrdias/foxer/commit/f6f3773a87658ff172ba1ba4899348a48d2486fe))
+
 ## [0.1.8](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.7...foxer-v0.1.8) (2026-03-16)
 
 
