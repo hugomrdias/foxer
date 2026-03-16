@@ -46,7 +46,7 @@
     "provenance": true
   },
   "scripts": {
-    "check": "tsc -b --noEmit && biome check .",
+    "check": "tsc --noEmit && biome check .",
     "build": "tsc -b",
     "prepublishOnly": "pnpm run build"
   },
