@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.1.9](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.8...foxer-v0.1.9) (2026-03-16)
+
+
+### Bug Fixes
+
+* enhance release workflow and update foxer configuration ([f6f3773](https://github.com/hugomrdias/foxer/commit/f6f3773a87658ff172ba1ba4899348a48d2486fe))
+
+## [0.1.8](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.7...foxer-v0.1.8) (2026-03-16)
+
+
+### Bug Fixes
+
+* update npm publish command and remove batch size from foxer config ([1de27ab](https://github.com/hugomrdias/foxer/commit/1de27ab86fdb801544db92b3485c6180d7d893f0))
+
+## [0.1.7](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.6...foxer-v0.1.7) (2026-03-16)
+
+
+### Bug Fixes
+
+* update release workflow and foxer configuration ([0489392](https://github.com/hugomrdias/foxer/commit/048939280e434bb7b86ab207c7f120a16b86a114))
+
+## [0.1.6](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.5...foxer-v0.1.6) (2026-03-16)
+
+
+### Bug Fixes
+
+* migrate package management from pnpm to bun ([6795718](https://github.com/hugomrdias/foxer/commit/6795718527732de1023a075e8dbd841b03d8bed3))
+
 ## [0.1.5](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.4...foxer-v0.1.5) (2026-03-16)
 
 
