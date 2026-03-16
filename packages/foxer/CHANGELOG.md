@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.7...foxer-v0.1.8) (2026-03-16)
+
+
+### Bug Fixes
+
+* update npm publish command and remove batch size from foxer config ([1de27ab](https://github.com/hugomrdias/foxer/commit/1de27ab86fdb801544db92b3485c6180d7d893f0))
+
 ## [0.1.7](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.6...foxer-v0.1.7) (2026-03-16)
 
 
