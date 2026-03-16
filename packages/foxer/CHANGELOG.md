@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.3...foxer-v0.1.4) (2026-03-15)
+
+
+### Bug Fixes
+
+* update foxer package configuration and dependencies ([980077b](https://github.com/hugomrdias/foxer/commit/980077b8f2b5847372894fdfa033825a179abc4c))
+* update README.md to reflect new features and improvements in foxer ([b4ede99](https://github.com/hugomrdias/foxer/commit/b4ede995b408d7470e280ac6a4acff4ea5eb1f35))
+
 ## [0.1.3](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.2...foxer-v0.1.3) (2026-03-11)
 
 ### Bug Fixes
