@@ -38,8 +38,8 @@ We very much appreciate it if you could include a [short, self-contained, correc
 If you have been assigned to fix an issue or develop a new feature, please follow these steps to get started:
 
 - Fork this repository.
-- Install dependencies by running `pnpm install`.
-  - We use [pnpm](https://pnpm.io/) for package management.
+- Install dependencies by running `bun install`.
+  - We use [Bun](https://bun.sh/) for package management.
   - Make sure you have Node LTS installed in your system.
 - Optionally run `npx simple-git-hooks` to install git hooks for linting and formatting.
 - Implement your changes to files in the `src/` directory and corresponding test files in the `/test` directory.
@@ -64,17 +64,12 @@ We squash and merge all PRs. Orderly, well-written commits will help us during r
 
 ### Tests
 
-If your change alters existing code, please run the test suites:
+If your change alters existing code, please run the available validation commands:
 
 ```sh
-pnpm run lint
-pnpm run test
-
-# node tests can use native watch mode
-pnpm test:node -n watch
-
-# browser tests can enable watch
-pnpm test:browser --watch
+bun run check
+bun run build
+bun run test
 ```
 
 If you are adding a new feature, please add tests that prove the code works correctly and reference them when you submit the pull request.

@@ -7,16 +7,16 @@
 From the repository root, start the API first and then the app:
 
 ```bash
-pnpm --filter foc-api dev
-pnpm --filter foc-app dev
+bun --filter foc-api dev
+bun --filter foc-app dev
 ```
 
 Other useful commands:
 
 ```bash
-pnpm --filter foc-app build
-pnpm --filter foc-app preview
-pnpm --filter foc-app lint
+bun --filter foc-app build
+bun --filter foc-app preview
+bun --filter foc-app check
 ```
 
 ## Notes

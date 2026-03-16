@@ -45,7 +45,7 @@
   "scripts": {
     "check": "tsc --noEmit && biome check .",
     "build": "tsc -b",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@hugomrdias/foxer-client": "workspace:^",

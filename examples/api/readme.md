@@ -30,16 +30,16 @@ Optional variables:
 ## Run
 
 ```bash
-pnpm generate
-pnpm dev
+bun run generate
+bun run dev
 ```
 
 Useful extras:
 
 ```bash
-pnpm build
-pnpm lint
-pnpm drizzle-kit studio
+bun run build
+bun run check
+bunx drizzle-kit studio
 ```
 
 The API listens on port `4200` by default, and the SQL endpoint is available at `http://localhost:4200/sql`.

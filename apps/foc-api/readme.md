@@ -8,7 +8,7 @@ From the repository root:
 
 ```bash
 cp apps/foc-api/.env.example apps/foc-api/.env.local
-pnpm install
+bun install
 ```
 
 Required variables in `.env.local`:
@@ -25,16 +25,15 @@ Optional variables:
 ## Run
 
 ```bash
-pnpm --filter foc-api generate
-pnpm --filter foc-api dev
+bun --filter foc-api generate
+bun --filter foc-api dev
 ```
 
 Other useful commands:
 
 ```bash
-pnpm --filter foc-api build
-pnpm --filter foc-api lint
-pnpm --filter foc-api typecheck
+bun --filter foc-api build
+bun --filter foc-api check
 ```
 
 The API listens on port `4200` by default, and the SQL endpoint is available at `http://localhost:4200/sql`.

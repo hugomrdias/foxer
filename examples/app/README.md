@@ -13,15 +13,15 @@ This example is a Vite + React frontend that consumes the `foxer` SQL API with `
 Start the API example first in another terminal, then run:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 Other useful commands:
 
 ```bash
-pnpm build
-pnpm preview
-pnpm lint
+bun run build
+bun run preview
+bun run check
 ```
 
 ## Notes

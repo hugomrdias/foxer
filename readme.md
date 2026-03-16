@@ -25,21 +25,21 @@ This repository contains the core `foxer` packages plus the internal apps and ex
 Install dependencies from the repository root:
 
 ```bash
-pnpm install
+bun install
 ```
 
 Common commands:
 
 ```bash
-pnpm build
-pnpm lint
+bun run build
+bun run check
 ```
 
 Run the workspace demo apps:
 
 ```bash
-pnpm --filter foc-api dev
-pnpm --filter foc-app dev
+bun --filter foc-api dev
+bun --filter foc-app dev
 ```
 
 ## Contributing

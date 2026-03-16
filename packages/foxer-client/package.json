@@ -45,7 +45,7 @@
   "scripts": {
     "check": "tsc --noEmit && biome check .",
     "build": "tsc --build",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "drizzle-orm": "1.0.0-beta.15-859cf75",

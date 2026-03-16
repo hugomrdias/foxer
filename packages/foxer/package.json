@@ -48,7 +48,7 @@
   "scripts": {
     "check": "tsc --noEmit && biome check .",
     "build": "tsc -b",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@bluwy/giget-core": "^0.1.6",
