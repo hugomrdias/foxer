@@ -28,14 +28,13 @@ jobs:
           manifest-file: .github/release-please-manifest.json
   npm:
     needs: release
-    if: |
-      contains(fromJson(needs.release.outputs.paths_released), 'packages/foxer') ||
-      contains(fromJson(needs.release.outputs.paths_released), 'packages/foxer-client') ||
-      contains(fromJson(needs.release.outputs.paths_released), 'packages/foxer-react')
+    if: ${{ needs.release.outputs.paths_released != '[]' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+    env:
+      RELEASE_PATH: ${{ fromJson(needs.release.outputs.paths_released)[0] }}
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
@@ -43,3 +42,4 @@ jobs:
       - run: bun run build
       - run: bun run check
       - run: bun publish --access=public
+        working-directory: ${{ env.RELEASE_PATH }}
