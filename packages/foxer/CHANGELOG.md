@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.5...foxer-v0.1.6) (2026-03-16)
+
+
+### Bug Fixes
+
+* migrate package management from pnpm to bun ([6795718](https://github.com/hugomrdias/foxer/commit/6795718527732de1023a075e8dbd841b03d8bed3))
+
 ## [0.1.5](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.4...foxer-v0.1.5) (2026-03-16)
 
 
