@@ -1,3 +1,4 @@
+import type { Hash } from 'viem'
 import { filterContracts, type InternalConfig } from '../config/config.ts'
 import { getBlocksInRange } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
@@ -61,17 +62,30 @@ export async function runBackfill(args: {
       blockNumber += 1n
     }
 
-    const [blocksByNumber, logsByBlock] = await Promise.all([
-      getBlocksInRange(logger, db, batchBlockNumbers, client, windowContracts),
-      getLogsInRange({
+    const logsByBlock = await getLogsInRange({
+      logger,
+      client,
+      addresses: windowContracts.addresses,
+      events: windowContracts.eventAbis,
+      fromBlock: cursor,
+      toBlock,
+    })
+
+    const logsTxsSet = new Set<Hash>()
+    for (const logs of logsByBlock.values()) {
+      for (const log of logs) {
+        logsTxsSet.add(log.transactionHash)
+      }
+    }
+
+    const { blocks: blocksByNumber, transactions: transactionsMap } =
+      await getBlocksInRange(
         logger,
+        db,
+        batchBlockNumbers,
         client,
-        addresses: windowContracts.addresses,
-        events: windowContracts.eventAbis,
-        fromBlock: cursor,
-        toBlock,
-      }),
-    ])
+        Array.from(logsTxsSet)
+      )
 
     let blockIndex = 0
 
@@ -81,15 +95,19 @@ export async function runBackfill(args: {
         const blockNumber = batchBlockNumbers[blockIndex]
         const prefetchedBlock = blocksByNumber.get(blockNumber)
 
+        if (!prefetchedBlock) {
+          throw new Error(`Block ${blockNumber} not found`)
+        }
+
         await processBlock({
           logger,
           config,
           db: tx,
           client,
           registry,
-          blockNumber,
           logs: logsByBlock.get(blockNumber) ?? [],
           block: prefetchedBlock,
+          transactionsMap,
           type: 'backfill',
           contracts: windowContracts,
         })

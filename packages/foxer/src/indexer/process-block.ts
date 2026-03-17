@@ -6,8 +6,7 @@ import type { Database } from '../db/client.ts'
 import type { relations, schema } from '../db/schema/index.ts'
 import { withTransaction } from '../db/transaction.ts'
 import type { HookRegistry } from '../hooks/registry.ts'
-import { safeGetBlock } from '../rpc/get-block.ts'
-import type { EncodedBlockWithTransactions, EncodedTransaction } from '../types'
+import type { EncodedBlock, TransactionsMap } from '../types'
 import type { Logger } from '../utils/logger.ts'
 import { ensureParentContinuity } from './reorg.ts'
 
@@ -24,9 +23,9 @@ export async function processBlock(args: {
   db: Database<typeof schema, typeof relations>
   client: PublicClient
   registry: HookRegistry<NonNullable<unknown>>
-  blockNumber: bigint
-  logs?: Log<bigint, number, false, AbiEvent>[]
-  block?: EncodedBlockWithTransactions
+  logs: Log<bigint, number, false, AbiEvent>[]
+  block: EncodedBlock
+  transactionsMap: TransactionsMap
   type: 'backfill' | 'live'
   contracts: FilteredContracts
 }): Promise<ProcessBlockResult> {
@@ -36,41 +35,12 @@ export async function processBlock(args: {
     db,
     client,
     registry,
-    blockNumber,
-    block: prefetchedBlock,
-    logs: prefetchedLogs,
+    block,
+    transactionsMap,
+    logs,
     type,
     contracts,
   } = args
-  const transactionByHash = new Map<`0x${string}`, EncodedTransaction>()
-
-  let block: EncodedBlockWithTransactions | undefined
-  let logs: Log<bigint, number, false, AbiEvent>[] | undefined
-
-  if (prefetchedBlock) {
-    block = prefetchedBlock
-  }
-  if (prefetchedLogs) {
-    logs = prefetchedLogs
-  }
-  if (!block || !logs) {
-    const [blockResult, logsResult] = await Promise.all([
-      safeGetBlock({ client, blockNumber, db }),
-      client.getLogs({
-        address: contracts.addresses,
-        events: contracts.eventAbis,
-        fromBlock: blockNumber,
-        toBlock: blockNumber,
-      }),
-    ])
-
-    block = blockResult
-    logs = logsResult
-  }
-
-  for (const tx of block.transactions) {
-    transactionByHash.set(tx.hash, tx)
-  }
 
   if (type === 'live') {
     const rewindTo = await ensureParentContinuity({
@@ -88,7 +58,8 @@ export async function processBlock(args: {
     if (type === 'live') {
       await cacheBlockAndTransactions({
         db: tx,
-        block,
+        blocks: [block],
+        transactions: Array.from(transactionsMap.values()),
         logger,
       })
     }
@@ -108,7 +79,7 @@ export async function processBlock(args: {
       if (!contracts.eventNames.has(eventName)) {
         continue
       }
-      const transaction = transactionByHash.get(log.transactionHash)
+      const transaction = transactionsMap.get(log.transactionHash)
 
       if (!transaction) {
         logger.debug(

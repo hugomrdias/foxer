@@ -3,7 +3,7 @@ import type { PublicClient } from 'viem'
 import { deleteBlocksFrom } from '../db/actions/blocks.ts'
 import type { Database } from '../db/client.ts'
 import { safeGetBlock } from '../rpc/get-block.ts'
-import type { EncodedBlockWithTransactions } from '../types'
+import type { EncodedBlock } from '../types'
 import { hashEquals } from '../utils/hash.ts'
 import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
@@ -16,7 +16,7 @@ export async function ensureParentContinuity(args: {
   logger: Logger
   db: Database
   client: PublicClient
-  block: EncodedBlockWithTransactions
+  block: EncodedBlock
 }): Promise<bigint | null> {
   const { logger, db, client, block } = args
   if (block.number === 0n) return null

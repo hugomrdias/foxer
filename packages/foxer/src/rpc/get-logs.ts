@@ -30,7 +30,7 @@ export async function getLogsInRange(args: {
   }
   logger.trace(
     {
-      logs: logsByBlock.size,
+      logs: logs.length,
       duration: endClock(),
     },
     'get logs'

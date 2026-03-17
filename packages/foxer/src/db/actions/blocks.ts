@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: its ok */
 
-import { gte } from 'drizzle-orm'
+import { and, gte, inArray, lte } from 'drizzle-orm'
 import {
   getTableConfig,
   type PgAsyncTransaction,
@@ -8,14 +8,16 @@ import {
   type PgQueryResultHKT,
   type PgTable,
 } from 'drizzle-orm/pg-core'
-import type { PublicClient } from 'viem'
+import type { Hash, PublicClient } from 'viem'
 
 import type { FilteredContracts } from '../../config/config.ts'
 import { MAX_QUERY_PARAMS } from '../../contants.ts'
 import { safeGetBlock } from '../../rpc/get-block.ts'
 import type {
-  EncodedBlockWithTransactions,
+  BlocksMap,
+  EncodedBlock,
   EncodedTransaction,
+  TransactionsMap,
 } from '../../types.ts'
 import type { Logger } from '../../utils/logger.ts'
 import { startClock } from '../../utils/timer.ts'
@@ -73,19 +75,20 @@ function getTablesWithBlockNumberColumn(fullSchema: Record<string, unknown>) {
  */
 export async function cacheBlockAndTransactions(args: {
   db: Database<typeof schema, typeof relations>
-  block: EncodedBlockWithTransactions
+  blocks: EncodedBlock[]
+  transactions: EncodedTransaction[]
   logger: Logger
 }): Promise<void> {
-  const { db, block } = args
+  const { db, blocks, transactions } = args
 
   await db.transaction(async (tx) => {
     await insertBlocksInChunks({
       db: tx,
-      blocks: [block],
+      blocks,
     })
     await insertTransactionsInChunks({
       db: tx,
-      transactions: block.transactions,
+      transactions,
     })
   })
 }
@@ -105,8 +108,8 @@ export async function getBlocksInRange(
   db: Database<typeof schema, typeof relations>,
   blockNumbers: bigint[],
   client: PublicClient,
-  contracts: FilteredContracts
-): Promise<Map<bigint, EncodedBlockWithTransactions>> {
+  logsTxs: Hash[]
+): Promise<{ blocks: BlocksMap; transactions: TransactionsMap }> {
   const endClock = startClock()
   const firstBlockNumber = blockNumbers[0]!
   const lastBlockNumber = blockNumbers[blockNumbers.length - 1]!
@@ -117,74 +120,79 @@ export async function getBlocksInRange(
   //   contractAddresses: contracts.addresses,
   // })
 
-  const r = await db.query.blocks.findMany({
-    with: {
-      transactions: {
-        where: {
-          AND: [
-            { blockNumber: { gte: firstBlockNumber } },
-            { blockNumber: { lte: lastBlockNumber } },
-            {
-              to: {
-                in: contracts.addresses,
-              },
-            },
-          ],
-        },
+  const [blocks, txs] = await Promise.all([
+    db.query.blocks.findMany({
+      where: {
+        AND: [
+          { number: { gte: firstBlockNumber } },
+          { number: { lte: lastBlockNumber } },
+        ],
       },
-    },
-    where: {
-      AND: [
-        { number: { gte: firstBlockNumber } },
-        { number: { lte: lastBlockNumber } },
-      ],
-    },
-  })
+    }),
+    db
+      .select()
+      .from(schema.transactions)
+      .where(
+        and(
+          // gte(schema.transactions.blockNumber, firstBlockNumber),
+          // lte(schema.transactions.blockNumber, lastBlockNumber),
+          // inArray(schema.transactions.to, contracts.addresses),
+          inArray(schema.transactions.hash, logsTxs)
+        )
+      ),
+  ])
 
-  const blocksByNumber = new Map<bigint, EncodedBlockWithTransactions>()
+  const transactionByHash = new Map<`0x${string}`, EncodedTransaction>()
+  for (const tx of txs) {
+    transactionByHash.set(tx.hash, tx)
+  }
+
+  const blocksByNumber = new Map<bigint, EncodedBlock>()
   const missing = new Set(blockNumbers)
 
-  for (const block of r) {
+  for (const block of blocks) {
     blocksByNumber.set(block.number, block)
     missing.delete(block.number)
   }
 
   const missingBlockNumbers = [...missing]
-  const newBlocks: EncodedBlockWithTransactions[] = []
+  const newBlocks: EncodedBlock[] = []
   const newTransactions: EncodedTransaction[] = []
 
   await Promise.all(
     missingBlockNumbers.map(async (blockNumber) => {
       const block = await safeGetBlock({ client, blockNumber, db })
-      const transactions = block.transactions
       blocksByNumber.set(blockNumber, block)
-      newBlocks.push(block)
+      const { transactions, ..._block } = block
+      newBlocks.push(_block)
+
       if (transactions.length > 0) {
         newTransactions.push(...transactions)
+      }
+      for (const tx of transactions) {
+        transactionByHash.set(tx.hash, tx)
       }
     })
   )
 
-  await db.transaction(async (tx) => {
-    await insertBlocksInChunks({
-      db: tx,
-      blocks: newBlocks,
-    })
-    await insertTransactionsInChunks({
-      db: tx,
-      transactions: newTransactions,
-    })
+  await cacheBlockAndTransactions({
+    db,
+    blocks: newBlocks,
+    transactions: newTransactions,
+    logger,
   })
 
   logger.trace(
     {
-      blocks: blocksByNumber.size,
-      missing: missingBlockNumbers.length,
+      blocks: blocks.length,
+      txs: txs.length,
+      newBlocks: newBlocks.length,
+      newTxs: newTransactions.length,
       duration: endClock(),
     },
-    'get blocks'
+    'get blocks and txs'
   )
-  return blocksByNumber
+  return { blocks: blocksByNumber, transactions: transactionByHash }
 }
 
 /**
@@ -192,7 +200,7 @@ export async function getBlocksInRange(
  */
 export async function insertBlocksInChunks(args: {
   db: PgAsyncTransaction<PgQueryResultHKT, typeof schema>
-  blocks: EncodedBlockWithTransactions[]
+  blocks: EncodedBlock[]
 }): Promise<void> {
   const { db, blocks } = args
   if (blocks.length === 0) return

@@ -3,7 +3,7 @@ import type { GetEventArgs, Log } from 'viem'
 
 import type { InternalConfig } from '../config/config'
 import type { Database } from '../db/client'
-import type { EncodedBlockWithTransactions, EncodedTransaction } from '../types'
+import type { EncodedBlock, EncodedTransaction } from '../types'
 import type { Logger } from '../utils/logger'
 import type {
   ContractAbiByEventKey,
@@ -34,7 +34,7 @@ export type DecodedEvent<
     { EnableUnion: false; IndexedOnly: false; Required: true }
   >
   log: Log<bigint, number, false, ContractAbiEventByEventKey<C, Event>>
-  block: EncodedBlockWithTransactions
+  block: EncodedBlock
   transaction: EncodedTransaction
 }
 
@@ -81,7 +81,7 @@ export class HookRegistry<
       { EnableUnion: false; IndexedOnly: false; Required: true }
     >
     log: Log<bigint, number, false, ContractAbiEventByEventKey<C, K>>
-    block: EncodedBlockWithTransactions
+    block: EncodedBlock
     transaction: EncodedTransaction
     context: HookContext<TSchema, TRelations>
   }): Promise<void> {

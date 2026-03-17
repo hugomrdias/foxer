@@ -31,3 +31,5 @@ export type EncodedBlockWithTransactions = Simplify<
     transactions: EncodedTransaction[]
   }
 >
+export type TransactionsMap = Map<`0x${string}`, EncodedTransaction>
+export type BlocksMap = Map<bigint, EncodedBlock>

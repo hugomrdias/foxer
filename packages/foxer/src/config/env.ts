@@ -25,6 +25,6 @@ export function createEnv(logger: Logger) {
       `Failed to parse environment variables: \n ${z.prettifyError(parsed.error)}`
     )
   }
-  logger.debug({ env: parsed.data }, 'env parsed')
+  // logger.debug({ env: parsed.data }, 'env parsed')
   return parsed.data
 }
