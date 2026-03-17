@@ -60,7 +60,7 @@
     "abitype": "^1.2.3",
     "cleye": "^2.3.0",
     "dotenv": "^17.2.3",
-    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "drizzle-orm": "1.0.0-beta.17-67b1795",
     "exit-hook": "^5.1.0",
     "hono": "^4.12.7",
     "hono-pino": "^0.10.3",

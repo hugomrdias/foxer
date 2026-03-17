@@ -1,11 +1,19 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "8bac51b8-3982-47ad-ac1f-2871f0fedb4a",
-  "prevIds": ["00000000-0000-0000-0000-000000000000"],
+  "id": "c23ee8d4-56c3-485b-b7b9-5e26d3500825",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
   "ddl": [
     {
-      "values": ["legacy", "eip1559", "eip2930", "eip4844", "eip7702"],
+      "values": [
+        "legacy",
+        "eip1559",
+        "eip2930",
+        "eip4844",
+        "eip7702"
+      ],
       "name": "transaction_type",
       "entityType": "enums",
       "schema": "public"
@@ -1254,10 +1262,42 @@
     },
     {
       "nameExplicit": true,
-      "columns": ["signer"],
+      "columns": [
+        {
+          "value": "to",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "block_number",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "transactions_to_block_number_index",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "transactions"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        "signer"
+      ],
       "schemaTo": "public",
       "tableTo": "sessionKeys",
-      "columnsTo": ["signer"],
+      "columnsTo": [
+        "signer"
+      ],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "sessionKeyPermissions_signer_fk",
@@ -1266,7 +1306,10 @@
       "table": "sessionKeyPermissions"
     },
     {
-      "columns": ["dataset_id", "id"],
+      "columns": [
+        "dataset_id",
+        "id"
+      ],
       "nameExplicit": false,
       "name": "pieces_pkey",
       "entityType": "pks",
@@ -1274,7 +1317,10 @@
       "table": "pieces"
     },
     {
-      "columns": ["signer", "permission"],
+      "columns": [
+        "signer",
+        "permission"
+      ],
       "nameExplicit": false,
       "name": "sessionKeyPermissions_pkey",
       "entityType": "pks",
@@ -1282,7 +1328,9 @@
       "table": "sessionKeyPermissions"
     },
     {
-      "columns": ["data_set_id"],
+      "columns": [
+        "data_set_id"
+      ],
       "nameExplicit": false,
       "name": "datasets_pkey",
       "schema": "public",
@@ -1290,7 +1338,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["provider_id"],
+      "columns": [
+        "provider_id"
+      ],
       "nameExplicit": false,
       "name": "providers_pkey",
       "schema": "public",
@@ -1298,7 +1348,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["signer"],
+      "columns": [
+        "signer"
+      ],
       "nameExplicit": false,
       "name": "sessionKeys_pkey",
       "schema": "public",
@@ -1306,7 +1358,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["number"],
+      "columns": [
+        "number"
+      ],
       "nameExplicit": false,
       "name": "blocks_pkey",
       "schema": "public",
@@ -1314,7 +1368,9 @@
       "entityType": "pks"
     },
     {
-      "columns": ["hash"],
+      "columns": [
+        "hash"
+      ],
       "nameExplicit": false,
       "name": "transactions_pkey",
       "schema": "public",

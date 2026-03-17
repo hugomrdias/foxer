@@ -36,14 +36,14 @@
     "@filoz/synapse-core": "^0.3.0",
     "@hono/standard-validator": "^0.2.2",
     "@hugomrdias/foxer": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.15-859cf75",
+    "drizzle-orm": "1.0.0-beta.17-67b1795",
     "hono": "^4.12.7",
     "viem": "2.47.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "drizzle-kit": "^0.31.9",
+    "drizzle-kit": "1.0.0-beta.17-67b1795",
     "typescript": "^5.9.3"
   }
 }

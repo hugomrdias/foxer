@@ -84,8 +84,12 @@ export function createDatabase<
   // Postgres
   if (driver === 'postgres' && url) {
     const pool = new Pool({
-      ...options,
+      application_name: 'foxer',
+      connectionTimeoutMillis: 5_000,
+      idleTimeoutMillis: 30_000,
+      max: 10,
       connectionString: url,
+      ...options,
     })
     const db = drizzleNodePostgres({
       client: pool,
