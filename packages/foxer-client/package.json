@@ -48,7 +48,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-beta.17-67b1795",
+    "drizzle-orm": "1.0.0-beta.18-905b79a",
     "eventsource": "^4.1.0"
   },
   "devDependencies": {
