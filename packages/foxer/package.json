@@ -53,7 +53,7 @@
   "dependencies": {
     "@bluwy/giget-core": "^0.1.6",
     "@clack/prompts": "^1.1.0",
-    "@electric-sql/pglite": "^0.3.16",
+    "@electric-sql/pglite": "^0.4.0",
     "@hono/node-server": "^1.19.11",
     "@libpg-query/parser": "^17.6.3",
     "@pgsql/traverse": "^17.2.4",
