@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: its ok */
 
-import { and, gte, inArray, lte } from 'drizzle-orm'
+import { and, gte, inArray } from 'drizzle-orm'
 import {
   getTableConfig,
   type PgAsyncTransaction,
@@ -10,7 +10,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import type { Hash, PublicClient } from 'viem'
 
-import type { FilteredContracts } from '../../config/config.ts'
 import { MAX_QUERY_PARAMS } from '../../contants.ts'
 import { safeGetBlock } from '../../rpc/get-block.ts'
 import type {
@@ -132,14 +131,7 @@ export async function getBlocksInRange(
     db
       .select()
       .from(schema.transactions)
-      .where(
-        and(
-          // gte(schema.transactions.blockNumber, firstBlockNumber),
-          // lte(schema.transactions.blockNumber, lastBlockNumber),
-          // inArray(schema.transactions.to, contracts.addresses),
-          inArray(schema.transactions.hash, logsTxs)
-        )
-      ),
+      .where(and(inArray(schema.transactions.hash, logsTxs))),
   ])
 
   const transactionByHash = new Map<`0x${string}`, EncodedTransaction>()

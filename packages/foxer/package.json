@@ -51,9 +51,9 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@bluwy/giget-core": "^0.1.6",
+    "@bluwy/giget-core": "^0.1.7",
     "@clack/prompts": "^1.1.0",
-    "@electric-sql/pglite": "^0.3.16",
+    "@electric-sql/pglite": "^0.4.1",
     "@hono/node-server": "^1.19.11",
     "@libpg-query/parser": "^17.6.3",
     "@pgsql/traverse": "^17.2.4",
@@ -62,11 +62,13 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "1.0.0-beta.17-67b1795",
     "exit-hook": "^5.1.0",
-    "hono": "^4.12.7",
+    "hono": "^4.12.9",
     "hono-pino": "^0.10.3",
     "http-shutdown": "^1.2.2",
+    "iso-base": "^4.3.1",
     "p-queue": "^9.1.0",
     "pg": "^8.20.0",
+    "pgserve": "^1.1.6",
     "picocolors": "^1.1.1",
     "pino": "^10.3.1",
     "postgres": "^3.4.8",
@@ -77,12 +79,12 @@
   "devDependencies": {
     "@pgsql/types": "^17.6.2",
     "@types/node": "^25.5.0",
-    "@types/pg": "^8.18.0",
-    "type-fest": "^5.4.4",
+    "@types/pg": "^8.20.0",
+    "type-fest": "^5.5.0",
     "typescript": "^5.9.2"
   },
   "peerDependencies": {
-    "hono": ">=4.5",
-    "viem": "2.x"
+    "hono": ">=4.12.9",
+    "viem": "2.47.6"
   }
 }

@@ -1,4 +1,5 @@
 import { customType } from 'drizzle-orm/pg-core'
+import { hex as hexCodec } from 'iso-base/rfc4648'
 import { type Address, type Hash, type Hex, stringify } from 'viem'
 
 export const numeric78 = customType<{ data: bigint; driverData: string }>({
@@ -90,16 +91,26 @@ export const jsonb = customType<{ data: unknown; driverData: string }>({
   },
 })
 
-export const bytea = customType<{ data: Hex; driverData: Buffer }>({
+export const bytea = customType<{ data: Hex; driverData: Uint8Array }>({
   dataType() {
     return 'bytea'
   },
-  toDriver(value: string): Buffer {
+  toDriver(value: string): Uint8Array {
     return Buffer.from(value.slice(2), 'hex')
   },
-  fromDriver(value: Buffer): Hex {
-    const hex = value.toString('hex')
-    const _value = hex.startsWith('\\x') ? hex.slice(2) : hex
-    return `0x${_value}` as Hex
+  fromDriver(value: unknown): Hex {
+    if (typeof value === 'string') {
+      return `0x${value.slice(2)}` as Hex
+    }
+
+    if (value instanceof Buffer) {
+      return `0x${value.toString('hex')}` as Hex
+    }
+
+    if (value instanceof Uint8Array) {
+      return `0x${hexCodec.encode(value)}` as Hex
+    }
+
+    throw new Error('Invalid value')
   },
 })
