@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.10...foxer-v0.1.11) (2026-03-23)
+
+
+### Bug Fixes
+
+* update foxer configuration and environment handling ([64df052](https://github.com/hugomrdias/foxer/commit/64df052eace280a5074be4763f50871d74456e76))
+
 ## [0.1.10](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.9...foxer-v0.1.10) (2026-03-23)
 
 
