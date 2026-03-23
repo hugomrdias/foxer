@@ -19,7 +19,4 @@ dist/
 .zed
 .env
 .env.local
-.wireit/
 .pglite
-
-.vite-hooks

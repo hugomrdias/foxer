@@ -4,7 +4,7 @@ import type { Logger } from '@hugomrdias/foxer'
 import { eq } from 'drizzle-orm'
 import { type Address, decodeFunctionData, zeroAddress } from 'viem'
 
-import type { Registry } from '../../foxer.config.ts'
+import type { Registry } from '../../foxer.config'
 import { schema } from '../schema/index.ts'
 
 // TODO add contract to the context
