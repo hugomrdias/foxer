@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.1...foxer-v0.2.2) (2026-03-23)
+
+
+### Bug Fixes
+
+* update project templates and configuration ([d1adfc8](https://github.com/hugomrdias/foxer/commit/d1adfc81d107804eaa169c6214386b15dc82fe88))
+
 ## [0.2.1](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.0...foxer-v0.2.1) (2026-03-23)
 
 
