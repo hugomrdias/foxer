@@ -14,13 +14,13 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.1.0",
-    "@filoz/synapse-core": "^0.3.0",
+    "@filoz/synapse-core": "^0.3.1",
     "@hugomrdias/foxer-client": "latest",
     "cleye": "^2.2.1",
     "conf": "^15.1.0",
     "foc-api": "workspace:*",
     "terminal-link": "^5.0.0",
-    "viem": "2.47.4"
+    "viem": "2.47.6"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
