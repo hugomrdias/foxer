@@ -38,6 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
+      - uses: pnpm/action-setup@v4
+        with:
+          version: latest
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
@@ -45,5 +48,5 @@ jobs:
       - run: bun install
       - run: bun run build
       - run: bun run check
-      - run: bun publish
+      - run: pnpm publish
         working-directory: ${{ env.RELEASE_PATH }}
