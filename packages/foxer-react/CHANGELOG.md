@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/hugomrdias/foxer/compare/foxer-react-v0.1.0...foxer-react-v0.1.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* update dependencies and configuration ([9335f07](https://github.com/hugomrdias/foxer/commit/9335f07ea4df9f8f378ceac4a2c4f9f4d6c530fe))
+* update dependencies in foxer-client and foxer-react ([c31cf4a](https://github.com/hugomrdias/foxer/commit/c31cf4afa89aed9334ca2b8219b8e459437a9935))
+
 ## [0.1.0](https://github.com/hugomrdias/foxer/compare/foxer-react-v0.0.4...foxer-react-v0.1.0) (2026-03-16)
 
 
