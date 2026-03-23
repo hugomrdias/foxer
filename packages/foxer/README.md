@@ -44,6 +44,7 @@ npx @hugomrdias/foxer create my-foxer-app --template app
 Create a `foxer.config.ts` file in your project root:
 
 ```ts
+import { calibration } from '@filoz/synapse-core/chains'
 import { createConfig } from '@hugomrdias/foxer'
 import { http } from 'viem'
 
@@ -51,7 +52,7 @@ export const config = createConfig({
   client: {
     transport: http(process.env.RPC_URL),
     realtimeTransport: http(process.env.RPC_LIVE_URL),
-    chain: /* your viem chain */,
+    chain: calibration,
   },
   contracts: {
     // contract definitions keyed by name
