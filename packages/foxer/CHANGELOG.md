@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.11...foxer-v0.2.0) (2026-03-23)
+
+
+### Features
+
+* enhance project scaffolding with new templates ([24dd954](https://github.com/hugomrdias/foxer/commit/24dd954406bff7952779ab91669dedaa71e13ec4))
+
 ## [0.1.11](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.10...foxer-v0.1.11) (2026-03-23)
 
 
