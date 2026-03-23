@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.0...foxer-v0.2.1) (2026-03-23)
+
+
+### Bug Fixes
+
+* remove redundant flag from README.md example ([38dd2c3](https://github.com/hugomrdias/foxer/commit/38dd2c3b70f65b19e1083b7c30519f726cd5537d))
+
 ## [0.2.0](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.11...foxer-v0.2.0) (2026-03-23)
 
 
