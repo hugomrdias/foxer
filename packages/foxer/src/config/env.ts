@@ -17,7 +17,7 @@ const envSchema = z.object({
   LOG_MODE: z.enum(['pretty', 'json']).default('pretty'),
 })
 
-export function createEnv(logger: Logger) {
+export function createEnv(_logger: Logger) {
   const parsed = envSchema.safeParse(process.env)
 
   if (!parsed.success) {

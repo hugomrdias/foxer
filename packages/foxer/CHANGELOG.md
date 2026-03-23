@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.11](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.10...foxer-v0.1.11) (2026-03-23)
+
+
+### Bug Fixes
+
+* update foxer configuration and environment handling ([64df052](https://github.com/hugomrdias/foxer/commit/64df052eace280a5074be4763f50871d74456e76))
+
+## [0.1.10](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.9...foxer-v0.1.10) (2026-03-23)
+
+
+### Bug Fixes
+
+* update block and transaction handling in the database actions ([8d7df5e](https://github.com/hugomrdias/foxer/commit/8d7df5e7babdb0277d74a19360a16e2158e6469c))
+* update dependencies and configuration ([9335f07](https://github.com/hugomrdias/foxer/commit/9335f07ea4df9f8f378ceac4a2c4f9f4d6c530fe))
+* update dependencies and improve bytea handling in database ([1bff003](https://github.com/hugomrdias/foxer/commit/1bff003c6f21ffc6a22ad79cd32df6113e11bce8))
+
 ## [0.1.9](https://github.com/hugomrdias/foxer/compare/foxer-v0.1.8...foxer-v0.1.9) (2026-03-16)
 
 

@@ -8,8 +8,7 @@
   "author": "Hugo Dias <hugomrdias@gmail.com>",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "examples/*"
+    "packages/*"
   ],
   "type": "module",
   "main": "index.js",
