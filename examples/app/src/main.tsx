@@ -9,9 +9,9 @@ import { createRoot } from 'react-dom/client'
 import { createConfig, http, WagmiProvider } from 'wagmi'
 
 import './index.css'
-import { injected } from 'wagmi/connectors'
 
-import { Schema } from '../../foc-api/src/index.ts'
+import { Schema } from 'api'
+import { injected } from 'wagmi/connectors'
 import App from './app.tsx'
 import { ThemeProvider } from './components/theme-provider.tsx'
 

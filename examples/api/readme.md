@@ -31,13 +31,13 @@ Optional variables:
 
 ```bash
 bun run generate
+bun run build
 bun run dev
 ```
 
 Useful extras:
 
 ```bash
-bun run build
 bun run check
 bunx drizzle-kit studio
 ```
