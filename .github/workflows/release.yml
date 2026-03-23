@@ -45,5 +45,5 @@ jobs:
       - run: bun install
       - run: bun run build
       - run: bun run check
-      - run: npm publish
+      - run: bun publish
         working-directory: ${{ env.RELEASE_PATH }}

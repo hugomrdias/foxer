@@ -1,10 +1,19 @@
 import { type Client, compileQuery } from '@hugomrdias/foxer-client'
 import type { QueryKey } from '@tanstack/react-query'
-import { stringify } from 'viem'
 
 import type { ResolvedSchema } from './index.js'
 
 export type SQLWrapper = Exclude<Parameters<typeof compileQuery>[0], string>
+
+export const stringify: typeof JSON.stringify = (value, replacer, space) =>
+  JSON.stringify(
+    value,
+    (key, value_) => {
+      const value = typeof value_ === 'bigint' ? value_.toString() : value_
+      return typeof replacer === 'function' ? replacer(key, value) : value
+    },
+    space
+  )
 
 export function getFoxerQueryOptions<T>(
   client: Client<ResolvedSchema>,
