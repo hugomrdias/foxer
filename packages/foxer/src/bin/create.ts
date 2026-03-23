@@ -126,6 +126,7 @@ export const create: Command = command(
   },
   async (argv) => {
     const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent)
+
     const pm = pkgInfo ? pkgInfo.name : 'npm'
     const targetDir = formatTargetDir(argv._.name)
     const cwd = process.cwd()
@@ -186,11 +187,6 @@ export const create: Command = command(
     copy(
       resolve(__dirname, `../../template/tsconfig.json.tpl`),
       resolve(root, 'tsconfig.json')
-    )
-    // copy turbo.json
-    copy(
-      resolve(__dirname, `../../template/turbo.json.tpl`),
-      resolve(root, 'turbo.json')
     )
 
     // copy apps/foc-api

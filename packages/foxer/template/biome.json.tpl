@@ -1,6 +1,5 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "root": false,
   "files": {
     "ignoreUnknown": true,
     "includes": [
@@ -83,5 +82,10 @@
       "attributePosition": "auto"
     },
     "globals": ["document", "navigator", "window"]
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
   }
 }
