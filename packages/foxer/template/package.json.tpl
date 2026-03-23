@@ -12,13 +12,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-   "check": "turbo run check",
+    "check": "turbo run check",
     "build": "turbo run build",
-    "lint": "biome check ."
+    "lint:fix": "biome check --write ."
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.7",
-    "@hugomrdias/configs": "^1.1.3",
-    "turbo": "^2.8.17"
+    "@biomejs/biome": "^2.4.8",
+    "turbo": "^2.8.20",
+    "typescript": "^5.9.3"
   }
 }

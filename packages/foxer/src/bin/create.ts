@@ -149,6 +149,7 @@ export const create: Command = command(
     mkdirSync(root, { recursive: true })
     p.log.step(`Scaffolding project in ${root}...`)
 
+    // copy package.json
     const pkg = JSON.parse(
       readFileSync(
         resolve(__dirname, `../../template/package.json.tpl`),
@@ -163,6 +164,7 @@ export const create: Command = command(
       `${JSON.stringify(pkg, null, 2)}\n`
     )
 
+    // copy pnpm-workspace.yaml
     if (pm === 'pnpm') {
       copy(
         resolve(__dirname, `../../template/pnpm-workspace.yaml.tpl`),
@@ -170,13 +172,25 @@ export const create: Command = command(
       )
     }
 
+    // copy .gitignore
     copy(
-      resolve(__dirname, `../../template/turbo.json.tpl`),
-      resolve(root, 'turbo.json')
+      resolve(__dirname, `../../template/.gitignore.tpl`),
+      resolve(root, '.gitignore')
     )
+    // copy biome.json
+    copy(
+      resolve(__dirname, `../../template/biome.json.tpl`),
+      resolve(root, 'biome.json')
+    )
+    // copy tsconfig.json
     copy(
       resolve(__dirname, `../../template/tsconfig.json.tpl`),
       resolve(root, 'tsconfig.json')
+    )
+    // copy turbo.json
+    copy(
+      resolve(__dirname, `../../template/turbo.json.tpl`),
+      resolve(root, 'turbo.json')
     )
 
     // copy apps/foc-api

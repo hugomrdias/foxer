@@ -1,0 +1,22 @@
+# npm
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+
+# Build
+dist/
+.turbo/
+
+# Env files
+.zed
+.env
+.env.local
+.pglite

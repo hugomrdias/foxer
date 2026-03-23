@@ -3,34 +3,42 @@
     /* Projects */
     "incremental": true,
     "composite": true,
-    // Emit
 
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "removeComments": true,
-
-    // Language and Environment
-    "lib": ["ESNext", "DOM"],
-    "target": "ESNext",
+    /* Language and Environment */
+    "target": "esnext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "moduleDetection": "force",
 
-    // Modules
-    "module": "preserve",
+    /* Modules */
+    "module": "preserve", // "NodeNext"
     "resolveJsonModule": true,
     "rewriteRelativeImportExtensions": true,
 
-    // Interop Constraints
+    /* JavaScript Support */
+    "allowJs": true,
+    "checkJs": true,
+
+    /* Emit */
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "sourceMap": true,
+    "removeComments": false,
+    "noEmit": false,
+    "importsNotUsedAsValues": "remove",
+    "stripInternal": true,
+    "noEmitOnError": true,
+
+    /* Interop Constraints */
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
-    "erasableSyntaxOnly": true,
     "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "erasableSyntaxOnly": true,
 
-    // Type Checking
+    /* Type Checking */
     "strict": true,
-    "noImplicitOverride": true,
-
-    // Completeness
     "skipLibCheck": true
   }
 }
