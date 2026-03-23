@@ -53,11 +53,11 @@
   },
   "devDependencies": {
     "@types/node": "25.5.0",
-    "type-fest": "^5.4.4",
+    "type-fest": "^5.5.0",
     "typescript": "5.9.3",
-    "viem": "2.47.4"
+    "viem": "2.47.6"
   },
   "peerDependencies": {
-    "viem": "2.x"
+    "viem": "2.47.6"
   }
 }
