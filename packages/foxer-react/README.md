@@ -12,7 +12,7 @@
 ## Install
 
 ```bash
-npm install @hugomrdias/foxer-react @hugomrdias/foxer-client @tanstack/react-query react wagmi viem
+npm install @hugomrdias/foxer-react @hugomrdias/foxer-client @tanstack/react-query react
 ```
 
 ## Package entrypoint
