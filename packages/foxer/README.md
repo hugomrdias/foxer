@@ -87,7 +87,6 @@ Useful flags:
 
 ```bash
 foxer dev --port 4200
-foxer dev --root .
 foxer dev --config ./foxer.config.ts
 ```
 
