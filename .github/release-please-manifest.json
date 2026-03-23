@@ -1,5 +1,5 @@
 {
-  "packages/foxer": "0.2.1",
+  "packages/foxer": "0.2.2",
   "packages/foxer-client": "0.1.1",
-  "packages/foxer-react": "0.1.2"
+  "packages/foxer-react": "0.1.3"
 }

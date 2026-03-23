@@ -1,6 +1,6 @@
 {
   "name": "@hugomrdias/foxer",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Foxer is a all-in-one application server for Filecoin.",
   "license": "Apache-2.0 OR MIT",
   "author": "Hugo Dias <hugomrdias@gmail.com>",
