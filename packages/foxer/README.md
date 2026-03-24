@@ -94,34 +94,60 @@ The dev server also looks for `.env.local` in the project root.
 
 ## Postgres recommendations
 
-Foxer supports both `pglite` and Postgres, but production deployments should use Postgres when you need higher write throughput, concurrent reads, or live SQL subscriptions.
+Foxer supports both `pglite` and Postgres, but production deployments should use Postgres when you need higher write throughput, concurrent reads, or Live SQL subscriptions.
 
-Live SQL requires logical replication to be enabled because Foxer creates a publication and subscribes to table changes at runtime.
+### Required for Postgres mode
 
-Recommended Postgres settings for a dedicated Foxer instance:
+Foxer currently checks for logical WAL during startup and creates a publication for application tables at runtime, so this setting is required when using Postgres:
 
 ```conf
 wal_level = logical
-max_wal_senders = 8
-max_replication_slots = 8
+```
+
+### Recommended defaults for a dedicated Foxer instance
+
+These are good starting points for a production Foxer deployment on SSD or NVMe storage:
+
+```conf
+wal_level = logical
+max_wal_senders = 4
+max_replication_slots = 4
 wal_compression = on
 checkpoint_timeout = 15min
 checkpoint_completion_target = 0.9
-max_wal_size = 8GB
+max_wal_size = 2GB
 min_wal_size = 1GB
 random_page_cost = 1.1
 effective_io_concurrency = 200
 default_statistics_target = 200
 ```
 
-If you treat the chain as the source of truth and can tolerate replaying the most recent blocks after a crash, `synchronous_commit = off` is a valid ingest-speed optimization.
+Notes:
 
-Memory settings depend on the machine. A good starting point is:
+- `max_wal_senders` and `max_replication_slots` are headroom settings for Foxer's logical replication usage. Increase them if you run multiple Foxer instances or additional replication consumers.
+- `random_page_cost = 1.1` and `effective_io_concurrency = 200` assume fast SSD or NVMe storage. Use more conservative values on slower disks.
+- `default_statistics_target = 200` improves planner quality for ad hoc SQL queries, at the cost of slightly more `ANALYZE` work.
 
-- `shared_buffers`: about 25% of RAM
-- `effective_cache_size`: about 60-75% of RAM
-- `work_mem`: `16MB`
+### Durability vs ingest speed
+
+If you treat the chain as the source of truth and can tolerate replaying the most recent blocks after a crash, this is a valid ingest-speed optimization:
+
+```conf
+synchronous_commit = off
+```
+
+If you need full durability for every acknowledged write, keep `synchronous_commit = on`.
+
+### Memory starting points
+
+Memory settings depend on the machine. For an `8-16GB` dedicated host, a good starting point is:
+
+- `shared_buffers`: `2GB`
+- `effective_cache_size`: `6GB`
+- `work_mem`: `8MB`
 - `maintenance_work_mem`: `512MB`
+
+For smaller hosts, reduce `shared_buffers` and `effective_cache_size` first. For larger hosts, increase them gradually based on actual query patterns and cache hit rates.
 
 Foxer now defaults the Node Postgres pool to:
 

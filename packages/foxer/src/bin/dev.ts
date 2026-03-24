@@ -46,6 +46,7 @@ export const dev: Command = command(
 
       const dbContext = createDatabase({
         env,
+        logger,
         schema: { ...config.schema, ...InternalSchema.schema },
         relations: { ...config.relations, ...InternalSchema.relations },
       })

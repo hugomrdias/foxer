@@ -13,6 +13,7 @@ import { Pool, type PoolConfig } from 'pg'
 
 import type { DatabaseConfig } from '../config/config.ts'
 import type { Env } from '../config/env.ts'
+import type { Logger } from '../utils/logger.ts'
 import { type relations, schema } from './schema/index.ts'
 
 export type Database<
@@ -62,11 +63,13 @@ export function createDatabase<
   config,
   schema,
   relations,
+  logger,
 }: {
   env: Env
   config?: DatabaseConfig
   schema: TSchema
   relations: TRelations
+  logger: Logger
 }): DatabaseContext<TSchema, TRelations> {
   let driver: string = 'pglite'
   let url: string | undefined
@@ -90,6 +93,9 @@ export function createDatabase<
       max: 10,
       connectionString: url,
       ...options,
+    })
+    pool.on('error', (err) => {
+      logger.error({ err }, 'postgres pool error')
     })
     const db = drizzleNodePostgres({
       client: pool,
