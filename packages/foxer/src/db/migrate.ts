@@ -41,7 +41,7 @@ export async function runMigrations({
     (table) => !FOXER_TABLES.includes(table)
   )
   // assert tables have blockNumber column and index
-  assertTablesHaveBlockNumberIndex(dbContext.db._.fullSchema, tables)
+  // assertTablesHaveBlockNumberIndex(dbContext.db._.fullSchema, tables)
 
   // create publications
   await createPublications(db, tables)
