@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.3](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.2...foxer-v0.2.3) (2026-03-26)
+
+
+### Bug Fixes
+
+* enhance Postgres configuration in README and add logger to database creation ([7e5b3e0](https://github.com/hugomrdias/foxer/commit/7e5b3e006580b9daa83069aaa5841b6ddb18bd84))
+* remove tables check for blockNumber ([0384507](https://github.com/hugomrdias/foxer/commit/03845078eb322109835be316102ac32b2134f6d9))
+
 ## [0.2.2](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.1...foxer-v0.2.2) (2026-03-23)
 
 
