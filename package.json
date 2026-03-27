@@ -23,7 +23,7 @@
     "@biomejs/biome": "^2.4.8",
     "@hugomrdias/configs": "^1.1.3",
     "turbo": "^2.8.20",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   },
   "packageManager": "bun@1.3.10",
   "engines": {
