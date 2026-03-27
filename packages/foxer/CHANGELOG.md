@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.3...foxer-v0.2.4) (2026-03-27)
+
+
+### Bug Fixes
+
+* improve error serialization in logger utility ([4a6164d](https://github.com/hugomrdias/foxer/commit/4a6164d7794a4a9feb1a3baaf139fb720c2018e0))
+
 ## [0.2.3](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.2...foxer-v0.2.3) (2026-03-26)
 
 
