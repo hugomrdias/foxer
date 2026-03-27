@@ -26,10 +26,20 @@ export function createLogger({
     },
   }
   const errorSerializer = pino.stdSerializers.wrapErrorSerializer((error) => {
-    error.meta = Array.isArray(error.meta) ? error.meta.join('\n') : error.meta
-    // @ts-expect-error - type is not defined in the error serializer
-    error.type = undefined
-    return error
+    const extra: Record<string, unknown> = {}
+    const meta = Array.isArray(error.meta) ? error.meta.join('\n') : error.meta
+    if (meta) {
+      extra.meta = meta
+    }
+    if (error.raw.cause) {
+      extra.cause = error.raw.cause
+    }
+    return {
+      message: error.message,
+      stack: error.stack,
+      type: error.constructor.name,
+      ...extra,
+    }
   })
   let logger: pino.Logger
 
@@ -48,6 +58,9 @@ export function createLogger({
   } else {
     logger = pino({
       level,
+      serializers: {
+        error: errorSerializer,
+      },
       // Removes "pid" and "hostname" properties from the log.
       base: undefined,
     })
