@@ -36,7 +36,7 @@
     "@filoz/synapse-core": "^0.3.1",
     "@hono/standard-validator": "^0.2.2",
     "@hugomrdias/foxer": "workspace:*",
-    "drizzle-orm": "1.0.0-beta.17-67b1795",
+    "drizzle-orm": "1.0.0-beta.20",
     "hono": "^4.12.9",
     "viem": "2.47.6",
     "zod": "^4.3.6"
