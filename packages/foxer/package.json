@@ -78,7 +78,7 @@
   },
   "devDependencies": {
     "@pgsql/types": "^17.6.2",
-    "@types/node": "^25.5.0",
+    "@types/node": "^25.5.2",
     "@types/pg": "^8.20.0",
     "type-fest": "^5.5.0",
     "typescript": "^5.9.2"
