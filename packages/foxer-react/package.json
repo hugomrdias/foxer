@@ -52,7 +52,7 @@
     "drizzle-orm": "1.0.0-beta.17-67b1795"
   },
   "devDependencies": {
-    "@types/node": "25.5.0",
+    "@types/node": "25.5.2",
     "@types/react": "^19.2.14",
     "typescript": "5.9.3"
   },
