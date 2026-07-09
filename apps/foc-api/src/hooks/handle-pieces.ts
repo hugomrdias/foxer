@@ -26,8 +26,8 @@ export function handlePieces(registry: Registry) {
 
     const piecesToInsert = args.pieceIds.map((pieceId, index) => {
       const hexCid = args.pieceCids[index]?.data ?? null
-      const cid = Piece.hexToPieceCID(hexCid)
-      const size = BigInt(Piece.getSizeFromPieceCID(cid))
+      const cid = Piece.from(hexCid)
+      const size = BigInt(cid.size)
       return {
         id: pieceId,
         blockNumber: event.block.number,

@@ -33,17 +33,17 @@
     "dev": "foxer.src dev"
   },
   "dependencies": {
-    "@filoz/synapse-core": "^0.3.1",
-    "@hono/standard-validator": "^0.2.2",
+    "@filoz/synapse-core": "^0.7.0",
+    "@hono/standard-validator": "^0.2.3",
     "@hugomrdias/foxer": "workspace:*",
     "drizzle-orm": "1.0.0-beta.17-67b1795",
-    "hono": "^4.12.9",
-    "viem": "2.47.6",
-    "zod": "^4.3.6"
+    "hono": "^4.12.28",
+    "viem": "2.55.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^26.1.1",
     "drizzle-kit": "1.0.0-beta.17-67b1795",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }

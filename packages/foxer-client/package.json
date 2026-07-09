@@ -52,12 +52,12 @@
     "eventsource": "^4.1.0"
   },
   "devDependencies": {
-    "@types/node": "25.5.0",
-    "type-fest": "^5.5.0",
-    "typescript": "5.9.3",
-    "viem": "2.47.6"
+    "@types/node": "26.1.1",
+    "type-fest": "^5.8.0",
+    "typescript": "6.0.3",
+    "viem": "2.55.0"
   },
   "peerDependencies": {
-    "viem": "2.47.6"
+    "viem": "2.55.0"
   }
 }

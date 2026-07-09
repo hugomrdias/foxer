@@ -1,6 +1,15 @@
 import * as p from '@clack/prompts'
-import { getChain } from '@filoz/synapse-core/chains'
-import { createPublicClient, createWalletClient, type Hex, http } from 'viem'
+import { type Chain, getChain } from '@filoz/synapse-core/chains'
+import {
+  type Account,
+  createPublicClient,
+  createWalletClient,
+  type Hex,
+  http,
+  type PublicClient,
+  type Transport,
+  type WalletClient,
+} from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 import { config } from './config.ts'
@@ -15,7 +24,10 @@ function privateKeyFromConfig() {
   return privateKey
 }
 
-export function privateKeyClient(chainId: number) {
+export function privateKeyClient(chainId: number): {
+  client: WalletClient<Transport, Chain, Account>
+  chain: Chain
+} {
   const chain = getChain(chainId)
 
   const privateKey = privateKeyFromConfig()
@@ -32,11 +44,10 @@ export function privateKeyClient(chainId: number) {
   }
 }
 
-export function publicClient(chainId: number) {
+export function publicClient(chainId: number): PublicClient {
   const chain = getChain(chainId)
-  const publicClient = createPublicClient({
+  return createPublicClient({
     chain,
     transport: http(),
   })
-  return publicClient
 }

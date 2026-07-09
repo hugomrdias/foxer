@@ -20,10 +20,10 @@
     "conf": "^15.1.0",
     "foc-api": "workspace:*",
     "terminal-link": "^5.0.0",
-    "viem": "2.47.6"
+    "viem": "2.55.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }
