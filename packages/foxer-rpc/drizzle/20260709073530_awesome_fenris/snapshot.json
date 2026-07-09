@@ -1,23 +1,11 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "8b834ffe-fbdf-44ed-8f65-ba4d6516f584",
+  "id": "c51d204b-ced6-4f5c-96d2-43d5dcc7edaa",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
-    {
-      "values": [
-        "legacy",
-        "eip1559",
-        "eip2930",
-        "eip4844",
-        "eip7702"
-      ],
-      "name": "transaction_type",
-      "entityType": "enums",
-      "schema": "public"
-    },
     {
       "isRlsEnabled": false,
       "name": "blocks",
@@ -453,7 +441,7 @@
       "table": "transactions"
     },
     {
-      "type": "bigint",
+      "type": "numeric(78,0)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -466,7 +454,7 @@
       "table": "transactions"
     },
     {
-      "type": "bigint",
+      "type": "numeric(78,0)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -479,7 +467,7 @@
       "table": "transactions"
     },
     {
-      "type": "bigint",
+      "type": "numeric(78,0)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -492,8 +480,8 @@
       "table": "transactions"
     },
     {
-      "type": "transaction_type",
-      "typeSchema": "public",
+      "type": "smallint",
+      "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
       "default": null,
@@ -505,7 +493,7 @@
       "table": "transactions"
     },
     {
-      "type": "bigint",
+      "type": "numeric(78,0)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -596,7 +584,7 @@
       "table": "transactions"
     },
     {
-      "type": "bigint",
+      "type": "numeric(78,0)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,

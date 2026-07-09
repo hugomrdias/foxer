@@ -29,6 +29,8 @@ export function startLiveSync(args: {
   })
 
   let nextBlockToQueue = args.initialCursor
+  let failedBlock: bigint | null = null
+  let consecutiveFailures = 0
 
   const unwatch = client.watchBlockNumber({
     emitMissed: true,
@@ -37,6 +39,19 @@ export function startLiveSync(args: {
       while (nextBlockToQueue <= head) {
         const blockNumber = nextBlockToQueue
         void pqueue.add(async () => {
+          if (failedBlock === blockNumber && consecutiveFailures > 0) {
+            const delayMs = Math.min(1000 * 2 ** consecutiveFailures, 30_000)
+            logger.error(
+              {
+                blockNumber: blockNumber.toString(),
+                consecutiveFailures,
+                delayMs,
+              },
+              'retrying live block after backoff'
+            )
+            await sleep(delayMs)
+          }
+
           await queueBlock({
             logger,
             blockNumber,
@@ -44,6 +59,18 @@ export function startLiveSync(args: {
             db,
             client,
             queueSize: pqueue.size,
+            onSuccess: () => {
+              failedBlock = null
+              consecutiveFailures = 0
+            },
+            onFailure: (failedBlockNumber) => {
+              if (failedBlock === failedBlockNumber) {
+                consecutiveFailures += 1
+              } else {
+                failedBlock = failedBlockNumber
+                consecutiveFailures = 1
+              }
+            },
             onRewind: (rewindTo) => {
               nextBlockToQueue = rewindTo
               pqueue.clear()
@@ -64,4 +91,8 @@ export function startLiveSync(args: {
   )
 
   return { stop: unwatch }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }

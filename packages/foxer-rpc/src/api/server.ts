@@ -54,17 +54,18 @@ export function createApiServer({
     try {
       body = await c.req.json()
     } catch (cause) {
+      logger.error({ error: cause }, 'json-rpc parse error')
       return c.json(
         {
           jsonrpc: '2.0',
           id: null,
-          error: { code: -32700, message: 'Parse error', data: cause },
+          error: { code: -32700, message: 'Parse error' },
         },
         400
       )
     }
 
-    const result = await handleJsonRpc({ db, config, body })
+    const result = await handleJsonRpc({ db, config, logger, body })
     if (result === undefined) {
       return c.body(null, 204)
     }

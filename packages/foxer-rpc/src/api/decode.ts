@@ -31,7 +31,8 @@ export function decodeBlock(
   block: BlockRow,
   transactions: TransactionRow[],
   logs: LogRow[],
-  fullTransactions: boolean
+  fullTransactions: boolean,
+  chainId: number
 ) {
   return {
     number: quantity(block.number),
@@ -53,7 +54,7 @@ export function decodeBlock(
     gasUsed: quantity(block.gasUsed),
     timestamp: quantity(block.timestamp),
     transactions: fullTransactions
-      ? transactions.map((tx) => decodeTransaction(tx, block))
+      ? transactions.map((tx) => decodeTransaction(tx, chainId, block))
       : transactions.map((tx) => tx.hash),
     uncles: [],
     baseFeePerGas: quantity(block.baseFeePerGas),
@@ -68,7 +69,11 @@ export function decodeBlock(
  * If a block row is provided, block hash and block number are included. This
  * supports both mined transaction responses and any future pending-style shapes.
  */
-export function decodeTransaction(tx: TransactionRow, block?: BlockRow) {
+export function decodeTransaction(
+  tx: TransactionRow,
+  chainId: number,
+  block?: BlockRow
+) {
   return {
     hash: tx.hash,
     nonce: quantity(tx.nonce),
@@ -81,11 +86,11 @@ export function decodeTransaction(tx: TransactionRow, block?: BlockRow) {
     gas: quantity(tx.gas),
     gasPrice: quantity(tx.gasPrice ?? tx.effectiveGasPrice),
     input: tx.input,
-    type: transactionType(tx.type),
+    type: quantity(tx.type),
     maxFeePerGas: quantity(tx.maxFeePerGas),
     maxPriorityFeePerGas: quantity(tx.maxPriorityFeePerGas),
     accessList: tx.accessList ?? [],
-    chainId: null,
+    chainId: quantity(chainId),
     v: quantity(tx.v),
     r: tx.r,
     s: tx.s,
@@ -117,7 +122,7 @@ export function decodeReceipt(
     logs: logs.map((log) => decodeLog(log, block, tx)),
     logsBloom: logsBloom(logs),
     status: quantity(tx.status),
-    type: transactionType(tx.type),
+    type: quantity(tx.type),
     effectiveGasPrice: quantity(tx.effectiveGasPrice),
   }
 }
@@ -155,20 +160,3 @@ function logsBloom(logs: LogRow[]) {
   return createLogsBloom(values)
 }
 
-/**
- * Maps the internal transaction enum to Ethereum's numeric transaction type.
- */
-function transactionType(type: TransactionRow['type']) {
-  switch (type) {
-    case 'legacy':
-      return '0x0'
-    case 'eip2930':
-      return '0x1'
-    case 'eip1559':
-      return '0x2'
-    case 'eip4844':
-      return '0x3'
-    case 'eip7702':
-      return '0x4'
-  }
-}

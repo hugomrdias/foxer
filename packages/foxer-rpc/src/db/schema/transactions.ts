@@ -1,21 +1,13 @@
 import {
   integer,
   jsonb,
-  pgEnum,
   pgTable,
+  smallint,
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import type { AccessList } from 'viem'
 
 import { address, bytea, hash, int8, numeric78 } from '../column-types.ts'
-
-export const transactionTypeEnum = pgEnum('transaction_type', [
-  'legacy',
-  'eip1559',
-  'eip2930',
-  'eip4844',
-  'eip7702',
-])
 
 export const transactions = pgTable(
   'transactions',
@@ -29,18 +21,18 @@ export const transactions = pgTable(
     value: numeric78().notNull(),
     nonce: integer().notNull(),
     gas: int8().notNull(),
-    gasPrice: int8(),
-    maxFeePerGas: int8(),
-    maxPriorityFeePerGas: int8(),
-    type: transactionTypeEnum().notNull(),
-    v: int8(),
+    gasPrice: numeric78(),
+    maxFeePerGas: numeric78(),
+    maxPriorityFeePerGas: numeric78(),
+    type: smallint().notNull(),
+    v: numeric78(),
     r: bytea(),
     s: bytea(),
     accessList: jsonb().$type<AccessList>(),
     status: integer(),
     receiptGasUsed: int8(),
     cumulativeGasUsed: int8(),
-    effectiveGasPrice: int8(),
+    effectiveGasPrice: numeric78(),
     contractAddress: address(),
   },
   (table) => [

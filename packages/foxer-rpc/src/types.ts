@@ -34,7 +34,7 @@ export type ChainReceipt = {
   logs: ChainLog[]
   status: 'success' | 'reverted'
   effectiveGasPrice: bigint
-  type: TransactionType
+  type: TransactionType | Hex
 }
 
 export type EncodedBlock = Schema['blocks']['$inferInsert']

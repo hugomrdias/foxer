@@ -8,6 +8,5 @@ export const schema = {
   logs,
 }
 
-export { transactionTypeEnum } from './transactions.ts'
 export { blocks, logs, transactions }
 export type Schema = typeof schema

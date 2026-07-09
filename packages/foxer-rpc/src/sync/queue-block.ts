@@ -18,6 +18,8 @@ export async function queueBlock(args: {
   logger: Logger
   blockNumber: bigint
   onRewind: (rewindTo: bigint) => void
+  onSuccess?: (blockNumber: bigint) => void
+  onFailure?: (blockNumber: bigint, error: unknown) => void
   config: InternalConfig
   db: Database
   client: PublicClient
@@ -55,11 +57,13 @@ export async function queueBlock(args: {
       },
       'processed live block'
     )
+    args.onSuccess?.(blockNumber)
   } catch (error) {
+    args.onFailure?.(blockNumber, error)
     logger.error(
       { error, blockNumber: blockNumber.toString() },
       'block processing failed; rewinding'
     )
-    onRewind(blockNumber === 0n ? 0n : blockNumber - 1n)
+    onRewind(blockNumber)
   }
 }

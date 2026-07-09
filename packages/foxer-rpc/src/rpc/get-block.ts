@@ -3,6 +3,7 @@ import type { Hash, PublicClient } from 'viem'
 import type { Database } from '../db/client.ts'
 import { encodeBlockData, encodeNullRoundBlock } from '../db/encode.ts'
 import type { IndexedBlockData } from '../types.ts'
+import { normalizeHex } from '../utils/hex.ts'
 import { getBlockReceipts } from './get-receipts.ts'
 
 export type BlockIdentity = {
@@ -39,7 +40,7 @@ export async function safeGetBlock(options: {
   } catch (error) {
     if (isNullRoundRpcError(error)) {
       let previousBlock:
-        | { number: bigint; hash: Hash; parentHash: Hash }
+        | { number: bigint; hash: Hash; parentHash: Hash; timestamp: bigint }
         | undefined
 
       previousBlock = (
@@ -56,8 +57,9 @@ export async function safeGetBlock(options: {
           })
           previousBlock = {
             number: block.number,
-            hash: block.hash,
-            parentHash: block.parentHash,
+            hash: normalizeHex(block.hash),
+            parentHash: normalizeHex(block.parentHash),
+            timestamp: block.timestamp,
           }
         } catch (error) {
           if (isNullRoundRpcError(error)) {
@@ -71,6 +73,7 @@ export async function safeGetBlock(options: {
       return encodeNullRoundBlock({
         number: blockNumber,
         hash: previousBlock.hash,
+        timestamp: previousBlock.timestamp,
       })
     }
     throw error
@@ -100,8 +103,8 @@ export async function safeGetBlockIdentity(options: {
     }
     return {
       number: block.number,
-      hash: block.hash,
-      parentHash: block.parentHash,
+      hash: normalizeHex(block.hash),
+      parentHash: normalizeHex(block.parentHash),
     }
   } catch (error) {
     if (isNullRoundRpcError(error)) {
@@ -177,8 +180,8 @@ async function findPreviousBlockIdentity(options: {
       }
       return {
         number: block.number,
-        hash: block.hash,
-        parentHash: block.parentHash,
+        hash: normalizeHex(block.hash),
+        parentHash: normalizeHex(block.parentHash),
       }
     } catch (error) {
       if (isNullRoundRpcError(error)) {

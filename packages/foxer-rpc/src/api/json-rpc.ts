@@ -5,6 +5,7 @@ import type { InternalConfig } from '../config.ts'
 import type { Database } from '../db/client.ts'
 import { schema } from '../db/schema/index.ts'
 import { hexToBytes } from '../utils/hex.ts'
+import type { Logger } from '../utils/logger.ts'
 import {
   decodeBlock,
   decodeLog,
@@ -39,6 +40,7 @@ type JsonRpcResponse =
 export function handleJsonRpc(args: {
   db: Database
   config: InternalConfig
+  logger: Logger
   body: unknown
 }): Promise<JsonRpcResponse | JsonRpcResponse[] | undefined> {
   if (Array.isArray(args.body)) {
@@ -64,7 +66,7 @@ export function handleJsonRpc(args: {
  * for unexpected internal failures.
  */
 async function dispatch(
-  args: { db: Database; config: InternalConfig },
+  args: { db: Database; config: InternalConfig; logger: Logger },
   body: unknown
 ): Promise<JsonRpcResponse | undefined> {
   if (!isRequest(body)) {
@@ -91,7 +93,7 @@ async function dispatch(
       case 'eth_getBlockByHash':
         return ok(id, await ethGetBlockByHash(args, params))
       case 'eth_getTransactionByHash':
-        return ok(id, await ethGetTransactionByHash(args.db, params))
+        return ok(id, await ethGetTransactionByHash(args, params))
       case 'eth_getTransactionByBlockNumberAndIndex':
         return ok(
           id,
@@ -116,7 +118,11 @@ async function dispatch(
     if (cause instanceof RpcError) {
       return error(id, cause.code, cause.message, cause.data)
     }
-    return error(id, -32603, 'Internal error', cause)
+    args.logger.error(
+      { error: cause, method: body.method },
+      'json-rpc internal error'
+    )
+    return error(id, -32603, 'Internal error')
   }
 }
 
@@ -141,44 +147,58 @@ async function ethGetBlockByNumber(
     await args.db.$prepared.getBlockByNumber.execute({ blockNumber })
   )[0]
   if (!block) return null
-  return decodeBlockByRow(args.db, block, Boolean(params[1]))
+  return decodeBlockByRow(args, block, Boolean(params[1]))
 }
 
 /**
  * Implements `eth_getBlockByHash` from database rows.
  */
-async function ethGetBlockByHash(args: { db: Database }, params: unknown[]) {
-  const hash = requireHex(params[0], 'block hash')
+async function ethGetBlockByHash(
+  args: { db: Database; config: InternalConfig },
+  params: unknown[]
+) {
+  const hash = requireHex(params[0], 'block hash', 32)
   const block = (
     await args.db.$prepared.getBlockByHash.execute({ hash: hexToBytes(hash) })
   )[0]
   if (!block) return null
-  return decodeBlockByRow(args.db, block, Boolean(params[1]))
+  return decodeBlockByRow(args, block, Boolean(params[1]))
 }
 
 /**
  * Loads a block's header, transactions, and logs, then builds the wire response.
  */
 async function decodeBlockByRow(
-  db: Database,
+  args: { db: Database; config: InternalConfig },
   block: typeof schema.blocks.$inferSelect,
   fullTransactions: boolean
 ) {
   const [transactions, logs] = await Promise.all([
-    db.$prepared.getTransactionsByBlockNumber.execute({
+    args.db.$prepared.getTransactionsByBlockNumber.execute({
       blockNumber: block.number,
     }),
-    db.$prepared.getLogsByBlockNumber.execute({ blockNumber: block.number }),
+    args.db.$prepared.getLogsByBlockNumber.execute({
+      blockNumber: block.number,
+    }),
   ])
-  return decodeBlock(block, transactions, logs, fullTransactions)
+  return decodeBlock(
+    block,
+    transactions,
+    logs,
+    fullTransactions,
+    args.config.chainId
+  )
 }
 
 /**
  * Implements `eth_getTransactionByHash` from the transaction primary key.
  */
-async function ethGetTransactionByHash(db: Database, params: unknown[]) {
-  const hash = requireHex(params[0], 'transaction hash')
-  const [row] = await db
+async function ethGetTransactionByHash(
+  args: { db: Database; config: InternalConfig },
+  params: unknown[]
+) {
+  const hash = requireHex(params[0], 'transaction hash', 32)
+  const [row] = await args.db
     .select({
       tx: schema.transactions,
       block: schema.blocks,
@@ -191,7 +211,7 @@ async function ethGetTransactionByHash(db: Database, params: unknown[]) {
     .where(sql`${schema.transactions.hash} = ${hexToBytes(hash)}`)
     .limit(1)
   if (!row) return null
-  return decodeTransaction(row.tx, row.block)
+  return decodeTransaction(row.tx, args.config.chainId, row.block)
 }
 
 /**
@@ -203,7 +223,7 @@ async function ethGetTransactionByBlockNumberAndIndex(
 ) {
   const blockNumber = await resolveBlockNumber(args, params[0])
   if (blockNumber == null) return null
-  return getTransactionByBlockNumberAndIndex(args.db, blockNumber, params[1])
+  return getTransactionByBlockNumberAndIndex(args, blockNumber, params[1])
 }
 
 /**
@@ -213,32 +233,32 @@ async function ethGetTransactionByBlockHashAndIndex(
   args: { db: Database },
   params: unknown[]
 ) {
-  const hash = requireHex(params[0], 'block hash')
+  const hash = requireHex(params[0], 'block hash', 32)
   const block = (
     await args.db.$prepared.getBlockByHash.execute({ hash: hexToBytes(hash) })
   )[0]
   if (!block) return null
-  return getTransactionByBlockNumberAndIndex(args.db, block.number, params[1])
+  return getTransactionByBlockNumberAndIndex(args, block.number, params[1])
 }
 
 /**
  * Loads a transaction by canonical block position and decodes it.
  */
 async function getTransactionByBlockNumberAndIndex(
-  db: Database,
+  args: { db: Database; config: InternalConfig },
   blockNumber: bigint,
   index: unknown
 ) {
   const transactionIndex = requireQuantityNumber(index, 'index')
   const [tx, block] = await Promise.all([
-    db.$prepared.getTransactionByBlockNumberAndIndex.execute({
+    args.db.$prepared.getTransactionByBlockNumberAndIndex.execute({
       blockNumber,
       transactionIndex,
     }),
-    db.$prepared.getBlockByNumber.execute({ blockNumber }),
+    args.db.$prepared.getBlockByNumber.execute({ blockNumber }),
   ])
   if (!tx[0] || !block[0]) return null
-  return decodeTransaction(tx[0], block[0])
+  return decodeTransaction(tx[0], args.config.chainId, block[0])
 }
 
 /**
@@ -265,7 +285,7 @@ async function ethGetBlockTransactionCountByHash(
   db: Database,
   params: unknown[]
 ) {
-  const hash = requireHex(params[0], 'block hash')
+  const hash = requireHex(params[0], 'block hash', 32)
   const block = (
     await db.$prepared.getBlockByHash.execute({ hash: hexToBytes(hash) })
   )[0]
@@ -282,7 +302,7 @@ async function ethGetBlockTransactionCountByHash(
  * Implements `eth_getTransactionReceipt`.
  */
 async function ethGetTransactionReceipt(db: Database, params: unknown[]) {
-  const hash = requireHex(params[0], 'transaction hash')
+  const hash = requireHex(params[0], 'transaction hash', 32)
   const tx = (
     await db.$prepared.getTransactionByHash.execute({ hash: hexToBytes(hash) })
   )[0]
@@ -371,7 +391,7 @@ async function ethGetLogs(
       (await resolveBlockNumber(args, filter.fromBlock ?? 'latest')) ?? 0n
     toBlock = (await resolveBlockNumber(args, filter.toBlock ?? 'latest')) ?? 0n
   } else {
-    const blockHash = requireHex(filter.blockHash, 'block hash')
+    const blockHash = requireHex(filter.blockHash, 'block hash', 32)
     const block = (
       await args.db.$prepared.getBlockByHash.execute({
         hash: hexToBytes(blockHash),
@@ -431,7 +451,7 @@ async function ethGetLogs(
 function addAddressFilter(conditions: SQL[], value: unknown) {
   if (value == null) return
   if (Array.isArray(value)) {
-    const addresses = value.map((item) => requireHex(item, 'address'))
+    const addresses = value.map((item) => requireHex(item, 'address', 20))
     if (addresses.length === 0) {
       conditions.push(sql`false`)
       return
@@ -439,7 +459,7 @@ function addAddressFilter(conditions: SQL[], value: unknown) {
     conditions.push(inArray(schema.logs.address, addresses))
     return
   }
-  conditions.push(eq(schema.logs.address, requireHex(value, 'address')))
+  conditions.push(eq(schema.logs.address, requireHex(value, 'address', 20)))
 }
 
 /**
@@ -462,7 +482,7 @@ function addTopicFilters(conditions: SQL[], topics: unknown[] | undefined) {
     const column = columns[index]
     if (!column) continue
     if (Array.isArray(topic)) {
-      const topicValues = topic.map((item) => requireHex(item, 'topic'))
+      const topicValues = topic.map((item) => requireHex(item, 'topic', 32))
       if (topicValues.length === 0) {
         conditions.push(sql`false`)
         continue
@@ -470,7 +490,7 @@ function addTopicFilters(conditions: SQL[], topics: unknown[] | undefined) {
       conditions.push(inArray(column, topicValues))
       continue
     }
-    conditions.push(eq(column, requireHex(topic, 'topic')))
+    conditions.push(eq(column, requireHex(topic, 'topic', 32)))
   }
 }
 
@@ -524,8 +544,13 @@ function requireQuantityNumber(value: unknown, name: string): number {
 /**
  * Validates and normalizes an expected hex string parameter.
  */
-function requireHex(value: unknown, name: string): Hex {
-  if (typeof value !== 'string' || !value.startsWith('0x')) {
+function requireHex(value: unknown, name: string, byteLength?: number): Hex {
+  if (
+    typeof value !== 'string' ||
+    !/^0x[0-9a-fA-F]*$/.test(value) ||
+    value.length % 2 !== 0 ||
+    (byteLength != null && value.length !== 2 + byteLength * 2)
+  ) {
     throw new RpcError(-32602, `invalid ${name}`)
   }
   return value.toLowerCase() as Hex

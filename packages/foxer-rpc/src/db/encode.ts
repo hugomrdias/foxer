@@ -69,7 +69,7 @@ export function encodeTransaction(
     gasPrice: tx.gasPrice ?? null,
     maxFeePerGas: tx.maxFeePerGas ?? null,
     maxPriorityFeePerGas: tx.maxPriorityFeePerGas ?? null,
-    type: tx.type,
+    type: encodeTransactionType(tx.type),
     v: tx.v ?? null,
     r: tx.r ? normalizeHex(tx.r) : null,
     s: tx.s ? normalizeHex(tx.s) : null,
@@ -81,6 +81,31 @@ export function encodeTransaction(
     contractAddress: receipt?.contractAddress
       ? normalizeHex(receipt.contractAddress)
       : null,
+  }
+}
+
+/**
+ * Maps viem's semantic transaction type names, or raw hex values from unknown
+ * transaction types, into the numeric JSON-RPC transaction type.
+ */
+export function encodeTransactionType(type: ChainTransaction['type'] | Hex) {
+  switch (type) {
+    case 'legacy':
+      return 0
+    case 'eip2930':
+      return 1
+    case 'eip1559':
+      return 2
+    case 'eip4844':
+      return 3
+    case 'eip7702':
+      return 4
+    default:
+      if (/^0x[0-9a-fA-F]+$/.test(type)) {
+        const value = Number.parseInt(type, 16)
+        if (Number.isSafeInteger(value) && value <= 32_767) return value
+      }
+      throw new Error(`Unsupported transaction type: ${type}`)
   }
 }
 
@@ -142,11 +167,12 @@ const EMPTY_TRIE_HASH =
 export function encodeNullRoundBlock(options: {
   number: bigint
   hash: Hash
+  timestamp: bigint
 }): IndexedBlockData {
   return {
     block: {
       number: options.number,
-      timestamp: BigInt(Math.floor(Date.now() / 1000)),
+      timestamp: options.timestamp,
       hash: normalizeHex(options.hash),
       isNullRound: true,
       parentHash: normalizeHex(options.hash),

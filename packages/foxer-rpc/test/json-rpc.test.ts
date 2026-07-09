@@ -9,6 +9,9 @@ const args = {
     chainId: 314_159,
   },
   db: {},
+  logger: {
+    error: () => undefined,
+  },
 } as Parameters<typeof handleJsonRpc>[0]
 
 describe('handleJsonRpc', () => {

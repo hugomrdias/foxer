@@ -1,4 +1,3 @@
-CREATE TYPE "transaction_type" AS ENUM('legacy', 'eip1559', 'eip2930', 'eip4844', 'eip7702');--> statement-breakpoint
 CREATE TABLE "blocks" (
 	"number" bigint PRIMARY KEY,
 	"hash" bytea NOT NULL,
@@ -39,18 +38,18 @@ CREATE TABLE "transactions" (
 	"value" numeric(78,0) NOT NULL,
 	"nonce" integer NOT NULL,
 	"gas" bigint NOT NULL,
-	"gas_price" bigint,
-	"max_fee_per_gas" bigint,
-	"max_priority_fee_per_gas" bigint,
-	"type" "transaction_type" NOT NULL,
-	"v" bigint,
+	"gas_price" numeric(78,0),
+	"max_fee_per_gas" numeric(78,0),
+	"max_priority_fee_per_gas" numeric(78,0),
+	"type" smallint NOT NULL,
+	"v" numeric(78,0),
 	"r" bytea,
 	"s" bytea,
 	"access_list" jsonb,
 	"status" integer,
 	"receipt_gas_used" bigint,
 	"cumulative_gas_used" bigint,
-	"effective_gas_price" bigint,
+	"effective_gas_price" numeric(78,0),
 	"contract_address" bytea
 );
 --> statement-breakpoint
