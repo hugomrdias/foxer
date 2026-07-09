@@ -243,7 +243,7 @@ Stop the process with `Ctrl+C`.
 
 Postgres is recommended for production and larger backfills.
 
-Start a local Postgres:
+Start a local Postgres. For production tuning, see [Recommended Production Settings](#recommended-production-settings) below:
 
 ```bash
 docker run --rm \
@@ -253,7 +253,18 @@ docker run --rm \
   -e POSTGRES_DB=foxer_rpc \
   -p 5432:5432 \
   -v foxer-rpc-postgres:/var/lib/postgresql/data \
-  postgres:17
+  postgres:17 \
+  -c shared_buffers=2GB \
+  -c effective_cache_size=6GB \
+  -c maintenance_work_mem=512MB \
+  -c work_mem=8MB \
+  -c checkpoint_timeout=15min \
+  -c checkpoint_completion_target=0.9 \
+  -c max_wal_size=8GB \
+  -c min_wal_size=1GB \
+  -c random_page_cost=1.1 \
+  -c effective_io_concurrency=200 \
+  -c jit=off
 ```
 
 In another terminal:
@@ -277,7 +288,9 @@ The `start` command:
 
 ## Recommended Production Settings
 
-For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics:
+For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics. The values below assume about 8 GB of RAM dedicated to Postgres. Scale `shared_buffers` to roughly 25% of RAM and `effective_cache_size` to roughly 50-75%.
+
+`foxer-rpc` keeps a small connection pool (`max: 20` per process), so the default `max_connections = 100` is enough for a single instance and a few replicas without extra tuning.
 
 ```conf
 shared_buffers = 2GB
@@ -286,11 +299,14 @@ maintenance_work_mem = 512MB
 work_mem = 8MB
 checkpoint_timeout = 15min
 checkpoint_completion_target = 0.9
-max_wal_size = 4GB
+max_wal_size = 8GB
 min_wal_size = 1GB
 random_page_cost = 1.1
 effective_io_concurrency = 200
+jit = off
 ```
+
+Use a larger `max_wal_size` (for example `16GB`) during a large initial backfill. After catch-up, you can lower it if steady-state writes are only one block every few seconds.
 
 For faster ingest when the chain can be replayed after a crash:
 
@@ -374,7 +390,7 @@ Create a network:
 docker network create foxer-rpc
 ```
 
-Start Postgres:
+Start Postgres with the recommended settings from [Recommended Production Settings](#recommended-production-settings):
 
 ```bash
 docker run -d \
@@ -384,7 +400,18 @@ docker run -d \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=foxer_rpc \
   -v foxer-rpc-postgres:/var/lib/postgresql/data \
-  postgres:17
+  postgres:17 \
+  -c shared_buffers=2GB \
+  -c effective_cache_size=6GB \
+  -c maintenance_work_mem=512MB \
+  -c work_mem=8MB \
+  -c checkpoint_timeout=15min \
+  -c checkpoint_completion_target=0.9 \
+  -c max_wal_size=8GB \
+  -c min_wal_size=1GB \
+  -c random_page_cost=1.1 \
+  -c effective_io_concurrency=200 \
+  -c jit=off
 ```
 
 Start `foxer-rpc`:
@@ -429,6 +456,30 @@ docker volume rm foxer-rpc-postgres foxer-rpc-pglite
 services:
   postgres:
     image: postgres:17
+    command:
+      - postgres
+      - -c
+      - shared_buffers=2GB
+      - -c
+      - effective_cache_size=6GB
+      - -c
+      - maintenance_work_mem=512MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - max_wal_size=8GB
+      - -c
+      - min_wal_size=1GB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - jit=off
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
