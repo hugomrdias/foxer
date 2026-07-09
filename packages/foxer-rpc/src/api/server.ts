@@ -11,8 +11,8 @@ import { handleJsonRpc } from './json-rpc.ts'
  * Builds the Hono app used by the CLI server.
  *
  * The app installs request logging, response compression, a lightweight health
- * route, and the JSON-RPC POST endpoint. All JSON-RPC methods are served by the
- * local database through `handleJsonRpc`.
+ * route, and the JSON-RPC POST endpoint. Known methods are served from the
+ * local database; unsupported methods are proxied by `handleJsonRpc`.
  */
 export function createApiServer({
   db,
@@ -66,9 +66,6 @@ export function createApiServer({
     }
 
     const result = await handleJsonRpc({ db, config, logger, body })
-    if (result === undefined) {
-      return c.body(null, 204)
-    }
     return c.json(result)
   })
 

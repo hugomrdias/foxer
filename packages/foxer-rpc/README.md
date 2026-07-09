@@ -19,7 +19,7 @@ The service stores:
 
 Receipt fields are stored on the `transactions` row, and receipt logs are stored in `logs`. There is no separate `receipts` table.
 
-Unsupported Ethereum RPC methods return JSON-RPC error `-32601`. The service does not proxy unknown calls to the upstream node.
+Methods served from the local database are listed below. Any other JSON-RPC method is proxied to the upstream node configured by `RPC_URL`.
 
 ## How It Works
 
@@ -91,7 +91,7 @@ Deletes happen in dependency order:
 
 ## JSON-RPC API
 
-The HTTP server listens on `POST /` and accepts JSON-RPC 2.0 single requests and batches.
+The HTTP server listens on `POST /` and accepts JSON-RPC 2.0 single requests and batches. Requests must include an `id`; notification-style requests are rejected with `Invalid Request`.
 
 Implemented methods:
 
@@ -109,6 +109,10 @@ Implemented methods:
 - `eth_getTransactionReceipt`
 - `eth_getBlockReceipts`
 - `eth_getLogs`
+
+Unsupported methods are forwarded to the upstream RPC node. This lets clients use read methods such as `eth_call` while keeping indexed block, transaction, receipt, and log reads served from the local database.
+
+`eth_getBlockReceipts` accepts the Ethereum Execution APIs block identifier shape: block number, block tag, or 32-byte block hash.
 
 Health check:
 

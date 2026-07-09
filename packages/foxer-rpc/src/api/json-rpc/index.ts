@@ -14,7 +14,7 @@ import { ethGetTransactionReceipt } from './methods/eth-get-transaction-receipt.
 import { netVersion } from './methods/net-version.ts'
 import { web3ClientVersion } from './methods/web3-client-version.ts'
 import { error, isRequest, ok } from './response.ts'
-import type { JsonRpcResponse, MethodContext } from './types.ts'
+import type { JsonRpcRequest, JsonRpcResponse, MethodContext } from './types.ts'
 
 /**
  * Handles a JSON-RPC 2.0 request body.
@@ -25,17 +25,12 @@ import type { JsonRpcResponse, MethodContext } from './types.ts'
  */
 export function handleJsonRpc(
   args: MethodContext & { body: unknown }
-): Promise<JsonRpcResponse | JsonRpcResponse[] | undefined> {
+): Promise<JsonRpcResponse | JsonRpcResponse[]> {
   if (Array.isArray(args.body)) {
     if (args.body.length === 0) {
       return Promise.resolve(error(null, -32600, 'Invalid Request'))
     }
-    return Promise.all(
-      args.body.map((request) => dispatch(args, request))
-    ).then((responses) => {
-      const filtered = responses.filter((response) => response != null)
-      return filtered.length === 0 ? undefined : filtered
-    })
+    return Promise.all(args.body.map((request) => dispatch(args, request)))
   }
 
   return dispatch(args, args.body)
@@ -51,15 +46,16 @@ export function handleJsonRpc(
 async function dispatch(
   args: MethodContext,
   body: unknown
-): Promise<JsonRpcResponse | undefined> {
+): Promise<JsonRpcResponse> {
   if (!isRequest(body)) {
     return error(null, -32600, 'Invalid Request')
   }
 
-  const isNotification = !Object.hasOwn(body, 'id')
   const id = body.id ?? null
   const params = body.params ?? []
-  if (isNotification) return undefined
+  if (!Object.hasOwn(body, 'id')) {
+    return error(null, -32600, 'Invalid Request')
+  }
 
   try {
     switch (body.method) {
@@ -95,7 +91,7 @@ async function dispatch(
       case 'eth_getLogs':
         return ok(id, await ethGetLogs(args, params))
       default:
-        return error(id, -32601, 'Method not found')
+        return proxy(args, body)
     }
   } catch (cause) {
     if (cause instanceof RpcError) {
@@ -107,4 +103,33 @@ async function dispatch(
     )
     return error(id, -32603, 'Internal error')
   }
+}
+
+async function proxy(
+  args: MethodContext,
+  body: JsonRpcRequest
+): Promise<JsonRpcResponse> {
+  try {
+    const result = await args.config.clients.live.request({
+      method: body.method,
+      params: body.params ?? [],
+    } as never)
+    return ok(body.id ?? null, result)
+  } catch (cause) {
+    if (isJsonRpcError(cause)) {
+      return error(body.id ?? null, cause.code, cause.message, cause.data)
+    }
+    throw cause
+  }
+}
+
+function isJsonRpcError(
+  cause: unknown
+): cause is { code: number; message: string; data?: unknown } {
+  return (
+    cause != null &&
+    typeof cause === 'object' &&
+    typeof (cause as { code?: unknown }).code === 'number' &&
+    typeof (cause as { message?: unknown }).message === 'string'
+  )
 }

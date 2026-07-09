@@ -4,27 +4,45 @@ import { describe, expect, test } from 'bun:test'
 
 import { handleJsonRpc } from '../src/api/json-rpc.ts'
 
-const args = {
-  config: {
-    chainId: 314_159,
+const baseConfig = {
+  chainId: 314_159,
+  clients: {
+    backfill: {
+      request: () => {
+        throw new Error('unexpected backfill proxy request')
+      },
+    },
+    live: {
+      request: () => {
+        throw new Error('unexpected live proxy request')
+      },
+    },
   },
+}
+
+const args = {
+  config: baseConfig,
   db: {},
   logger: {
     error: () => undefined,
   },
-} as Parameters<typeof handleJsonRpc>[0]
+} as never
 
 describe('handleJsonRpc', () => {
-  test('does not return a response for a single notification', async () => {
+  test('returns invalid request for a single notification', async () => {
     await expect(
       handleJsonRpc({
         ...args,
         body: { jsonrpc: '2.0', method: 'web3_clientVersion' },
       })
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      jsonrpc: '2.0',
+      id: null,
+      error: { code: -32600, message: 'Invalid Request' },
+    })
   })
 
-  test('does not return a response when every batch item is a notification', async () => {
+  test('returns explicit errors for notification batch items', async () => {
     await expect(
       handleJsonRpc({
         ...args,
@@ -33,7 +51,126 @@ describe('handleJsonRpc', () => {
           { jsonrpc: '2.0', method: 'eth_chainId' },
         ],
       })
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual([
+      {
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: 'Invalid Request' },
+      },
+      {
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: 'Invalid Request' },
+      },
+    ])
+  })
+
+  test('proxies unsupported methods to the upstream rpc', async () => {
+    const requests: unknown[] = []
+    const response = await handleJsonRpc({
+      ...args,
+      config: {
+        ...baseConfig,
+        clients: {
+          backfill: {
+            request: () => {
+              throw new Error('unexpected backfill proxy request')
+            },
+          },
+          live: {
+            request: (request: unknown) => {
+              requests.push(request)
+              return '0x1234'
+            },
+          },
+        },
+      },
+      body: {
+        jsonrpc: '2.0',
+        id: 'call-1',
+        method: 'eth_call',
+        params: [
+          { to: '0x0000000000000000000000000000000000000000' },
+          'latest',
+        ],
+      },
+    } as never)
+
+    expect(requests).toEqual([
+      {
+        method: 'eth_call',
+        params: [
+          { to: '0x0000000000000000000000000000000000000000' },
+          'latest',
+        ],
+      },
+    ])
+    expect(response).toEqual({
+      jsonrpc: '2.0',
+      id: 'call-1',
+      result: '0x1234',
+    })
+  })
+
+  test('preserves batch responses for local and proxied methods', async () => {
+    const response = await handleJsonRpc({
+      ...args,
+      config: {
+        ...baseConfig,
+        clients: {
+          backfill: {
+            request: () => {
+              throw new Error('unexpected backfill proxy request')
+            },
+          },
+          live: {
+            request: () => '0xabcd',
+          },
+        },
+      },
+      body: [
+        { jsonrpc: '2.0', id: 1, method: 'web3_clientVersion' },
+        { jsonrpc: '2.0', id: 2, method: 'eth_getCode', params: [] },
+      ],
+    } as never)
+
+    expect(response).toEqual([
+      { jsonrpc: '2.0', id: 1, result: 'foxer-rpc/0.0.0' },
+      { jsonrpc: '2.0', id: 2, result: '0xabcd' },
+    ])
+  })
+
+  test('forwards upstream json-rpc errors from proxied methods', async () => {
+    const response = await handleJsonRpc({
+      ...args,
+      config: {
+        ...baseConfig,
+        clients: {
+          backfill: {
+            request: () => {
+              throw new Error('unexpected backfill proxy request')
+            },
+          },
+          live: {
+            request: () => {
+              throw { code: -32601, message: 'Method not found' }
+            },
+          },
+        },
+      },
+      body: {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'debug_traceBlockByHash',
+        params: [],
+      },
+    } as never)
+
+    expect(response).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      error: { code: -32601, message: 'Method not found' },
+    })
   })
 
   test('returns invalid params for malformed block quantities', async () => {
