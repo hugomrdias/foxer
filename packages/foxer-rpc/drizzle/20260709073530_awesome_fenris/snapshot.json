@@ -2,9 +2,7 @@
   "version": "8",
   "dialect": "postgres",
   "id": "c51d204b-ced6-4f5c-96d2-43d5dcc7edaa",
-  "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
-  ],
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "ddl": [
     {
       "isRlsEnabled": false,
@@ -715,10 +713,7 @@
       "table": "transactions"
     },
     {
-      "columns": [
-        "block_number",
-        "log_index"
-      ],
+      "columns": ["block_number", "log_index"],
       "nameExplicit": true,
       "name": "logs_block_number_log_index_pk",
       "entityType": "pks",
@@ -726,9 +721,7 @@
       "table": "logs"
     },
     {
-      "columns": [
-        "number"
-      ],
+      "columns": ["number"],
       "nameExplicit": false,
       "name": "blocks_pkey",
       "schema": "public",
@@ -736,9 +729,7 @@
       "entityType": "pks"
     },
     {
-      "columns": [
-        "hash"
-      ],
+      "columns": ["hash"],
       "nameExplicit": false,
       "name": "transactions_pkey",
       "schema": "public",

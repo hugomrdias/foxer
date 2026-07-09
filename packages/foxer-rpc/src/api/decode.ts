@@ -159,4 +159,3 @@ function logsBloom(logs: LogRow[]) {
   ) as Hex[]
   return createLogsBloom(values)
 }
-

@@ -230,7 +230,7 @@ async function ethGetTransactionByBlockNumberAndIndex(
  * Implements `eth_getTransactionByBlockHashAndIndex`.
  */
 async function ethGetTransactionByBlockHashAndIndex(
-  args: { db: Database },
+  args: { db: Database; config: InternalConfig },
   params: unknown[]
 ) {
   const hash = requireHex(params[0], 'block hash', 32)
