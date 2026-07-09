@@ -160,12 +160,43 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `LOG_LEVEL` | `--log-level` | `info` | Pino log level |
 | `MAX_LOGS_BLOCK_RANGE` | `--max-logs-block-range` | `10000` | Maximum block range for `eth_getLogs` |
 | `MAX_LOGS_RESULT_ROWS` | `--max-logs-result-rows` | `10000` | Maximum rows returned by `eth_getLogs` |
+| `AUTH_SECRET` | `--auth-secret` | None | Enables JWT auth on all routes except `/health` |
 
 Development mode also accepts:
 
 | Flag | Default | Description |
 | --- | --- | --- |
 | `--dir` | `.pglite` | PGlite data directory |
+
+## Authentication
+
+When `AUTH_SECRET` is set, all routes require a valid JWT except `GET /health` (for probes/load balancers) and `POST /admin/keys` (which uses the static secret to mint JWTs).
+
+Generate a safe secret:
+
+```bash
+openssl rand -hex 32
+```
+
+Mint a per-user API key:
+
+```bash
+curl http://127.0.0.1:8545/admin/keys \
+  -H 'authorization: Bearer <AUTH_SECRET>' \
+  -H 'content-type: application/json' \
+  --data '{"sub":"alice","expiresInDays":90}'
+```
+
+Use the minted JWT on JSON-RPC requests:
+
+```bash
+curl http://127.0.0.1:8545 \
+  -H 'authorization: Bearer <JWT>' \
+  -H 'content-type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
+```
+
+JWTs are stateless and cannot be revoked individually. Rotate `AUTH_SECRET` to invalidate all keys. Set `expiresInDays` when minting keys to limit their lifetime.
 
 ## Install
 

@@ -65,4 +65,8 @@ export const globalFlags = {
     description: 'The port to use for the JSON-RPC server',
     default: process.env.PORT ? Number(process.env.PORT) : 8545,
   },
+  authSecret: {
+    type: String,
+    description: 'Secret used to mint and verify JWT API keys (enables auth)',
+  },
 } as const

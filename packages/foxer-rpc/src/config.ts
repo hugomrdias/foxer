@@ -30,6 +30,7 @@ export type InternalConfig = {
   logLevel: LogLevel
   chainId: number
   clients: RpcClients
+  authSecret?: string
 }
 
 const envSchema = z.object({
@@ -45,6 +46,7 @@ const envSchema = z.object({
     .default('info'),
   MAX_LOGS_BLOCK_RANGE: z.coerce.bigint().default(10_000n),
   MAX_LOGS_RESULT_ROWS: z.coerce.number().int().positive().default(10_000),
+  AUTH_SECRET: z.string().min(16).optional(),
 })
 
 export type CliConfig = {
@@ -59,6 +61,7 @@ export type CliConfig = {
   maxLogsResultRows?: number
   port?: number
   logLevel?: LogLevel
+  authSecret?: string
 }
 
 /**
@@ -84,6 +87,7 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
       flags.maxLogsBlockRange ?? process.env.MAX_LOGS_BLOCK_RANGE,
     MAX_LOGS_RESULT_ROWS:
       flags.maxLogsResultRows ?? process.env.MAX_LOGS_RESULT_ROWS,
+    AUTH_SECRET: flags.authSecret ?? process.env.AUTH_SECRET,
   })
 
   if (!env.RPC_URL) {
@@ -113,5 +117,6 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     logLevel: env.LOG_LEVEL,
     chainId,
     clients,
+    authSecret: env.AUTH_SECRET,
   }
 }

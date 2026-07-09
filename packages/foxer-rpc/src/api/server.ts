@@ -1,11 +1,19 @@
 import { Hono } from 'hono'
+import { bearerAuth } from 'hono/bearer-auth'
+import { jwt, sign } from 'hono/jwt'
 import { compress } from 'hono-compress'
 import { type PinoLogger, pinoLogger } from 'hono-pino'
+import { z } from 'zod'
 
 import type { InternalConfig } from '../config.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
 import { handleJsonRpc } from './json-rpc.ts'
+
+const mintKeySchema = z.object({
+  sub: z.string().min(1),
+  expiresInDays: z.coerce.number().int().positive().optional(),
+})
 
 /**
  * Builds the Hono app used by the CLI server.
@@ -38,6 +46,44 @@ export function createApiServer({
       gzipLevel: 6,
     })
   )
+
+  if (config.authSecret) {
+    const authSecret = config.authSecret
+    const requireJwt = jwt({ secret: authSecret, alg: 'HS256' })
+    app.use('*', (c, next) => {
+      if (c.req.path === '/health' || c.req.path === '/admin/keys') {
+        return next()
+      }
+      return requireJwt(c, next)
+    })
+
+    app.post('/admin/keys', bearerAuth({ token: authSecret }), async (c) => {
+      let body: unknown
+      try {
+        body = await c.req.json()
+      } catch {
+        return c.json({ error: 'Invalid JSON body' }, 400)
+      }
+
+      const parsed = mintKeySchema.safeParse(body)
+      if (!parsed.success) {
+        return c.json({ error: parsed.error.message }, 400)
+      }
+
+      const { sub, expiresInDays } = parsed.data
+      const now = Math.floor(Date.now() / 1000)
+      const token = await sign(
+        {
+          sub,
+          iat: now,
+          ...(expiresInDays && { exp: now + expiresInDays * 86_400 }),
+        },
+        authSecret
+      )
+
+      return c.json({ token, sub })
+    })
+  }
 
   app.get('/health', async (c) => {
     const latest =
