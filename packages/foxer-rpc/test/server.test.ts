@@ -50,7 +50,7 @@ function createServer(authSecret?: string) {
     config: {
       ...baseConfig,
       ...(authSecret ? { authSecret } : {}),
-    },
+    } as never,
     logger: mockLogger,
   })
 }

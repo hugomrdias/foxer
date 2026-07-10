@@ -10,7 +10,11 @@ import {
 } from '../src/api/decode.ts'
 import { encodeTransaction, encodeTransactionType } from '../src/db/encode.ts'
 import { schema } from '../src/db/schema/index.ts'
-import type { ChainReceipt, ChainTransaction } from '../src/types.ts'
+import type {
+  ChainReceipt,
+  ChainTransaction,
+  EncodedBlock,
+} from '../src/types.ts'
 import { address, bytes32, emptyRoot, withTestDatabase } from './helpers.ts'
 
 test('encodes oversized fee values and unknown transaction types', async () => {
@@ -57,7 +61,7 @@ test('encodes oversized fee values and unknown transaction types', async () => {
 })
 
 function transaction(
-  overrides: Partial<ChainTransaction> & {
+  overrides: Omit<Partial<ChainTransaction>, 'type'> & {
     type: ChainTransaction['type'] | Hex
   }
 ): ChainTransaction {
@@ -74,13 +78,12 @@ function transaction(
     gasPrice: 1n,
     maxFeePerGas: 1n,
     maxPriorityFeePerGas: 1n,
-    type: 'eip1559',
     v: 1n,
     r: bytes32('c'),
     s: bytes32('d'),
     accessList: [],
     ...overrides,
-  } as ChainTransaction
+  } as unknown as ChainTransaction
 }
 
 function receipt(overrides: Partial<ChainReceipt>): ChainReceipt {
@@ -102,7 +105,7 @@ function receipt(overrides: Partial<ChainReceipt>): ChainReceipt {
   }
 }
 
-function blockRow(number: bigint) {
+function blockRow(number: bigint): EncodedBlock {
   return {
     number,
     hash: bytes32('1'),

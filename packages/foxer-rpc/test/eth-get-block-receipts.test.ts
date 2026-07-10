@@ -1,10 +1,12 @@
 /// <reference types="bun" />
 
 import { describe, expect, test } from 'bun:test'
+import type { Hash } from 'viem'
 
 import { handleJsonRpc } from '../src/api/json-rpc.ts'
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
+import type { EncodedBlock, EncodedTransaction } from '../src/types.ts'
 import {
   address,
   bytes32,
@@ -24,16 +26,19 @@ describe('eth_getBlockReceipts', () => {
       await seedReceipts(db)
 
       const byNumber = await rpc(db, '0x1')
+      if (!byNumber.result) throw new Error('expected receipts by number')
       expect(byNumber.result.map((receipt) => receipt.transactionHash)).toEqual(
         [tx1]
       )
 
       const byLatest = await rpc(db, 'latest')
+      if (!byLatest.result) throw new Error('expected latest receipts')
       expect(byLatest.result.map((receipt) => receipt.transactionHash)).toEqual(
         [tx2]
       )
 
       const byHash = await rpc(db, block1)
+      if (!byHash.result) throw new Error('expected receipts by hash')
       expect(byHash.result).toHaveLength(1)
       expect(byHash.result[0]).toMatchObject({
         blockHash: block1,
@@ -129,7 +134,7 @@ async function seedReceipts(db: Database) {
   ])
 }
 
-function blockRow(number: bigint, hash: string, parentHash: string) {
+function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
   return {
     number,
     hash,
@@ -148,7 +153,11 @@ function blockRow(number: bigint, hash: string, parentHash: string) {
   }
 }
 
-function txRow(blockNumber: bigint, transactionIndex: number, hash: string) {
+function txRow(
+  blockNumber: bigint,
+  transactionIndex: number,
+  hash: Hash
+): EncodedTransaction {
   return {
     hash,
     blockNumber,

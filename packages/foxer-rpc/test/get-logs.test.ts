@@ -1,10 +1,12 @@
 /// <reference types="bun" />
 
 import { describe, expect, test } from 'bun:test'
+import type { Hash } from 'viem'
 
 import { handleJsonRpc } from '../src/api/json-rpc.ts'
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
+import type { EncodedBlock, EncodedTransaction } from '../src/types.ts'
 import {
   address,
   bytes32,
@@ -97,7 +99,7 @@ describe('eth_getLogs', () => {
 
 async function getLogs(db: Database, filter: Record<string, unknown>) {
   const response = await rpc(db, filter)
-  if ('error' in response) throw new Error(response.error.message)
+  if (response.error) throw new Error(response.error.message)
   return response as Extract<typeof response, { result: unknown }>
 }
 
@@ -170,7 +172,7 @@ async function seedLogs(db: Database) {
   ])
 }
 
-function blockRow(number: bigint, hash: string, parentHash: string) {
+function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
   return {
     number,
     hash,
@@ -189,7 +191,11 @@ function blockRow(number: bigint, hash: string, parentHash: string) {
   }
 }
 
-function txRow(blockNumber: bigint, transactionIndex: number, hash: string) {
+function txRow(
+  blockNumber: bigint,
+  transactionIndex: number,
+  hash: Hash
+): EncodedTransaction {
   return {
     hash,
     blockNumber,

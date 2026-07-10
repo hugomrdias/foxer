@@ -26,7 +26,7 @@ const args = {
   logger: {
     error: () => undefined,
   },
-} as never
+}
 
 describe('handleJsonRpc', () => {
   test('returns invalid request for a single notification', async () => {
@@ -34,7 +34,7 @@ describe('handleJsonRpc', () => {
       handleJsonRpc({
         ...args,
         body: { jsonrpc: '2.0', method: 'web3_clientVersion' },
-      })
+      } as never)
     ).resolves.toEqual({
       jsonrpc: '2.0',
       id: null,
@@ -50,7 +50,7 @@ describe('handleJsonRpc', () => {
           { jsonrpc: '2.0', method: 'web3_clientVersion' },
           { jsonrpc: '2.0', method: 'eth_chainId' },
         ],
-      })
+      } as never)
     ).resolves.toEqual([
       {
         jsonrpc: '2.0',
@@ -182,7 +182,7 @@ describe('handleJsonRpc', () => {
         method: 'eth_getBlockByNumber',
         params: ['0x'],
       },
-    })
+    } as never)
 
     expect(response).toEqual({
       jsonrpc: '2.0',

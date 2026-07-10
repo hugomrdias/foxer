@@ -2,6 +2,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
+import type { Hash } from 'viem'
 
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
@@ -9,6 +10,11 @@ import {
   ensureParentContinuity,
   verifyRecentBlocks,
 } from '../src/sync/reorg.ts'
+import type {
+  EncodedBlock,
+  EncodedLog,
+  EncodedTransaction,
+} from '../src/types.ts'
 import {
   address,
   bytes32,
@@ -126,7 +132,7 @@ async function seedChain(db: Database) {
     .values([logRow(1n, 0), logRow(2n, 1), logRow(3n, 2)])
 }
 
-function blockRow(number: bigint, hash: string, parentHash: string) {
+function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
   return {
     number,
     hash,
@@ -145,7 +151,11 @@ function blockRow(number: bigint, hash: string, parentHash: string) {
   }
 }
 
-function txRow(blockNumber: bigint, transactionIndex: number, hash: string) {
+function txRow(
+  blockNumber: bigint,
+  transactionIndex: number,
+  hash: Hash
+): EncodedTransaction {
   return {
     hash,
     blockNumber,
@@ -172,7 +182,7 @@ function txRow(blockNumber: bigint, transactionIndex: number, hash: string) {
   }
 }
 
-function logRow(blockNumber: bigint, logIndex: number) {
+function logRow(blockNumber: bigint, logIndex: number): EncodedLog {
   return {
     blockNumber,
     logIndex,
