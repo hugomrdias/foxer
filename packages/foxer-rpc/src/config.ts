@@ -1,6 +1,11 @@
 import dotenv from 'dotenv'
 import { z } from 'zod'
 
+import {
+  DEFAULT_COPY_CHUNK_BYTES,
+  MAX_COPY_CHUNK_BYTES,
+  MIN_COPY_CHUNK_BYTES,
+} from './db/copy.ts'
 import { createRpcClients, type RpcClients } from './rpc/client.ts'
 import type { LogLevel } from './utils/logger.ts'
 
@@ -19,6 +24,8 @@ export type DatabaseConfig =
       directory: string
     }
 
+export type BackfillWriteMode = 'auto' | 'copy' | 'insert'
+
 export type InternalConfig = {
   database?: DatabaseConfig
   startBlock: bigint
@@ -27,12 +34,22 @@ export type InternalConfig = {
   maxLogsBlockRange: bigint
   maxLogsResultRows: number
   deferBackfillIndexes: boolean
+  backfillWriteMode: BackfillWriteMode
+  backfillFetchConcurrency: number
+  backfillCopyChunkBytes: number
   port: number
   logLevel: LogLevel
   chainId: number
   clients: RpcClients
   authSecret?: string
 }
+
+const backfillCopyChunkBytesSchema = z.coerce
+  .number()
+  .int()
+  .min(MIN_COPY_CHUNK_BYTES)
+  .max(MAX_COPY_CHUNK_BYTES)
+  .default(DEFAULT_COPY_CHUNK_BYTES)
 
 const envSchema = z.object({
   RPC_URL: z.url().optional(),
@@ -52,6 +69,9 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === true || value === 'true' || value === '1')
     .default(false),
+  BACKFILL_WRITE_MODE: z.enum(['auto', 'copy', 'insert']).default('auto'),
+  BACKFILL_FETCH_CONCURRENCY: z.coerce.number().int().positive().default(20),
+  BACKFILL_COPY_CHUNK_BYTES: backfillCopyChunkBytesSchema,
   AUTH_SECRET: z.string().min(16).optional(),
 })
 
@@ -66,9 +86,22 @@ export type CliConfig = {
   maxLogsBlockRange?: string
   maxLogsResultRows?: number
   deferBackfillIndexes?: boolean
+  backfillWriteMode?: BackfillWriteMode
+  backfillFetchConcurrency?: number
+  backfillCopyChunkBytes?: number
   port?: number
   logLevel?: LogLevel
   authSecret?: string
+}
+
+/**
+ * Resolves validated COPY chunk bytes with CLI-over-environment precedence.
+ */
+export function resolveBackfillCopyChunkBytes(
+  flagValue: number | undefined,
+  envValue: string | undefined
+): number {
+  return backfillCopyChunkBytesSchema.parse(flagValue ?? envValue)
 }
 
 /**
@@ -96,6 +129,14 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
       flags.maxLogsResultRows ?? process.env.MAX_LOGS_RESULT_ROWS,
     DEFER_BACKFILL_INDEXES:
       flags.deferBackfillIndexes ?? process.env.DEFER_BACKFILL_INDEXES,
+    BACKFILL_WRITE_MODE:
+      flags.backfillWriteMode ?? process.env.BACKFILL_WRITE_MODE,
+    BACKFILL_FETCH_CONCURRENCY:
+      flags.backfillFetchConcurrency ?? process.env.BACKFILL_FETCH_CONCURRENCY,
+    BACKFILL_COPY_CHUNK_BYTES: resolveBackfillCopyChunkBytes(
+      flags.backfillCopyChunkBytes,
+      process.env.BACKFILL_COPY_CHUNK_BYTES
+    ),
     AUTH_SECRET: flags.authSecret ?? process.env.AUTH_SECRET,
   })
 
@@ -123,10 +164,39 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     maxLogsBlockRange: env.MAX_LOGS_BLOCK_RANGE,
     maxLogsResultRows: env.MAX_LOGS_RESULT_ROWS,
     deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
+    backfillWriteMode: env.BACKFILL_WRITE_MODE,
+    backfillFetchConcurrency: env.BACKFILL_FETCH_CONCURRENCY,
+    backfillCopyChunkBytes: env.BACKFILL_COPY_CHUNK_BYTES,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     chainId,
     clients,
     authSecret: env.AUTH_SECRET,
   }
+}
+
+/**
+ * Resolves the effective backfill writer for the configured database driver.
+ *
+ * `auto` selects COPY on PostgreSQL and inserts on PGlite. Explicit `copy` on
+ * PGlite fails with a clear configuration error.
+ */
+export function resolveBackfillWriteMode(
+  mode: BackfillWriteMode,
+  driver: DatabaseConfig['driver']
+): 'copy' | 'insert' {
+  if (mode === 'insert') {
+    return 'insert'
+  }
+
+  if (mode === 'copy') {
+    if (driver === 'pglite') {
+      throw new Error(
+        'BACKFILL_WRITE_MODE=copy requires PostgreSQL; use auto or insert for PGlite'
+      )
+    }
+    return 'copy'
+  }
+
+  return driver === 'postgres' ? 'copy' : 'insert'
 }

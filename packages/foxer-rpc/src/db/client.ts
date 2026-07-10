@@ -33,6 +33,18 @@ export type DatabaseContext = {
 }
 
 /**
+ * Narrows the shared database union to the PostgreSQL node-postgres driver.
+ */
+export function isPostgresDatabase(db: Database): db is NodePgDatabase<
+  typeof schema
+> & {
+  $client: Pool
+  $prepared: PreparedQueries
+} {
+  return db.$client instanceof Pool
+}
+
+/**
  * Opens the configured database and attaches prepared query helpers.
  *
  * Production uses node-postgres through Drizzle. Development can use PGlite,

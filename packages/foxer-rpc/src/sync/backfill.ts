@@ -1,4 +1,5 @@
 import type { InternalConfig } from '../config.ts'
+import { resolveBackfillWriteMode } from '../config.ts'
 import { insertIndexedBlockData } from '../db/actions.ts'
 import {
   anyManagedIndexMissing,
@@ -6,11 +7,16 @@ import {
   restoreManagedBackfillIndexes,
 } from '../db/backfill-indexes.ts'
 import type { Database } from '../db/client.ts'
-import { safeGetBlock } from '../rpc/get-block.ts'
-import type { EncodedBlock, EncodedLog, EncodedTransaction } from '../types.ts'
+import { copyIndexedBlockData } from '../db/copy.ts'
+import {
+  countBlocks,
+  countLogs,
+  countTransactions,
+} from '../db/indexed-batch.ts'
 import { windowEnd } from '../utils/cursor.ts'
 import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
+import { fetchBlocksInOrder } from './fetch-blocks.ts'
 
 /**
  * Runs the historical catch-up phase up to the chain's safe head.
@@ -41,6 +47,10 @@ export async function runBackfill(args: {
   const needsWork = cursor <= safeHead
   const deferIndexes = config.deferBackfillIndexes
   const deferIndexesForBackfill = deferIndexes && needsWork
+  const backfillWriter = resolveBackfillWriteMode(
+    config.backfillWriteMode,
+    config.database?.driver ?? 'pglite'
+  )
 
   if (!deferIndexesForBackfill && (await anyManagedIndexMissing(db))) {
     await restoreManagedBackfillIndexes({ db, logger })
@@ -63,7 +73,11 @@ export async function runBackfill(args: {
       fromBlock: cursor.toString(),
       toBlock: safeHead.toString(),
       batchSize: config.batchSize.toString(),
+      backfillFetchConcurrency: config.backfillFetchConcurrency,
+      backfillCopyChunkBytes: config.backfillCopyChunkBytes,
       deferBackfillIndexes: deferIndexes,
+      backfillWriteMode: config.backfillWriteMode,
+      backfillWriter,
     },
     'starting backfill'
   )
@@ -76,36 +90,53 @@ export async function runBackfill(args: {
     while (cursor <= safeHead) {
       const batchStartMs = Date.now()
       const toBlock = windowEnd(cursor, config.batchSize, safeHead)
-      const batch: bigint[] = []
-      let blockNumber = cursor
-      while (blockNumber <= toBlock) {
-        batch.push(blockNumber)
-        blockNumber += 1n
-      }
 
-      const indexedBlocks = await Promise.all(
-        batch.map((blockNumber) => safeGetBlock({ client, blockNumber, db }))
-      )
-
-      const blocks: EncodedBlock[] = []
-      const transactions: EncodedTransaction[] = []
-      const logs: EncodedLog[] = []
-
-      for (const item of indexedBlocks) {
-        blocks.push(item.block)
-        transactions.push(...item.transactions)
-        logs.push(...item.logs)
-      }
-
+      const fetchClock = startClock()
+      const indexedBlocks = await fetchBlocksInOrder({
+        client,
+        db,
+        fromBlock: cursor,
+        toBlock,
+        concurrency: config.backfillFetchConcurrency,
+      })
       logger.debug(
         {
-          blocks: blocks.length,
-          transactions: transactions.length,
-          logs: logs.length,
+          fromBlock: cursor.toString(),
+          toBlock: toBlock.toString(),
+          duration: fetchClock(),
         },
-        'indexed block data'
+        'fetched onchain block data'
       )
-      await insertIndexedBlockData({ db, blocks, transactions, logs })
+
+      const writeClock = startClock()
+      const copyMetrics =
+        backfillWriter === 'copy'
+          ? await copyIndexedBlockData({
+              db,
+              batch: indexedBlocks,
+              chunkBytes: config.backfillCopyChunkBytes,
+            })
+          : undefined
+      if (backfillWriter !== 'copy') {
+        await insertIndexedBlockData({ db, batch: indexedBlocks })
+      }
+      logger.debug(
+        {
+          blocks: countBlocks(indexedBlocks),
+          transactions: countTransactions(indexedBlocks),
+          logs: countLogs(indexedBlocks),
+          duration: writeClock(),
+          backfillWriter,
+          ...(copyMetrics
+            ? {
+                copyBlocks: copyMetrics.blocks,
+                copyTransactions: copyMetrics.transactions,
+                copyLogs: copyMetrics.logs,
+              }
+            : {}),
+        },
+        'wrote indexed block data'
+      )
 
       const elapsed = Date.now() - batchStartMs
       const blocksInRange = Number(toBlock - cursor + 1n)

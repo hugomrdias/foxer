@@ -36,9 +36,7 @@ export async function processBlock(args: {
 
   await insertIndexedBlockData({
     db,
-    blocks: [data.block],
-    transactions: data.transactions,
-    logs: data.logs,
+    batch: [data],
   })
 
   return { status: 'ok' }

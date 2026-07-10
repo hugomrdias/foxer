@@ -188,6 +188,7 @@ describe('backfill indexes', () => {
         startBlock: 0n,
         finality: 0n,
         batchSize: 1n,
+        backfillFetchConcurrency: 1,
         deferBackfillIndexes: true,
         clients: {
           backfill: {

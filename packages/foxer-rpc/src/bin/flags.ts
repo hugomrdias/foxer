@@ -1,3 +1,5 @@
+import type { BackfillWriteMode } from '../config.ts'
+
 const LogLevels = [
   'trace',
   'debug',
@@ -15,6 +17,18 @@ const LogLevel = (logLevel: LogLevels) => {
   }
 
   return logLevel
+}
+
+const BackfillWriteModes = ['auto', 'copy', 'insert'] as const
+
+const BackfillWriteModeFlag = (mode: string): BackfillWriteMode => {
+  if (!BackfillWriteModes.includes(mode as BackfillWriteMode)) {
+    throw new Error(
+      `Invalid backfill write mode: "${mode}". Expected auto, copy, or insert.`
+    )
+  }
+
+  return mode as BackfillWriteMode
 }
 
 export const globalFlags = {
@@ -73,5 +87,19 @@ export const globalFlags = {
     type: Boolean,
     description:
       'Drop and rebuild non-constraint indexes during large historical backfills',
+  },
+  backfillWriteMode: {
+    type: BackfillWriteModeFlag,
+    description:
+      'Backfill writer: auto (COPY on PostgreSQL, inserts on PGlite), copy, or insert',
+  },
+  backfillFetchConcurrency: {
+    type: Number,
+    description: 'Concurrent block fetches during backfill',
+  },
+  backfillCopyChunkBytes: {
+    type: Number,
+    description:
+      'Target byte size for PostgreSQL COPY stream chunks during backfill (16 KiB to 16 MiB)',
   },
 } as const

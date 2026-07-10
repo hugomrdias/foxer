@@ -2,6 +2,7 @@ import type { Hash, Hex } from 'viem'
 
 import type {
   ChainBlock,
+  ChainLog,
   ChainReceipt,
   ChainTransaction,
   EncodedBlock,
@@ -9,7 +10,7 @@ import type {
   EncodedTransaction,
   IndexedBlockData,
 } from '../types.ts'
-import { normalizeHex } from '../utils/hex.ts'
+import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
 
 /**
  * Converts a viem block into the compact `blocks` insert shape.
@@ -71,8 +72,8 @@ export function encodeTransaction(
     maxPriorityFeePerGas: tx.maxPriorityFeePerGas ?? null,
     type: encodeTransactionType(tx.type),
     v: tx.v ?? null,
-    r: tx.r ? normalizeHex(tx.r) : null,
-    s: tx.s ? normalizeHex(tx.s) : null,
+    r: tx.r == null ? null : normalizeSignatureComponent(tx.r, 'r', tx.hash),
+    s: tx.s == null ? null : normalizeSignatureComponent(tx.s, 's', tx.hash),
     accessList: tx.accessList ?? null,
     status: encodeStatus(receipt?.status),
     receiptGasUsed: receipt?.gasUsed ?? null,
@@ -117,7 +118,11 @@ export function encodeTransactionType(type: ChainTransaction['type'] | Hex) {
  * recovered by joins at API time to keep the high-cardinality log table smaller.
  */
 export function encodeReceiptLogs(receipt: ChainReceipt): EncodedLog[] {
-  return receipt.logs.map((log) => ({
+  return receipt.logs.map(encodeLog)
+}
+
+function encodeLog(log: ChainLog): EncodedLog {
+  return {
     blockNumber: log.blockNumber,
     logIndex: log.logIndex,
     transactionIndex: log.transactionIndex,
@@ -127,7 +132,7 @@ export function encodeReceiptLogs(receipt: ChainReceipt): EncodedLog[] {
     topic2: normalizeTopic(log.topics[2]),
     topic3: normalizeTopic(log.topics[3]),
     data: normalizeHex(log.data),
-  }))
+  }
 }
 
 /**
@@ -140,16 +145,36 @@ export function encodeBlockData(
   block: ChainBlock,
   receipts: ChainReceipt[]
 ): IndexedBlockData {
-  const receiptByHash = new Map(
-    receipts.map((receipt) => [normalizeHex(receipt.transactionHash), receipt])
-  )
+  const receiptByHash = new Map<ReturnType<typeof normalizeHex>, ChainReceipt>()
+  let logCount = 0
+
+  for (const receipt of receipts) {
+    receiptByHash.set(normalizeHex(receipt.transactionHash), receipt)
+    logCount += receipt.logs.length
+  }
+
+  const transactions = new Array<EncodedTransaction>(block.transactions.length)
+  for (let i = 0; i < block.transactions.length; i++) {
+    const tx = block.transactions[i]
+    transactions[i] = encodeTransaction(
+      tx,
+      receiptByHash.get(normalizeHex(tx.hash))
+    )
+  }
+
+  const logs = new Array<EncodedLog>(logCount)
+  let logIndex = 0
+  for (const receipt of receipts) {
+    for (const log of receipt.logs) {
+      logs[logIndex] = encodeLog(log)
+      logIndex += 1
+    }
+  }
 
   return {
     block: encodeBlock(block),
-    transactions: block.transactions.map((tx) =>
-      encodeTransaction(tx, receiptByHash.get(normalizeHex(tx.hash)))
-    ),
-    logs: receipts.flatMap(encodeReceiptLogs),
+    transactions,
+    logs,
   }
 }
 
@@ -204,4 +229,19 @@ function encodeStatus(status: ChainReceipt['status'] | undefined) {
  */
 function normalizeTopic(topic: Hex | undefined) {
   return topic ? normalizeHex(topic) : null
+}
+
+/**
+ * Normalizes transaction signature components to canonical 32-byte hex.
+ */
+function normalizeSignatureComponent(
+  value: Hex,
+  field: 'r' | 's',
+  txHash: ChainTransaction['hash']
+) {
+  return normalizeFixedWidthHex(
+    value,
+    32,
+    `Transaction ${normalizeHex(txHash)} ${field}`
+  )
 }

@@ -1,8 +1,18 @@
 import { gte } from 'drizzle-orm'
 
 import { MAX_QUERY_PARAMS } from '../contants.ts'
-import type { EncodedBlock, EncodedLog, EncodedTransaction } from '../types.ts'
+import type {
+  EncodedBlock,
+  EncodedLog,
+  EncodedTransaction,
+  IndexedBlockData,
+} from '../types.ts'
 import type { Database } from './client.ts'
+import {
+  flattenBlocks,
+  flattenLogs,
+  flattenTransactions,
+} from './indexed-batch.ts'
 import { schema } from './schema/index.ts'
 import { withTransaction } from './transaction.ts'
 
@@ -19,14 +29,16 @@ const LOG_INSERT_WIDTH = 9
  */
 export async function insertIndexedBlockData(args: {
   db: Database
-  blocks: EncodedBlock[]
-  transactions: EncodedTransaction[]
-  logs: EncodedLog[]
+  batch: IndexedBlockData[]
 }) {
+  const blocks = flattenBlocks(args.batch)
+  const transactions = flattenTransactions(args.batch)
+  const logs = flattenLogs(args.batch)
+
   await withTransaction(args.db, async (tx) => {
-    await insertBlocksInChunks(tx, args.blocks)
-    await insertTransactionsInChunks(tx, args.transactions)
-    await insertLogsInChunks(tx, args.logs)
+    await insertBlocksInChunks(tx, blocks)
+    await insertTransactionsInChunks(tx, transactions)
+    await insertLogsInChunks(tx, logs)
   })
 }
 
