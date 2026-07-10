@@ -4,179 +4,7 @@ import {
   DataFinalityStateRealtime,
   DataFinalityStateUnfinalized,
   DataFinalityStateUnknown,
-  type Duration,
-  type FailsafeConfig,
 } from '@erpc-cloud/config'
-
-/** Adaptive timeout spec — runtime accepts this shape; TS Duration is string-only. */
-const adaptiveTimeout = (spec: {
-  quantile: number
-  base: string
-  min: string
-  max: string
-}) => ({ duration: spec as unknown as Duration })
-
-const staticTimeout = (duration: string) => ({
-  duration: duration as Duration,
-})
-
-const liveUpstreamFailsafe: FailsafeConfig[] = [
-  {
-    matchMethod:
-      'eth_blockNumber|eth_gasPrice|eth_getBalance|eth_chainId|eth_maxPriorityFeePerGas|eth_getTransactionCount',
-    timeout: adaptiveTimeout({
-      quantile: 0.8,
-      base: '500ms',
-      min: '200ms',
-      max: '2s',
-    }),
-  },
-  {
-    matchMethod: 'eth_getLogs|eth_getBlockReceipts|eth_call',
-    timeout: adaptiveTimeout({
-      quantile: 0.9,
-      base: '10s',
-      min: '2s',
-      max: '15s',
-    }),
-  },
-  {
-    matchMethod: 'eth_get*',
-    timeout: adaptiveTimeout({
-      quantile: 0.9,
-      base: '5s',
-      min: '500ms',
-      max: '8s',
-    }),
-  },
-  {
-    matchMethod: '*',
-    timeout: adaptiveTimeout({
-      quantile: 0.8,
-      base: '15s',
-      min: '2s',
-      max: '20s',
-    }),
-  },
-]
-
-const liveNetworkFailsafe: FailsafeConfig[] = [
-  {
-    matchMethod:
-      'eth_blockNumber|eth_gasPrice|eth_getBalance|eth_chainId|eth_maxPriorityFeePerGas',
-    matchFinality: [DataFinalityStateRealtime, DataFinalityStateUnfinalized],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '3s',
-      min: '2s',
-      max: '5s',
-    }),
-  },
-  {
-    matchMethod: 'eth_call|eth_getLogs',
-    matchFinality: [DataFinalityStateRealtime, DataFinalityStateUnfinalized],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '20s',
-      min: '15s',
-      max: '30s',
-    }),
-  },
-  {
-    matchMethod: '*',
-    matchFinality: [DataFinalityStateRealtime, DataFinalityStateUnfinalized],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '10s',
-      min: '6s',
-      max: '15s',
-    }),
-  },
-  {
-    matchMethod: '*',
-    matchFinality: [DataFinalityStateFinalized, DataFinalityStateUnknown],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '8s',
-      min: '5s',
-      max: '12s',
-    }),
-  },
-]
-
-const archiveNetworkFailsafe: FailsafeConfig[] = [
-  {
-    // Large archive payloads (e.g. eth_getBlockReceipts ~6MB) can exceed 60s upstream.
-    matchMethod:
-      'eth_getLogs|eth_getBlockReceipts|eth_getBlockByNumber|eth_call',
-    matchFinality: [DataFinalityStateFinalized, DataFinalityStateUnknown],
-    timeout: staticTimeout('200s'),
-  },
-  {
-    matchMethod: 'eth_getLogs|eth_call',
-    matchFinality: [DataFinalityStateRealtime, DataFinalityStateUnfinalized],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '90s',
-      min: '30s',
-      max: '120s',
-    }),
-  },
-  {
-    matchMethod: '*',
-    matchFinality: [DataFinalityStateFinalized, DataFinalityStateUnknown],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '60s',
-      min: '15s',
-      max: '90s',
-    }),
-  },
-  {
-    matchMethod: '*',
-    matchFinality: [DataFinalityStateRealtime, DataFinalityStateUnfinalized],
-    timeout: adaptiveTimeout({
-      quantile: 0.99,
-      base: '45s',
-      min: '10s',
-      max: '60s',
-    }),
-  },
-]
-
-const archiveUpstreamFailsafe: FailsafeConfig[] = [
-  {
-    matchMethod: 'eth_getLogs|eth_getBlockReceipts|eth_getBlockByNumber',
-    timeout: staticTimeout('180s'),
-  },
-  {
-    matchMethod: 'eth_call',
-    timeout: adaptiveTimeout({
-      quantile: 0.9,
-      base: '60s',
-      min: '10s',
-      max: '90s',
-    }),
-  },
-  {
-    matchMethod: 'eth_get*',
-    timeout: adaptiveTimeout({
-      quantile: 0.9,
-      base: '30s',
-      min: '5s',
-      max: '60s',
-    }),
-  },
-  {
-    matchMethod: '*',
-    timeout: adaptiveTimeout({
-      quantile: 0.8,
-      base: '60s',
-      min: '10s',
-      max: '90s',
-    }),
-  },
-]
 
 export default createConfig({
   logLevel: 'info',
@@ -185,8 +13,6 @@ export default createConfig({
     httpHostV6: '::',
     httpPort: 4000,
     enableGzip: true,
-    // Archive heavy methods use up to 200s network / 180s upstream; live stays tight.
-    maxTimeout: '240s',
 
     // waitAfterShutdown: '30s',
     // waitBeforeShutdown: '30s',
@@ -220,7 +46,6 @@ export default createConfig({
           evm: {
             chainId: 314159,
           },
-          failsafe: liveNetworkFailsafe,
         },
       ],
       upstreams: [
@@ -230,7 +55,6 @@ export default createConfig({
           evm: {
             chainId: 314159,
           },
-          failsafe: liveUpstreamFailsafe,
         },
         {
           id: 'chainlove-public',
@@ -238,7 +62,6 @@ export default createConfig({
           evm: {
             chainId: 314159,
           },
-          failsafe: liveUpstreamFailsafe,
         },
         {
           id: 'ankr-public',
@@ -247,7 +70,6 @@ export default createConfig({
           evm: {
             chainId: 314159,
           },
-          failsafe: liveUpstreamFailsafe,
         },
       ],
     },
@@ -276,7 +98,6 @@ export default createConfig({
           evm: {
             chainId: 314159,
           },
-          failsafe: archiveNetworkFailsafe,
         },
       ],
       upstreams: [
@@ -287,7 +108,6 @@ export default createConfig({
             chainId: 314159,
             nodeType: 'archive',
           },
-          failsafe: archiveUpstreamFailsafe,
         },
       ],
     },
