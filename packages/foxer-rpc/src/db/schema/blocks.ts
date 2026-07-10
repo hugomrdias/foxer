@@ -1,8 +1,8 @@
-import { boolean, index, pgTable } from 'drizzle-orm/pg-core'
+import { boolean, index, snakeCase } from 'drizzle-orm/pg-core'
 
 import { address, bytea, hash, int8 } from '../column-types.ts'
 
-export const blocks = pgTable(
+export const blocks = snakeCase.table(
   'blocks',
   {
     number: int8().notNull().primaryKey(),

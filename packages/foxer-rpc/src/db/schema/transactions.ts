@@ -1,15 +1,15 @@
 import {
   integer,
   jsonb,
-  pgTable,
   smallint,
+  snakeCase,
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import type { AccessList } from 'viem'
 
 import { address, bytea, hash, int8, numeric78 } from '../column-types.ts'
 
-export const transactions = pgTable(
+export const transactions = snakeCase.table(
   'transactions',
   {
     hash: hash().primaryKey(),

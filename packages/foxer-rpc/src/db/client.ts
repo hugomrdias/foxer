@@ -17,11 +17,11 @@ import { schema } from './schema/index.ts'
 type PreparedQueries = ReturnType<typeof generatePrepared>
 
 export type Database =
-  | (PgliteDatabase<typeof schema> & {
+  | (PgliteDatabase & {
       $client: PGlite
       $prepared: PreparedQueries
     })
-  | (NodePgDatabase<typeof schema> & {
+  | (NodePgDatabase & {
       $client: Pool
       $prepared: PreparedQueries
     })
@@ -35,9 +35,7 @@ export type DatabaseContext = {
 /**
  * Narrows the shared database union to the PostgreSQL node-postgres driver.
  */
-export function isPostgresDatabase(db: Database): db is NodePgDatabase<
-  typeof schema
-> & {
+export function isPostgresDatabase(db: Database): db is NodePgDatabase & {
   $client: Pool
   $prepared: PreparedQueries
 } {
@@ -72,8 +70,6 @@ export function createDatabase({
 
     const db = drizzleNodePostgres({
       client: pool,
-      schema,
-      casing: 'snake_case',
     }) as Database
 
     db.$prepared = generatePrepared(db)
@@ -92,8 +88,6 @@ export function createDatabase({
   )
   const db = drizzlePglite({
     client,
-    schema,
-    casing: 'snake_case',
   }) as Database
 
   db.$prepared = generatePrepared(db)
