@@ -29,13 +29,30 @@ export async function queueBlock(args: {
   const endClock = startClock()
 
   try {
+    const getBlockClock = startClock()
     const data = await safeGetBlock({ client, blockNumber, db })
+    logger.debug(
+      {
+        blockNumber: blockNumber.toString(),
+        duration: getBlockClock(),
+      },
+      'fetched live block'
+    )
+
+    const processBlockClock = startClock()
     const result = await processBlock({
       logger,
       db,
       client,
       data,
     })
+    logger.debug(
+      {
+        blockNumber: blockNumber.toString(),
+        duration: processBlockClock(),
+      },
+      'processed live block data'
+    )
 
     if (result.status === 'reorg') {
       logger.warn(
