@@ -26,6 +26,7 @@ export type InternalConfig = {
   batchSize: bigint
   maxLogsBlockRange: bigint
   maxLogsResultRows: number
+  deferBackfillIndexes: boolean
   port: number
   logLevel: LogLevel
   chainId: number
@@ -46,6 +47,11 @@ const envSchema = z.object({
     .default('info'),
   MAX_LOGS_BLOCK_RANGE: z.coerce.bigint().default(10_000n),
   MAX_LOGS_RESULT_ROWS: z.coerce.number().int().positive().default(10_000),
+  DEFER_BACKFILL_INDEXES: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((value) => value === true || value === 'true' || value === '1')
+    .default(false),
   AUTH_SECRET: z.string().min(16).optional(),
 })
 
@@ -59,6 +65,7 @@ export type CliConfig = {
   batchSize?: string
   maxLogsBlockRange?: string
   maxLogsResultRows?: number
+  deferBackfillIndexes?: boolean
   port?: number
   logLevel?: LogLevel
   authSecret?: string
@@ -87,6 +94,8 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
       flags.maxLogsBlockRange ?? process.env.MAX_LOGS_BLOCK_RANGE,
     MAX_LOGS_RESULT_ROWS:
       flags.maxLogsResultRows ?? process.env.MAX_LOGS_RESULT_ROWS,
+    DEFER_BACKFILL_INDEXES:
+      flags.deferBackfillIndexes ?? process.env.DEFER_BACKFILL_INDEXES,
     AUTH_SECRET: flags.authSecret ?? process.env.AUTH_SECRET,
   })
 
@@ -113,6 +122,7 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     batchSize: env.BATCH_SIZE,
     maxLogsBlockRange: env.MAX_LOGS_BLOCK_RANGE,
     maxLogsResultRows: env.MAX_LOGS_RESULT_ROWS,
+    deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     chainId,

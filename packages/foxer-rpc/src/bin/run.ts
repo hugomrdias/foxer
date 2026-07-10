@@ -5,7 +5,9 @@ import { createApi } from '../api/create-api.ts'
 import { type CliConfig, createConfig } from '../config.ts'
 import { createDatabase } from '../db/client.ts'
 import { runMigrations } from '../db/migrate.ts'
-import { createSync } from '../sync/create-sync.ts'
+import { runBackfill } from '../sync/backfill.ts'
+import { startLiveSync } from '../sync/live.ts'
+import { verifyRecentBlocks } from '../sync/reorg.ts'
 import type { Logger } from '../utils/logger.ts'
 import { createExit } from '../utils/shutdown.ts'
 
@@ -32,16 +34,31 @@ export async function runServer(args: { logger: Logger; flags: CliConfig }) {
     logger: args.logger,
   })
 
+  await verifyRecentBlocks({
+    logger: args.logger,
+    db: dbContext.db,
+    client: config.clients.backfill,
+    depth: config.finality,
+  })
+
+  const nextCursor = await runBackfill({
+    logger: args.logger,
+    db: dbContext.db,
+    config,
+  })
+
   const api = createApi({
     db: dbContext.db,
     config,
     logger: args.logger,
     port: config.port,
   })
-  const sync = await createSync({
+  const sync = startLiveSync({
     logger: args.logger,
-    db: dbContext.db,
     config,
+    db: dbContext.db,
+    client: config.clients.live,
+    initialCursor: nextCursor,
   })
 
   createExit({

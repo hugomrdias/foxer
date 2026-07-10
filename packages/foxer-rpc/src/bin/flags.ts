@@ -69,4 +69,9 @@ export const globalFlags = {
     type: String,
     description: 'Secret used to mint and verify JWT API keys (enables auth)',
   },
+  deferBackfillIndexes: {
+    type: Boolean,
+    description:
+      'Drop and rebuild non-constraint indexes during large historical backfills',
+  },
 } as const

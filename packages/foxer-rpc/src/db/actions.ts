@@ -8,7 +8,7 @@ import { withTransaction } from './transaction.ts'
 
 const BLOCK_INSERT_WIDTH = 14
 const TRANSACTION_INSERT_WIDTH = 22
-const LOG_INSERT_WIDTH = 7
+const LOG_INSERT_WIDTH = 9
 
 /**
  * Persists a batch of canonical block data across the three fixed tables.

@@ -1,6 +1,5 @@
 import {
   createPublicClient,
-  type HttpTransport,
   http,
   type PublicClient,
   type Transport,
@@ -23,10 +22,30 @@ export function createRpcClients(options: {
   rpcUrl: string
   realtimeRpcUrl?: string
 }): RpcClients {
-  const backfillTransport = http(options.rpcUrl) as HttpTransport
-  const liveTransport = http(
-    options.realtimeRpcUrl ?? options.rpcUrl
-  ) as HttpTransport
+  const backfillTransport = http(options.rpcUrl, {
+    fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
+    timeout: 120000,
+    maxResponseBodySize: false,
+    onFetchRequest: async (request) => {
+      // console.log(
+      //   'request',
+      //   request.url,
+      //   request.headers,
+      //   await request.clone().json()
+      // )
+    },
+    onFetchResponse: async (response) => {
+      // console.log(
+      //   'response',
+      //   response.url,
+      //   response.headers,
+      //   (await response.clone().arrayBuffer()).byteLength
+      // )
+    },
+  })
+  const liveTransport = http(options.realtimeRpcUrl ?? options.rpcUrl, {
+    fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
+  })
 
   return {
     backfill: createPublicClient({ transport: backfillTransport }),

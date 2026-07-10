@@ -1,5 +1,10 @@
 import type { InternalConfig } from '../config.ts'
 import { insertIndexedBlockData } from '../db/actions.ts'
+import {
+  anyManagedIndexMissing,
+  dropManagedBackfillIndexes,
+  restoreManagedBackfillIndexes,
+} from '../db/backfill-indexes.ts'
 import type { Database } from '../db/client.ts'
 import { safeGetBlock } from '../rpc/get-block.ts'
 import type { EncodedBlock, EncodedLog, EncodedTransaction } from '../types.ts'
@@ -33,7 +38,15 @@ export async function runBackfill(args: {
       ? config.startBlock
       : nextBlock
 
-  if (cursor > safeHead) {
+  const needsWork = cursor <= safeHead
+  const deferIndexes = config.deferBackfillIndexes
+  const deferIndexesForBackfill = deferIndexes && needsWork
+
+  if (!deferIndexesForBackfill && (await anyManagedIndexMissing(db))) {
+    await restoreManagedBackfillIndexes({ db, logger })
+  }
+
+  if (!needsWork) {
     logger.info(
       {
         cursor: cursor.toString(),
@@ -50,52 +63,71 @@ export async function runBackfill(args: {
       fromBlock: cursor.toString(),
       toBlock: safeHead.toString(),
       batchSize: config.batchSize.toString(),
+      deferBackfillIndexes: deferIndexes,
     },
     'starting backfill'
   )
 
-  while (cursor <= safeHead) {
-    const batchStartMs = Date.now()
-    const toBlock = windowEnd(cursor, config.batchSize, safeHead)
-    const batch: bigint[] = []
-    let blockNumber = cursor
-    while (blockNumber <= toBlock) {
-      batch.push(blockNumber)
-      blockNumber += 1n
+  try {
+    if (deferIndexesForBackfill) {
+      await dropManagedBackfillIndexes({ db, logger })
     }
 
-    const indexedBlocks = await Promise.all(
-      batch.map((blockNumber) => safeGetBlock({ client, blockNumber, db }))
-    )
+    while (cursor <= safeHead) {
+      const batchStartMs = Date.now()
+      const toBlock = windowEnd(cursor, config.batchSize, safeHead)
+      const batch: bigint[] = []
+      let blockNumber = cursor
+      while (blockNumber <= toBlock) {
+        batch.push(blockNumber)
+        blockNumber += 1n
+      }
 
-    const blocks: EncodedBlock[] = []
-    const transactions: EncodedTransaction[] = []
-    const logs: EncodedLog[] = []
+      const indexedBlocks = await Promise.all(
+        batch.map((blockNumber) => safeGetBlock({ client, blockNumber, db }))
+      )
 
-    for (const item of indexedBlocks) {
-      blocks.push(item.block)
-      transactions.push(...item.transactions)
-      logs.push(...item.logs)
+      const blocks: EncodedBlock[] = []
+      const transactions: EncodedTransaction[] = []
+      const logs: EncodedLog[] = []
+
+      for (const item of indexedBlocks) {
+        blocks.push(item.block)
+        transactions.push(...item.transactions)
+        logs.push(...item.logs)
+      }
+
+      logger.debug(
+        {
+          blocks: blocks.length,
+          transactions: transactions.length,
+          logs: logs.length,
+        },
+        'indexed block data'
+      )
+      await insertIndexedBlockData({ db, blocks, transactions, logs })
+
+      const elapsed = Date.now() - batchStartMs
+      const blocksInRange = Number(toBlock - cursor + 1n)
+      const throughput =
+        elapsed > 0 ? blocksInRange / (elapsed / 1000) : blocksInRange
+      logger.info(
+        {
+          indexedUpTo: toBlock.toString(),
+          duration: elapsed,
+          throughput: Number(throughput.toFixed(2)),
+        },
+        'backfill batch completed'
+      )
+
+      cursor = toBlock + 1n
     }
 
-    await insertIndexedBlockData({ db, blocks, transactions, logs })
-
-    const elapsed = Date.now() - batchStartMs
-    const blocksInRange = Number(toBlock - cursor + 1n)
-    const throughput =
-      elapsed > 0 ? blocksInRange / (elapsed / 1000) : blocksInRange
-    logger.info(
-      {
-        indexedUpTo: toBlock.toString(),
-        duration: elapsed,
-        throughput: Number(throughput.toFixed(2)),
-      },
-      'backfill batch completed'
-    )
-
-    cursor = toBlock + 1n
+    logger.info({ duration: endClock() }, 'backfill completed')
+    return cursor
+  } finally {
+    if (deferIndexesForBackfill) {
+      await restoreManagedBackfillIndexes({ db, logger })
+    }
   }
-
-  logger.info({ duration: endClock() }, 'backfill completed')
-  return cursor
 }
