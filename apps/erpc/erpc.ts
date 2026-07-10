@@ -185,7 +185,7 @@ export default createConfig({
     httpHostV6: '::',
     httpPort: 4000,
     enableGzip: true,
-    // Archive heavy methods use up to 200s network / 180s upstream; live stays tight.
+    // Archive heavy methods use up to 200s network / 180s upstream (see Dockerfile patch).
     maxTimeout: '240s',
 
     // waitAfterShutdown: '30s',
