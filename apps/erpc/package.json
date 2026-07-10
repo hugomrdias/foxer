@@ -8,10 +8,14 @@
   "author": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check": "tsc --noEmit && biome check ."
   },
   "dependencies": {
-    "@erpc-cloud/config": "^0.0.63"
+    "@erpc-cloud/config": "^0.1.1"
   },
-  "packageManager": "bun@1.3.10"
+  "packageManager": "bun@1.3.10",
+  "devDependencies": {
+    "@types/node": "^26.1.1"
+  }
 }

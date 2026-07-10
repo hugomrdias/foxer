@@ -12,6 +12,8 @@ export default createConfig({
     httpHostV4: '0.0.0.0',
     httpHostV6: '::',
     httpPort: 4000,
+    enableGzip: true,
+
     // waitAfterShutdown: '30s',
     // waitBeforeShutdown: '30s',
   },
