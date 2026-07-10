@@ -26,22 +26,22 @@ export function createRpcClients(options: {
     fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
     timeout: 120000,
     maxResponseBodySize: false,
-    onFetchRequest: async (request) => {
-      // console.log(
-      //   'request',
-      //   request.url,
-      //   request.headers,
-      //   await request.clone().json()
-      // )
-    },
-    onFetchResponse: async (response) => {
-      // console.log(
-      //   'response',
-      //   response.url,
-      //   response.headers,
-      //   (await response.clone().arrayBuffer()).byteLength
-      // )
-    },
+    // onFetchRequest: async (request) => {
+    // console.log(
+    //   'request',
+    //   request.url,
+    //   request.headers,
+    //   await request.clone().json()
+    // )
+    // },
+    // onFetchResponse: async (response) => {
+    // console.log(
+    //   'response',
+    //   response.url,
+    //   response.headers,
+    //   (await response.clone().arrayBuffer()).byteLength
+    // )
+    // },
   })
   const liveTransport = http(options.realtimeRpcUrl ?? options.rpcUrl, {
     fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
