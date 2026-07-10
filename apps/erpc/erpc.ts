@@ -110,7 +110,7 @@ const archiveNetworkFailsafe: FailsafeConfig[] = [
     matchMethod:
       'eth_getLogs|eth_getBlockReceipts|eth_getBlockByNumber|eth_call',
     matchFinality: [DataFinalityStateFinalized, DataFinalityStateUnknown],
-    timeout: staticTimeout('150s'),
+    timeout: staticTimeout('200s'),
   },
   {
     matchMethod: 'eth_getLogs|eth_call',
@@ -147,7 +147,7 @@ const archiveNetworkFailsafe: FailsafeConfig[] = [
 const archiveUpstreamFailsafe: FailsafeConfig[] = [
   {
     matchMethod: 'eth_getLogs|eth_getBlockReceipts|eth_getBlockByNumber',
-    timeout: staticTimeout('140s'),
+    timeout: staticTimeout('180s'),
   },
   {
     matchMethod: 'eth_call',
@@ -185,8 +185,8 @@ export default createConfig({
     httpHostV6: '::',
     httpPort: 4000,
     enableGzip: true,
-    // Archive heavy methods use up to 150s network / 140s upstream; live stays tight.
-    maxTimeout: '180s',
+    // Archive heavy methods use up to 200s network / 180s upstream; live stays tight.
+    maxTimeout: '240s',
 
     // waitAfterShutdown: '30s',
     // waitBeforeShutdown: '30s',
