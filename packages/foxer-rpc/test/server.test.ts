@@ -323,41 +323,69 @@ describe('createApiServer request logging', () => {
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
   })
 
-  test('adds complete batch entries without their JSON-RPC envelopes', async () => {
-    const { app, logs } = createServerWithLogs()
-    const body = [
-      {
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'eth_chainId',
-        params: [],
-        extension: 'first',
-      },
-      { jsonrpc: '2.0', id: 2, method: 'net_version', params: ['kept'] },
-      null,
-      'invalid entry',
+  test('rejects batches without adding JSON-RPC request metadata', async () => {
+    const bodies = [
+      [],
+      [
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_chainId',
+          params: [],
+          extension: 'first',
+        },
+        { jsonrpc: '2.0', id: 2, method: 'net_version', params: ['kept'] },
+        null,
+        'invalid entry',
+      ],
     ]
 
-    const response = await app.request('/', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    })
+    for (const body of bodies) {
+      const { app, logs } = createServerWithLogs()
+      const response = await app.request('/', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
 
-    expect(response.status).toBe(200)
-    expect(await response.json()).toHaveLength(4)
-    expect(completedRequest(logs)?.jsonRpcBody).toEqual([
-      {
-        method: 'eth_chainId',
-        params: [],
-        extension: 'first',
-      },
-      { method: 'net_version', params: ['kept'] },
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: 'Batch requests are not supported' },
+      })
+      expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody')
+      expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
+      expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
+    }
+  })
+
+  test('rejects invalid requests before streamed handler selection', async () => {
+    const bodies = [
       null,
-      'invalid entry',
-    ])
-    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
-    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
+      {
+        jsonrpc: '2.0',
+        method: 'eth_getBlockReceipts',
+        params: ['0x1'],
+      },
+    ]
+
+    for (const body of bodies) {
+      const { app, logs } = createServerWithLogs()
+      const response = await app.request('/', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: 'Invalid Request' },
+      })
+      expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody')
+    }
   })
 
   test('does not add JSON-RPC metadata to non-RPC request logs', async () => {

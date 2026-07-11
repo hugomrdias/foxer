@@ -122,8 +122,24 @@ export function decodeTransaction(
  */
 export function decodeReceipt(
   tx: ReceiptTransactionRow,
-  block: BlockRow,
+  block: BlockHashRow,
   logs: LogRow[]
+) {
+  return {
+    ...decodeReceiptFields(tx, block),
+    logs: logs.map((log) => decodeLog(log, block, tx)),
+  }
+}
+
+/**
+ * Reconstructs the scalar fields of an Ethereum transaction receipt.
+ *
+ * Keeping log decoding separate lets large block-receipt responses serialize
+ * logs incrementally without duplicating receipt formatting rules.
+ */
+export function decodeReceiptFields(
+  tx: ReceiptTransactionRow,
+  block: BlockHashRow
 ) {
   return {
     transactionHash: tx.hash,
@@ -135,7 +151,6 @@ export function decodeReceipt(
     cumulativeGasUsed: quantity(tx.cumulativeGasUsed),
     gasUsed: quantity(tx.receiptGasUsed),
     contractAddress: tx.contractAddress,
-    logs: logs.map((log) => decodeLog(log, block, tx)),
     logsBloom: tx.logsBloom,
     status: quantity(tx.status),
     type: quantity(tx.type),

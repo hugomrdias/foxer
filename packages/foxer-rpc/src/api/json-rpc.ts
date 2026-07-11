@@ -1,1 +1,5 @@
-export { handleJsonRpc } from './json-rpc/index.ts'
+export {
+  handleJsonRpc,
+  handleJsonRpcStream,
+  isStreamedRequest,
+} from './json-rpc/index.ts'

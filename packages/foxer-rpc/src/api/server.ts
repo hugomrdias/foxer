@@ -8,7 +8,13 @@ import { z } from 'zod'
 import type { InternalConfig } from '../config.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
-import { handleJsonRpc } from './json-rpc.ts'
+import { error, isRequest } from './json-rpc/response.ts'
+import { streamJsonRpc } from './json-rpc/stream.ts'
+import {
+  handleJsonRpc,
+  handleJsonRpcStream,
+  isStreamedRequest,
+} from './json-rpc.ts'
 
 const mintKeySchema = z.object({
   sub: z.string().min(1),
@@ -148,10 +154,25 @@ export function createApiServer({
       )
     }
 
-    const jsonRpcBody = Array.isArray(body)
-      ? body.map(omitJsonRpcEnvelope)
-      : omitJsonRpcEnvelope(body)
-    c.var.logger.assign({ jsonRpcBody })
+    if (Array.isArray(body)) {
+      return c.json(error(null, -32600, 'Batch requests are not supported'))
+    }
+    if (!isRequest(body)) {
+      return c.json(error(null, -32600, 'Invalid Request'))
+    }
+
+    const id = body.id ?? null
+    if (!Object.hasOwn(body, 'id')) {
+      return c.json(error(null, -32600, 'Invalid Request'))
+    }
+
+    c.var.logger.assign({ jsonRpcBody: omitJsonRpcEnvelope(body) })
+
+    if (isStreamedRequest(body)) {
+      return streamJsonRpc(c, { id }, (stream) =>
+        handleJsonRpcStream({ db, config, logger, body, stream })
+      )
+    }
 
     const result = await handleJsonRpc({ db, config, logger, body })
     return c.json(result)

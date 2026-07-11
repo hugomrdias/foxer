@@ -3,7 +3,7 @@ import { ethBlockNumber } from './methods/eth-block-number.ts'
 import { ethChainId } from './methods/eth-chain-id.ts'
 import { ethGetBlockByHash } from './methods/eth-get-block-by-hash.ts'
 import { ethGetBlockByNumber } from './methods/eth-get-block-by-number.ts'
-import { ethGetBlockReceipts } from './methods/eth-get-block-receipts.ts'
+import { streamEthGetBlockReceipts } from './methods/eth-get-block-receipts-stream.ts'
 import { ethGetBlockTransactionCountByHash } from './methods/eth-get-block-transaction-count-by-hash.ts'
 import { ethGetBlockTransactionCountByNumber } from './methods/eth-get-block-transaction-count-by-number.ts'
 import { ethGetLogs } from './methods/eth-get-logs.ts'
@@ -13,27 +13,48 @@ import { ethGetTransactionByHash } from './methods/eth-get-transaction-by-hash.t
 import { ethGetTransactionReceipt } from './methods/eth-get-transaction-receipt.ts'
 import { netVersion } from './methods/net-version.ts'
 import { web3ClientVersion } from './methods/web3-client-version.ts'
-import { error, isRequest, ok } from './response.ts'
+import { error, ok } from './response.ts'
+import type { JsonRpcMethodStream } from './stream.ts'
 import type { JsonRpcRequest, JsonRpcResponse, MethodContext } from './types.ts'
 
 /**
- * Handles a JSON-RPC 2.0 request body.
- *
- * Both single requests and batches are supported. Empty batches and malformed
- * request objects are translated into standard JSON-RPC error responses instead
- * of throwing out to Hono.
+ * Handles one JSON-RPC request validated by the transport boundary.
  */
 export function handleJsonRpc(
-  args: MethodContext & { body: unknown }
-): Promise<JsonRpcResponse | JsonRpcResponse[]> {
-  if (Array.isArray(args.body)) {
-    if (args.body.length === 0) {
-      return Promise.resolve(error(null, -32600, 'Invalid Request'))
-    }
-    return Promise.all(args.body.map((request) => dispatch(args, request)))
-  }
-
+  args: MethodContext & { body: JsonRpcRequest }
+): Promise<JsonRpcResponse> {
   return dispatch(args, args.body)
+}
+
+/**
+ * Reports whether a validated request uses the streaming response transport.
+ */
+export function isStreamedRequest(body: JsonRpcRequest): boolean {
+  switch (body.method) {
+    case 'eth_getBlockReceipts':
+      return true
+    default:
+      return false
+  }
+}
+
+/**
+ * Dispatches one validated request through a method-facing JSON-RPC stream.
+ */
+export function handleJsonRpcStream(
+  args: MethodContext & {
+    body: JsonRpcRequest
+    stream: JsonRpcMethodStream
+  }
+) {
+  const params = args.body.params ?? []
+
+  switch (args.body.method) {
+    case 'eth_getBlockReceipts':
+      return streamEthGetBlockReceipts({ db: args.db }, params, args.stream)
+    default:
+      throw new Error(`JSON-RPC method is not streamed: ${args.body.method}`)
+  }
 }
 
 /**
@@ -45,17 +66,10 @@ export function handleJsonRpc(
  */
 async function dispatch(
   args: MethodContext,
-  body: unknown
+  body: JsonRpcRequest
 ): Promise<JsonRpcResponse> {
-  if (!isRequest(body)) {
-    return error(null, -32600, 'Invalid Request')
-  }
-
   const id = body.id ?? null
   const params = body.params ?? []
-  if (!Object.hasOwn(body, 'id')) {
-    return error(null, -32600, 'Invalid Request')
-  }
 
   try {
     switch (body.method) {
@@ -86,8 +100,6 @@ async function dispatch(
         return ok(id, await ethGetBlockTransactionCountByHash(args.db, params))
       case 'eth_getTransactionReceipt':
         return ok(id, await ethGetTransactionReceipt(args.db, params))
-      case 'eth_getBlockReceipts':
-        return ok(id, await ethGetBlockReceipts(args, params))
       case 'eth_getLogs':
         return ok(id, await ethGetLogs(args, params))
       default:

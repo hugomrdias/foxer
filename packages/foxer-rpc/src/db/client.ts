@@ -125,13 +125,6 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     .orderBy(asc(schema.transactions.transactionIndex))
     .prepare('get_transactions_by_block_number')
 
-  const getReceiptTransactionsByBlockNumber = db
-    .select(receiptTransactionColumns)
-    .from(schema.transactions)
-    .where(eq(schema.transactions.blockNumber, sql.placeholder('blockNumber')))
-    .orderBy(asc(schema.transactions.transactionIndex))
-    .prepare('get_receipt_transactions_by_block_number')
-
   const getTransactionHashesByBlockNumber = db
     .select({ hash: schema.transactions.hash })
     .from(schema.transactions)
@@ -160,13 +153,6 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     .where(eq(schema.transactions.blockNumber, sql.placeholder('blockNumber')))
     .prepare('get_transaction_count_by_block_number')
 
-  const getLogsByBlockNumber = db
-    .select()
-    .from(schema.logs)
-    .where(eq(schema.logs.blockNumber, sql.placeholder('blockNumber')))
-    .orderBy(asc(schema.logs.logIndex))
-    .prepare('get_logs_by_block_number')
-
   const getLogsByTransactionPosition = db
     .select()
     .from(schema.logs)
@@ -187,16 +173,14 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     getTransactionByHash,
     getReceiptTransactionByHash,
     getTransactionsByBlockNumber,
-    getReceiptTransactionsByBlockNumber,
     getTransactionHashesByBlockNumber,
     getTransactionByBlockNumberAndIndex,
     getTransactionCountByBlockNumber,
-    getLogsByBlockNumber,
     getLogsByTransactionPosition,
   }
 }
 
-const receiptTransactionColumns = {
+export const receiptTransactionColumns = {
   hash: schema.transactions.hash,
   blockNumber: schema.transactions.blockNumber,
   transactionIndex: schema.transactions.transactionIndex,

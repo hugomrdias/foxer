@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { handleJsonRpc } from '../src/api/json-rpc.ts'
+import { handleJsonRpc, isStreamedRequest } from '../src/api/json-rpc.ts'
 import { createRpcClients } from '../src/rpc/client.ts'
 import { mockUpstreamRpc, realtimeRpcUrl, upstreamRpcUrl } from './upstream.ts'
 
@@ -29,40 +29,23 @@ const args = {
 }
 
 describe('handleJsonRpc', () => {
-  test('returns invalid request for a single notification', async () => {
-    await expect(
-      handleJsonRpc({
-        ...args,
-        body: { jsonrpc: '2.0', method: 'web3_clientVersion' },
-      } as never)
-    ).resolves.toEqual({
-      jsonrpc: '2.0',
-      id: null,
-      error: { code: -32600, message: 'Invalid Request' },
-    })
-  })
-
-  test('returns explicit errors for notification batch items', async () => {
-    await expect(
-      handleJsonRpc({
-        ...args,
-        body: [
-          { jsonrpc: '2.0', method: 'web3_clientVersion' },
-          { jsonrpc: '2.0', method: 'eth_chainId' },
-        ],
-      } as never)
-    ).resolves.toEqual([
-      {
+  test('identifies methods that use the streaming transport', () => {
+    expect(
+      isStreamedRequest({
         jsonrpc: '2.0',
-        id: null,
-        error: { code: -32600, message: 'Invalid Request' },
-      },
-      {
+        id: 1,
+        method: 'eth_getBlockReceipts',
+        params: ['latest'],
+      })
+    ).toBe(true)
+    expect(
+      isStreamedRequest({
         jsonrpc: '2.0',
-        id: null,
-        error: { code: -32600, message: 'Invalid Request' },
-      },
-    ])
+        id: 2,
+        method: 'eth_chainId',
+        params: [],
+      })
+    ).toBe(false)
   })
 
   test('proxies unsupported methods to the upstream rpc', async () => {
@@ -99,29 +82,6 @@ describe('handleJsonRpc', () => {
       id: 'call-1',
       result: '0x1234',
     })
-  })
-
-  test('preserves batch responses for local and proxied methods', async () => {
-    mockUpstreamRpc({ eth_getCode: '0xabcd' }, { url: realtimeRpcUrl })
-    const response = await handleJsonRpc({
-      ...args,
-      config: {
-        ...baseConfig,
-        clients: createRpcClients({
-          rpcUrl: upstreamRpcUrl,
-          realtimeRpcUrl,
-        }),
-      },
-      body: [
-        { jsonrpc: '2.0', id: 1, method: 'web3_clientVersion' },
-        { jsonrpc: '2.0', id: 2, method: 'eth_getCode', params: [] },
-      ],
-    } as never)
-
-    expect(response).toEqual([
-      { jsonrpc: '2.0', id: 1, result: 'foxer-rpc/0.0.0' },
-      { jsonrpc: '2.0', id: 2, result: '0xabcd' },
-    ])
   })
 
   test('forwards upstream json-rpc errors from proxied methods', async () => {
