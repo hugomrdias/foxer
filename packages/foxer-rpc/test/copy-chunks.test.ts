@@ -1,5 +1,3 @@
-/// <reference types="bun" />
-
 import { describe, expect, test } from 'bun:test'
 import { Writable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'

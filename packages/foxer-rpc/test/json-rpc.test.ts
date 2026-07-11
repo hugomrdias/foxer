@@ -1,5 +1,3 @@
-/// <reference types="bun" />
-
 import { describe, expect, test } from 'bun:test'
 
 import { handleJsonRpc } from '../src/api/json-rpc.ts'

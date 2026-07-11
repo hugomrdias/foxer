@@ -1,5 +1,3 @@
-/// <reference types="bun" />
-
 import { expect, test } from 'bun:test'
 
 import { globalFlags } from '../src/bin/flags.ts'

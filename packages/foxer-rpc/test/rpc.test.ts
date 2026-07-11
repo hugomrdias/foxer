@@ -1,5 +1,3 @@
-/// <reference types="bun" />
-
 import { expect, test } from 'bun:test'
 
 import { createRpcClients } from '../src/rpc/client.ts'

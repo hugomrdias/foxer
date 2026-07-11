@@ -1,5 +1,3 @@
-/// <reference types="bun" />
-
 import { expect, test } from 'bun:test'
 
 import { createApiServer } from '../src/api/server.ts'

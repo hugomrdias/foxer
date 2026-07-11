@@ -1,5 +1,3 @@
-/// <reference types="bun" />
-
 import { encodeCopyHeader, encodeCopyTrailer } from '../src/db/copy/protocol.ts'
 import type {
   ChainReceipt,
