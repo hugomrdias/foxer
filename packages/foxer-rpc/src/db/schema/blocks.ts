@@ -19,6 +19,7 @@ export const blocks = snakeCase.table(
     receiptsRoot: hash().notNull(),
     transactionsRoot: hash().notNull(),
     extraData: bytea().notNull(),
+    logsBloom: bytea().notNull(),
   },
   (table) => [index('blocks_hash_index').on(table.hash)]
 )

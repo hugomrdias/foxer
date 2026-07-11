@@ -8,15 +8,59 @@ import {
   decodeReceipt,
   decodeTransaction,
 } from '../src/api/decode.ts'
-import { encodeTransaction, encodeTransactionType } from '../src/db/encode.ts'
+import {
+  encodeBlock,
+  encodeNullRoundBlock,
+  encodeTransaction,
+  encodeTransactionType,
+} from '../src/db/encode.ts'
 import { schema } from '../src/db/schema/index.ts'
 import type {
+  ChainBlock,
   ChainReceipt,
   ChainTransaction,
   EncodedBlock,
 } from '../src/types.ts'
 import { normalizeFixedWidthHex } from '../src/utils/hex.ts'
-import { address, bytes32, emptyRoot, withTestDatabase } from './helpers.ts'
+import {
+  address,
+  bytes32,
+  emptyRoot,
+  withTestDatabase,
+  zeroLogsBloom,
+} from './helpers.ts'
+
+test('normalizes and persists the upstream block logs bloom', async () => {
+  const encoded = encodeBlock(chainBlock({ logsBloom: '0xAB' }))
+  const expectedBloom = `0x${'00'.repeat(255)}ab` as Hex
+
+  expect(encoded.logsBloom).toBe(expectedBloom)
+
+  await withTestDatabase(async (db) => {
+    await db.insert(schema.blocks).values(encoded)
+    const [stored] = await db.select().from(schema.blocks)
+    expect(stored.logsBloom).toBe(expectedBloom)
+
+    const decoded = decodeBlock(stored, { full: false, rows: [] }, 314_159)
+    expect(decoded.logsBloom).toBe(expectedBloom)
+  })
+})
+
+test('rejects block logs blooms wider than 256 bytes', () => {
+  expect(() =>
+    encodeBlock(chainBlock({ logsBloom: `0x${'ff'.repeat(257)}` }))
+  ).toThrow('logs bloom: hex value exceeds 256 bytes')
+})
+
+test('stores the canonical zero bloom for null rounds', () => {
+  const encoded = encodeNullRoundBlock({
+    number: 2n,
+    hash: bytes32('1'),
+    timestamp: 1n,
+  })
+
+  expect(encoded.block.logsBloom).toBe(zeroLogsBloom)
+})
 
 test('normalizes transaction signature components to canonical 32-byte hex', () => {
   const txHash = bytes32('f')
@@ -170,7 +214,11 @@ test('encodes oversized fee values and unknown transaction types', async () => {
     expect(decodedTx.type).toBe('0x7e')
     expect(decodedTx.chainId).toBe('0x4cb2f')
 
-    const decodedBlock = decodeBlock(storedBlock, [storedTx], [], true, 314_159)
+    const decodedBlock = decodeBlock(
+      storedBlock,
+      { full: true, rows: [storedTx] },
+      314_159
+    )
     expect(decodedBlock.logsBloom).toMatch(/^0x[0-9a-f]{512}$/)
     expect(decodedBlock.transactions[0]).toMatchObject({
       hash: txHash,
@@ -230,6 +278,27 @@ function receipt(overrides: Partial<ChainReceipt>): ChainReceipt {
   }
 }
 
+function chainBlock(overrides: Partial<ChainBlock> = {}): ChainBlock {
+  return {
+    number: 1n,
+    hash: bytes32('1'),
+    parentHash: bytes32('0'),
+    timestamp: 1n,
+    miner: address('0'),
+    gasUsed: 21_000n,
+    gasLimit: 30_000_000n,
+    baseFeePerGas: 1_000_000_000n,
+    size: 1n,
+    stateRoot: emptyRoot,
+    receiptsRoot: emptyRoot,
+    transactionsRoot: emptyRoot,
+    extraData: '0x',
+    logsBloom: zeroLogsBloom,
+    transactions: [],
+    ...overrides,
+  } as unknown as ChainBlock
+}
+
 function blockRow(number: bigint): EncodedBlock {
   return {
     number,
@@ -246,5 +315,6 @@ function blockRow(number: bigint): EncodedBlock {
     receiptsRoot: emptyRoot,
     transactionsRoot: emptyRoot,
     extraData: '0x',
+    logsBloom: zeroLogsBloom,
   }
 }

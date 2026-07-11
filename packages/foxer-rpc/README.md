@@ -61,7 +61,7 @@ The schema is optimized for small disk usage and fast API reads:
 - Most numeric fields are stored as `bigint`.
 - `transactions.value` is stored as `numeric(78,0)` because attoFIL values can exceed signed 64-bit integer range.
 - Receipt fields such as `status`, `receiptGasUsed`, `cumulativeGasUsed`, `effectiveGasPrice`, and `contractAddress` are stored on `transactions`.
-- `logsBloom` is not stored. It is recomputed from logs when returning blocks or receipts.
+- Block `logsBloom` is stored with each block. Receipt blooms are recomputed from their logs.
 - Log rows do not duplicate `blockHash` or `transactionHash`; those are recovered by joining through `blockNumber` and `transactionIndex`.
 
 Important indexes:

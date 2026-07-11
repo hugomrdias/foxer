@@ -191,6 +191,7 @@ describe('binary COPY protocol', () => {
       'receipts_root',
       'transactions_root',
       'extra_data',
+      'logs_bloom',
     ])
     expect(TRANSACTION_COPY_COLUMNS).toEqual([
       'hash',
@@ -232,7 +233,7 @@ describe('binary COPY protocol', () => {
     const tx = sampleTransaction()
     const log = sampleLog()
 
-    expect(encodeBlockCopyRow(block).subarray(0, 2).readInt16BE(0)).toBe(14)
+    expect(encodeBlockCopyRow(block).subarray(0, 2).readInt16BE(0)).toBe(15)
     expect(encodeTransactionCopyRow(tx).subarray(0, 2).readInt16BE(0)).toBe(22)
     expect(encodeLogCopyRow(log).subarray(0, 2).readInt16BE(0)).toBe(9)
   })

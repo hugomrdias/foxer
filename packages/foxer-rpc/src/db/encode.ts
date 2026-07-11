@@ -10,6 +10,7 @@ import type {
   EncodedTransaction,
   IndexedBlockData,
 } from '../types.ts'
+import { zeroLogsBloom } from '../utils/bloom.ts'
 import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
 
 /**
@@ -22,6 +23,9 @@ import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
 export function encodeBlock(block: ChainBlock): EncodedBlock {
   if (!block.hash) {
     throw new Error(`Block ${block.number} has no hash`)
+  }
+  if (!block.logsBloom) {
+    throw new Error(`Block ${block.number} has no logs bloom`)
   }
 
   return {
@@ -39,6 +43,11 @@ export function encodeBlock(block: ChainBlock): EncodedBlock {
     receiptsRoot: normalizeHex(block.receiptsRoot),
     transactionsRoot: normalizeHex(block.transactionsRoot),
     extraData: normalizeHex(block.extraData),
+    logsBloom: normalizeFixedWidthHex(
+      block.logsBloom,
+      256,
+      `Block ${block.number} logs bloom`
+    ),
   }
 }
 
@@ -210,6 +219,7 @@ export function encodeNullRoundBlock(options: {
       receiptsRoot: EMPTY_TRIE_HASH,
       transactionsRoot: EMPTY_TRIE_HASH,
       extraData: '0x',
+      logsBloom: zeroLogsBloom,
     },
     transactions: [],
     logs: [],

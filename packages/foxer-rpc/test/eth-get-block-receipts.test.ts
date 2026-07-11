@@ -13,6 +13,7 @@ import {
   emptyRoot,
   testLogger,
   withTestDatabase,
+  zeroLogsBloom,
 } from './helpers.ts'
 
 const block1 = bytes32('1')
@@ -150,6 +151,7 @@ function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
     receiptsRoot: emptyRoot,
     transactionsRoot: emptyRoot,
     extraData: '0x',
+    logsBloom: zeroLogsBloom,
   }
 }
 

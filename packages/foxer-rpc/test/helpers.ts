@@ -5,6 +5,8 @@ import { resolve } from 'node:path'
 import { createDatabase, type Database } from '../src/db/client.ts'
 import { runMigrations } from '../src/db/migrate.ts'
 
+export { zeroLogsBloom } from '../src/utils/bloom.ts'
+
 export const testLogger = {
   error: () => undefined,
   info: () => undefined,

@@ -21,6 +21,7 @@ import {
   emptyRoot,
   testLogger,
   withTestDatabase,
+  zeroLogsBloom,
 } from './helpers.ts'
 
 describe('reorg handling', () => {
@@ -148,6 +149,7 @@ function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
     receiptsRoot: emptyRoot,
     transactionsRoot: emptyRoot,
     extraData: '0x',
+    logsBloom: zeroLogsBloom,
   }
 }
 

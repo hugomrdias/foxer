@@ -3,10 +3,7 @@ import { type Hex, hexToBytes, keccak256 } from 'viem'
 export const zeroLogsBloom = `0x${'00'.repeat(256)}` as Hex
 
 /**
- * Recomputes an Ethereum logs bloom from log addresses and topics.
- *
- * Blooms are not stored in the database to save 256 bytes per block/receipt, so
- * JSON-RPC block and receipt responses call this when they need the bloom field.
+ * Recomputes an Ethereum receipt logs bloom from log addresses and topics.
  */
 export function createLogsBloom(values: Hex[]): Hex {
   const bloom = new Uint8Array(256)

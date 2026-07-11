@@ -15,7 +15,13 @@ import {
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
 import { runBackfill } from '../src/sync/backfill.ts'
-import { address, emptyRoot, testLogger, withTestDatabase } from './helpers.ts'
+import {
+  address,
+  emptyRoot,
+  testLogger,
+  withTestDatabase,
+  zeroLogsBloom,
+} from './helpers.ts'
 
 const REQUIRED_INDEXES = [
   'blocks_pkey',
@@ -56,6 +62,7 @@ async function insertSampleRows(db: Database) {
     receiptsRoot: emptyRoot,
     transactionsRoot: emptyRoot,
     extraData: '0x',
+    logsBloom: zeroLogsBloom,
   })
 
   await db.insert(schema.transactions).values({
@@ -128,6 +135,7 @@ describe('backfill indexes', () => {
           receiptsRoot: emptyRoot,
           transactionsRoot: emptyRoot,
           extraData: '0x',
+          logsBloom: zeroLogsBloom,
         })
       }).toThrow()
 

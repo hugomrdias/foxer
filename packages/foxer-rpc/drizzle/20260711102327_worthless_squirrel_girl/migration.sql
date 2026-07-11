@@ -1,0 +1,1 @@
+ALTER TABLE "blocks" ADD COLUMN "logs_bloom" bytea NOT NULL;

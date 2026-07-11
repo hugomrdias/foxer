@@ -13,6 +13,7 @@ import {
 } from '../src/db/client.ts'
 import { runMigrations } from '../src/db/migrate.ts'
 import { schema } from '../src/db/schema/index.ts'
+import { zeroLogsBloom } from '../src/utils/bloom.ts'
 import { hexToBytes } from '../src/utils/hex.ts'
 
 const logger = {
@@ -93,6 +94,7 @@ test('getBlockByHash prefers real blocks over null-round placeholders', async ()
         receiptsRoot: emptyRoot,
         transactionsRoot: emptyRoot,
         extraData: '0x',
+        logsBloom: zeroLogsBloom,
       },
       {
         number: 10n,
@@ -109,6 +111,7 @@ test('getBlockByHash prefers real blocks over null-round placeholders', async ()
         receiptsRoot: emptyRoot,
         transactionsRoot: emptyRoot,
         extraData: '0x',
+        logsBloom: zeroLogsBloom,
       },
     ])
 

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, mock, test } from 'bun:test'
 
 import type { Database } from '../src/db/client.ts'
 import type { IndexedBlockData } from '../src/types.ts'
+import { zeroLogsBloom } from './helpers.ts'
 
 const active = { current: 0, max: 0 }
 
@@ -184,6 +185,7 @@ function sampleIndexedBlock(number: bigint): IndexedBlockData {
       transactionsRoot:
         '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421',
       extraData: '0x',
+      logsBloom: zeroLogsBloom,
     },
     transactions: [],
     logs: [],

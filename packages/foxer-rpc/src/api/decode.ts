@@ -5,7 +5,11 @@ import { createLogsBloom, zeroLogsBloom } from '../utils/bloom.ts'
 
 type BlockRow = typeof schema.blocks.$inferSelect
 type TransactionRow = typeof schema.transactions.$inferSelect
+type TransactionHashRow = Pick<TransactionRow, 'hash'>
 type LogRow = typeof schema.logs.$inferSelect
+type BlockTransactions =
+  | { full: true; rows: TransactionRow[] }
+  | { full: false; rows: TransactionHashRow[] }
 
 /**
  * Formats integer-like values as Ethereum JSON-RPC hex quantities.
@@ -24,14 +28,11 @@ export function quantity(
  * Reconstructs an Ethereum block response from compact database rows.
  *
  * Several Filecoin/FEVM Ethereum-view fields are deterministic constants, so
- * they are emitted here instead of stored. `logsBloom` is recomputed from the
- * block's logs to keep the blocks table small.
+ * they are emitted here instead of stored.
  */
 export function decodeBlock(
   block: BlockRow,
-  transactions: TransactionRow[],
-  logs: LogRow[],
-  fullTransactions: boolean,
+  transactions: BlockTransactions,
   chainId: number
 ) {
   return {
@@ -41,7 +42,7 @@ export function decodeBlock(
     nonce: '0x0000000000000000',
     sha3Uncles:
       '0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347',
-    logsBloom: logsBloom(logs),
+    logsBloom: block.logsBloom,
     transactionsRoot: block.transactionsRoot,
     stateRoot: block.stateRoot,
     receiptsRoot: block.receiptsRoot,
@@ -53,9 +54,9 @@ export function decodeBlock(
     gasLimit: quantity(block.gasLimit),
     gasUsed: quantity(block.gasUsed),
     timestamp: quantity(block.timestamp),
-    transactions: fullTransactions
-      ? transactions.map((tx) => decodeTransaction(tx, chainId, block))
-      : transactions.map((tx) => tx.hash),
+    transactions: transactions.full
+      ? transactions.rows.map((tx) => decodeTransaction(tx, chainId, block))
+      : transactions.rows.map((tx) => tx.hash),
     uncles: [],
     baseFeePerGas: quantity(block.baseFeePerGas),
     mixHash:

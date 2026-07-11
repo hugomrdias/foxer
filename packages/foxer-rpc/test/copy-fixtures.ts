@@ -8,7 +8,7 @@ import type {
   EncodedTransaction,
   IndexedBlockData,
 } from '../src/types.ts'
-import { address, bytes32, emptyRoot } from './helpers.ts'
+import { address, bytes32, emptyRoot, zeroLogsBloom } from './helpers.ts'
 
 export function toHex(buffer: Buffer): string {
   return buffer.toString('hex')
@@ -211,6 +211,7 @@ export function sampleBlock(number = 1n): EncodedBlock {
     receiptsRoot: emptyRoot,
     transactionsRoot: emptyRoot,
     extraData: '0x',
+    logsBloom: zeroLogsBloom,
   }
 }
 

@@ -193,6 +193,7 @@ export function encodeBlockCopyRow(block: EncodedBlock): Buffer {
     encodeCopyBytea(block.receiptsRoot),
     encodeCopyBytea(block.transactionsRoot),
     encodeCopyBytea(block.extraData),
+    encodeCopyBytea(block.logsBloom),
   ])
 }
 

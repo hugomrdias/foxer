@@ -21,6 +21,7 @@ export const BLOCK_COPY_COLUMNS = [
   'receipts_root',
   'transactions_root',
   'extra_data',
+  'logs_bloom',
 ] as const
 
 /** Fixed column order for `transactions` COPY ingestion. */

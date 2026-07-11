@@ -169,6 +169,13 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     .orderBy(asc(schema.transactions.transactionIndex))
     .prepare('get_transactions_by_block_number')
 
+  const getTransactionHashesByBlockNumber = db
+    .select({ hash: schema.transactions.hash })
+    .from(schema.transactions)
+    .where(eq(schema.transactions.blockNumber, sql.placeholder('blockNumber')))
+    .orderBy(asc(schema.transactions.transactionIndex))
+    .prepare('get_transaction_hashes_by_block_number')
+
   const getTransactionByBlockNumberAndIndex = db
     .select()
     .from(schema.transactions)
@@ -216,6 +223,7 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     getBlockByHash,
     getTransactionByHash,
     getTransactionsByBlockNumber,
+    getTransactionHashesByBlockNumber,
     getTransactionByBlockNumberAndIndex,
     getTransactionCountByBlockNumber,
     getLogsByBlockNumber,

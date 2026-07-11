@@ -1,5 +1,5 @@
 import { hexToBytes } from '../../../utils/hex.ts'
-import { decodeBlockByRow } from '../block.ts'
+import { decodeBlock } from '../../decode.ts'
 import type { MethodContext } from '../types.ts'
 import { requireHex } from '../validation.ts'
 
@@ -15,5 +15,17 @@ export async function ethGetBlockByHash(
     await args.db.$prepared.getBlockByHash.execute({ hash: hexToBytes(hash) })
   )[0]
   if (!block) return null
-  return decodeBlockByRow(args, block, Boolean(params[1]))
+
+  if (params[1]) {
+    const rows = await args.db.$prepared.getTransactionsByBlockNumber.execute({
+      blockNumber: block.number,
+    })
+    return decodeBlock(block, { full: true, rows }, args.config.chainId)
+  }
+
+  const rows =
+    await args.db.$prepared.getTransactionHashesByBlockNumber.execute({
+      blockNumber: block.number,
+    })
+  return decodeBlock(block, { full: false, rows }, args.config.chainId)
 }

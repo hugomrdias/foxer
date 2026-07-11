@@ -14,7 +14,13 @@ import {
   iterateTransactions,
 } from '../src/db/indexed-batch.ts'
 import type { EncodedLog, IndexedBlockData } from '../src/types.ts'
-import { address, bytes32, emptyRoot, withTestDatabase } from './helpers.ts'
+import {
+  address,
+  bytes32,
+  emptyRoot,
+  withTestDatabase,
+  zeroLogsBloom,
+} from './helpers.ts'
 
 const RANGE_ERROR_REGRESSION_SIZE = 1_000_001
 
@@ -76,6 +82,7 @@ function sampleIndexedBlock(
       receiptsRoot: emptyRoot,
       transactionsRoot: emptyRoot,
       extraData: '0x',
+      logsBloom: zeroLogsBloom,
     },
     transactions,
     logs,
