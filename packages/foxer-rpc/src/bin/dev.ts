@@ -20,13 +20,7 @@ export const dev: Command = command(
     })
 
     try {
-      await runServer({
-        logger,
-        flags: {
-          ...argv.flags,
-          pgliteDir: argv.flags.dir,
-        },
-      })
+      await runServer({ logger, flags: argv.flags })
     } catch (error) {
       logger.error({ error }, 'dev server failed')
       gracefulExit(1)

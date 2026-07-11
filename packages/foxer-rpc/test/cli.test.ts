@@ -22,3 +22,24 @@ test('registers the API-only serve command', async () => {
     'serve        Serve the production JSON-RPC API without sync'
   )
 })
+
+test('dev exposes only PostgreSQL database configuration', async () => {
+  const entrypoint = fileURLToPath(
+    new URL('../src/bin/index.ts', import.meta.url)
+  )
+  const child = Bun.spawn([process.execPath, entrypoint, 'dev', '--help'], {
+    stderr: 'pipe',
+    stdout: 'pipe',
+  })
+
+  const [exitCode, stdout, stderr] = await Promise.all([
+    child.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ])
+
+  expect(exitCode).toBe(0)
+  expect(stderr).toBe('')
+  expect(stdout).toContain('--database-url')
+  expect(stdout).not.toContain('--dir')
+})

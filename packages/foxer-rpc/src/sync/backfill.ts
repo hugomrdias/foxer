@@ -1,5 +1,4 @@
 import type { InternalConfig } from '../config.ts'
-import { resolveBackfillWriteMode } from '../config.ts'
 import { insertIndexedBlockData } from '../db/actions.ts'
 import {
   anyManagedIndexMissing,
@@ -47,10 +46,6 @@ export async function runBackfill(args: {
   const needsWork = cursor <= safeHead
   const deferIndexes = config.deferBackfillIndexes
   const deferIndexesForBackfill = deferIndexes && needsWork
-  const backfillWriter = resolveBackfillWriteMode(
-    config.backfillWriteMode,
-    config.database?.driver ?? 'pglite'
-  )
 
   if (!deferIndexesForBackfill && (await anyManagedIndexMissing(db))) {
     await restoreManagedBackfillIndexes({ db, logger })
@@ -77,7 +72,7 @@ export async function runBackfill(args: {
       backfillCopyChunkBytes: config.backfillCopyChunkBytes,
       deferBackfillIndexes: deferIndexes,
       backfillWriteMode: config.backfillWriteMode,
-      backfillWriter,
+      backfillWriter: config.backfillWriteMode,
     },
     'starting backfill'
   )
@@ -110,14 +105,14 @@ export async function runBackfill(args: {
 
       const writeClock = startClock()
       const copyMetrics =
-        backfillWriter === 'copy'
+        config.backfillWriteMode === 'copy'
           ? await copyIndexedBlockData({
               db,
               batch: indexedBlocks,
               chunkBytes: config.backfillCopyChunkBytes,
             })
           : undefined
-      if (backfillWriter !== 'copy') {
+      if (config.backfillWriteMode !== 'copy') {
         await insertIndexedBlockData({ db, batch: indexedBlocks })
       }
       logger.debug(
@@ -126,7 +121,7 @@ export async function runBackfill(args: {
           transactions: countTransactions(indexedBlocks),
           logs: countLogs(indexedBlocks),
           duration: writeClock(),
-          backfillWriter,
+          backfillWriter: config.backfillWriteMode,
           ...(copyMetrics
             ? {
                 copyBlocks: copyMetrics.blocks,

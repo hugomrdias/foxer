@@ -2,7 +2,7 @@
 
 `foxer-rpc` is a standalone full-chain sync service for Filecoin/FEVM-style Ethereum JSON-RPC chains.
 
-It syncs canonical chain data into a small Postgres-compatible database schema and exposes a minimal Ethereum JSON-RPC API backed by that database. It is intentionally simpler than `@hugomrdias/foxer`: there are no contract configs, hooks, custom indexers, user schemas, SQL-over-HTTP endpoints, or config files.
+It syncs canonical chain data into a small PostgreSQL database schema and exposes a minimal Ethereum JSON-RPC API backed by that database. It is intentionally simpler than `@hugomrdias/foxer`: there are no contract configs, hooks, custom indexers, user schemas, SQL-over-HTTP endpoints, or config files.
 
 ## What It Does
 
@@ -27,7 +27,7 @@ Methods served from the local database are listed below. Any other JSON-RPC meth
 flowchart LR
   upstream["Upstream JSON-RPC node"]
   sync["foxer-rpc sync engine"]
-  db["Postgres or PGlite"]
+  db["PostgreSQL"]
   api["Hono JSON-RPC API"]
   client["RPC client"]
 
@@ -43,11 +43,11 @@ At startup, `foxer-rpc`:
 1. Reads configuration from CLI flags and environment variables.
 2. Connects to the upstream RPC node with `viem`.
 3. Reads the upstream `chainId`.
-4. Opens Postgres or PGlite. Postgres uses a static one-connection sync pool; PGlite uses one shared client.
+4. Opens a static one-connection PostgreSQL sync pool.
 5. Applies the shipped Drizzle migrations from `packages/foxer-rpc/drizzle`.
 6. Verifies recently indexed blocks against the upstream chain to detect reorgs.
 7. Backfills historical blocks up to `head - finality` through the sync pool.
-8. Opens the API Postgres pool (or reuses the PGlite client).
+8. Opens the PostgreSQL API pool.
 9. Starts live sync with `watchBlockNumber` on the sync database context.
 10. Starts the Hono JSON-RPC API on the API database context.
 
@@ -153,7 +153,7 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | --- | --- | --- | --- |
 | `RPC_URL` | `--rpc-url` | Required | Upstream Ethereum JSON-RPC URL |
 | `REALTIME_RPC_URL` | `--realtime-rpc-url` | `RPC_URL` | Optional upstream RPC URL for live polling |
-| `DATABASE_URL` | `--database-url` | None | Postgres connection URL |
+| `DATABASE_URL` | `--database-url` | Required | PostgreSQL connection URL |
 | `MAX_CONNECTIONS` | `--max-connections` | `100` | Maximum Postgres connections for the API pool (minimum 1) |
 | `START_BLOCK` | `--start-block` | `0` | First block to sync when the DB is empty |
 | `FINALITY` | `--finality` | `30` | Blocks to leave behind the chain head during backfill |
@@ -162,13 +162,8 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `LOG_LEVEL` | `--log-level` | `info` | Pino log level |
 | `MAX_LOGS_BLOCK_RANGE` | `--max-logs-block-range` | `10000` | Maximum block range for `eth_getLogs` |
 | `MAX_LOGS_RESULT_ROWS` | `--max-logs-result-rows` | `10000` | Maximum rows returned by `eth_getLogs` |
+| `BACKFILL_WRITE_MODE` | `--backfill-write-mode` | `copy` | Backfill with PostgreSQL binary COPY or batched `insert` statements |
 | `AUTH_SECRET` | `--auth-secret` | None | Enables JWT auth on all routes except `/health` |
-
-Development mode also accepts:
-
-| Flag | Default | Description |
-| --- | --- | --- |
-| `--dir` | `.pglite` | PGlite data directory |
 
 ## Testing
 
@@ -249,20 +244,32 @@ cd packages/foxer-rpc
 bun run src/bin/index.ts
 ```
 
-## Run Manually With PGlite
+## Local Development Without Docker
 
-PGlite is best for local development and quick smoke tests. It stores the database in a local directory and does not require a separate Postgres server.
+[`autopg`](https://github.com/automagik-dev/autopg) can run a native local PostgreSQL server without Docker. It is an optional development tool and is not embedded in or required by `foxer-rpc`.
+
+Install the current signed release using the upstream installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/automagik-dev/autopg/main/install.sh | bash
+```
+
+Start a persistent local server in one terminal:
+
+```bash
+autopg serve --data .autopg --port 5432
+```
+
+Then start `foxer-rpc` in another terminal. A dedicated autopg data directory makes using its default `postgres` database safe for this local workflow:
 
 ```bash
 cd packages/foxer-rpc
 
 RPC_URL='https://api.calibration.node.glif.io/rpc/v1' \
+DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/postgres' \
 START_BLOCK=3140755 \
 PORT=8545 \
-bun run src/bin/index.ts dev \
-  --dir .pglite \
-  --start-block 3140755 \
-  --port 8545
+bun run src/bin/index.ts dev
 ```
 
 Then query the local endpoint:
@@ -293,7 +300,7 @@ Stop the process with `Ctrl+C`.
 
 ## Run Manually With Postgres
 
-Postgres is recommended for production and larger backfills.
+Dockerized PostgreSQL remains available for production-like local development.
 
 Start a local Postgres. For production tuning, see [Recommended Production Settings](#recommended-production-settings) below:
 
@@ -364,7 +371,7 @@ closer to clients.
 
 For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics. The values below assume about 8 GB of RAM dedicated to Postgres. Scale `shared_buffers` to roughly 25% of RAM and `effective_cache_size` to roughly 50-75%.
 
-The combined `start` deployment keeps two Postgres pools. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. API-only `serve` deployments open only the API pool. Pools are tagged with `application_name` values `foxer-rpc-api` and `foxer-rpc-sync` for observability. PGlite uses one shared client in development because it does not use Postgres pools and must not open the same local database twice.
+The combined `start` deployment keeps two Postgres pools. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. API-only `serve` deployments open only the API pool. Pools are tagged with `application_name` values `foxer-rpc-api` and `foxer-rpc-sync` for observability.
 
 Plan PostgreSQL `max_connections` for every replica plus headroom: each `start` process can hold up to its configured API maximum plus one sync connection, while each `serve` process can hold up to its configured API maximum.
 
@@ -442,24 +449,6 @@ docker build \
   .
 ```
 
-### Run With Docker And PGlite
-
-PGlite works in Docker for testing, but it is not recommended for production.
-
-```bash
-docker volume create foxer-rpc-pglite
-
-docker run --rm \
-  --name foxer-rpc \
-  -p 8545:8545 \
-  -e RPC_URL='https://api.calibration.node.glif.io/rpc/v1' \
-  -e START_BLOCK=3140755 \
-  -e PORT=8545 \
-  -v foxer-rpc-pglite:/app/packages/foxer-rpc/.pglite \
-  foxer-rpc:local \
-  bun run dist/bin/index.js dev --dir .pglite
-```
-
 ### Run With Docker And Postgres
 
 Create a network:
@@ -525,7 +514,7 @@ docker stop foxer-rpc-postgres
 Remove data volumes when you no longer need them:
 
 ```bash
-docker volume rm foxer-rpc-postgres foxer-rpc-pglite
+docker volume rm foxer-rpc-postgres
 ```
 
 ## Docker Compose Example

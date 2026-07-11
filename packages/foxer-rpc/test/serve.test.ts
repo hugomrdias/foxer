@@ -6,10 +6,7 @@ import type { Logger } from '../src/utils/logger.ts'
 
 const logger = {} as Logger
 const config = {
-  database: {
-    driver: 'postgres',
-    url: 'postgres://localhost/foxer_rpc',
-  },
+  databaseUrl: 'postgres://localhost/foxer_rpc',
   maxConnections: 17,
   port: 8545,
 } as InternalConfig
@@ -30,7 +27,6 @@ function createDependencies(options: {
       options.onCreateDatabase?.(databaseOptions)
       return {
         db: {} as Database,
-        driver: 'postgres',
         stop: options.dbStop,
       } satisfies DatabaseContext
     }),

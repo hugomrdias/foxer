@@ -1,5 +1,4 @@
 import { migrate as migratePostgres } from 'drizzle-orm/node-postgres/migrator'
-import { migrate as migratePglite } from 'drizzle-orm/pglite/migrator'
 
 import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
@@ -22,14 +21,7 @@ export async function runMigrations({
 }) {
   const endClock = startClock()
 
-  if (dbContext.driver === 'postgres') {
-    await migratePostgres(dbContext.db as never, { migrationsFolder: folder })
-  } else {
-    await migratePglite(dbContext.db as never, { migrationsFolder: folder })
-  }
+  await migratePostgres(dbContext.db, { migrationsFolder: folder })
 
-  logger.info(
-    { driver: dbContext.driver, duration: endClock() },
-    'migrations applied'
-  )
+  logger.info({ duration: endClock() }, 'migrations applied')
 }

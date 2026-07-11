@@ -55,7 +55,7 @@ export async function runServer(args: { logger: Logger; flags: CliConfig }) {
   const stopDatabases = async () => {
     const errors: unknown[] = []
 
-    if (apiDbContext && apiDbContext !== syncDbContext) {
+    if (apiDbContext) {
       try {
         await apiDbContext.stop()
       } catch (err) {
@@ -98,7 +98,7 @@ export async function runServer(args: { logger: Logger; flags: CliConfig }) {
 
   try {
     syncDbContext = createDatabase({
-      config: config.database,
+      databaseUrl: config.databaseUrl,
       logger: args.logger,
       role: 'sync',
     })
@@ -122,15 +122,12 @@ export async function runServer(args: { logger: Logger; flags: CliConfig }) {
       config,
     })
 
-    apiDbContext =
-      syncDbContext.driver === 'postgres'
-        ? createDatabase({
-            config: config.database,
-            logger: args.logger,
-            role: 'api',
-            maxConnections: config.maxConnections,
-          })
-        : syncDbContext
+    apiDbContext = createDatabase({
+      databaseUrl: config.databaseUrl,
+      logger: args.logger,
+      role: 'api',
+      maxConnections: config.maxConnections,
+    })
 
     sync = startLiveSync({
       logger: args.logger,

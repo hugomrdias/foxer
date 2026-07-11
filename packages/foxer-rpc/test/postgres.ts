@@ -25,7 +25,7 @@ export async function migrateTemplateDatabase() {
   if (!state.templateUrl)
     throw new Error('PostgreSQL test container is not ready')
   const dbContext = createDatabase({
-    config: { driver: 'postgres', url: state.templateUrl },
+    databaseUrl: state.templateUrl,
     logger: testLogger,
   })
   try {
@@ -52,7 +52,7 @@ export async function createTestDatabaseContext(): Promise<DatabaseContext> {
   }
 
   const context = createDatabase({
-    config: { driver: 'postgres', url: databaseUrl(container, database) },
+    databaseUrl: databaseUrl(container, database),
     logger: testLogger,
   })
   const stop = context.stop

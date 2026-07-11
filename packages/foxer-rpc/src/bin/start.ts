@@ -19,11 +19,6 @@ export const start: Command = command(
       mode: 'json',
     })
 
-    if (!argv.flags.databaseUrl && !process.env.DATABASE_URL) {
-      logger.error('DATABASE_URL environment variable is not set')
-      gracefulExit(1)
-    }
-
     try {
       await runServer({
         logger,

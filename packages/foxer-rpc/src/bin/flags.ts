@@ -19,12 +19,12 @@ const LogLevel = (logLevel: LogLevels) => {
   return logLevel
 }
 
-const BackfillWriteModes = ['auto', 'copy', 'insert'] as const
+const BackfillWriteModes = ['copy', 'insert'] as const
 
 const BackfillWriteModeFlag = (mode: string): BackfillWriteMode => {
   if (!BackfillWriteModes.includes(mode as BackfillWriteMode)) {
     throw new Error(
-      `Invalid backfill write mode: "${mode}". Expected auto, copy, or insert.`
+      `Invalid backfill write mode: "${mode}". Expected copy or insert.`
     )
   }
 
@@ -47,11 +47,6 @@ export const globalFlags = {
   maxConnections: {
     type: Number,
     description: 'Maximum Postgres connections for the JSON-RPC API pool',
-  },
-  dir: {
-    type: String,
-    description: 'PGlite directory for dev mode',
-    default: '.pglite',
   },
   startBlock: {
     type: String,
@@ -94,8 +89,7 @@ export const globalFlags = {
   },
   backfillWriteMode: {
     type: BackfillWriteModeFlag,
-    description:
-      'Backfill writer: auto (COPY on PostgreSQL, inserts on PGlite), copy, or insert',
+    description: 'Backfill writer: PostgreSQL COPY or batched inserts',
   },
   backfillFetchConcurrency: {
     type: Number,

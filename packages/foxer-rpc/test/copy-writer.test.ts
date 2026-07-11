@@ -1,20 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { resolve } from 'node:path'
 import { Writable } from 'node:stream'
 import { eq } from 'drizzle-orm'
 import { Pool, type PoolClient } from 'pg'
 
-import {
-  type BackfillWriteMode,
-  resolveBackfillWriteMode,
-} from '../src/config.ts'
-import {
-  createDatabase,
-  type Database,
-  isPostgresDatabase,
-} from '../src/db/client.ts'
+import type { Database } from '../src/db/client.ts'
 import { createCopyTableMetrics } from '../src/db/copy/chunks.ts'
 import {
   MAX_COPY_CHUNK_BYTES,
@@ -39,7 +28,6 @@ import {
   sampleLog,
   sampleTransaction,
 } from './copy-fixtures.ts'
-import { testLogger } from './helpers.ts'
 import { createTestDatabaseContext } from './postgres.ts'
 
 describe('COPY metrics', () => {
@@ -180,77 +168,6 @@ test('copies tables in blocks, transactions, logs order', async () => {
     expect(copyTables).toEqual(['blocks', 'transactions', 'logs'])
   } finally {
     await pool.end()
-  }
-})
-
-describe('backfill writer selection', () => {
-  const cases: Array<{
-    mode: BackfillWriteMode
-    driver: 'postgres' | 'pglite'
-    expected?: 'copy' | 'insert'
-    error?: string
-  }> = [
-    { mode: 'auto', driver: 'postgres', expected: 'copy' },
-    { mode: 'auto', driver: 'pglite', expected: 'insert' },
-    { mode: 'copy', driver: 'postgres', expected: 'copy' },
-    { mode: 'insert', driver: 'postgres', expected: 'insert' },
-    { mode: 'insert', driver: 'pglite', expected: 'insert' },
-    {
-      mode: 'copy',
-      driver: 'pglite',
-      error:
-        'BACKFILL_WRITE_MODE=copy requires PostgreSQL; use auto or insert for PGlite',
-    },
-  ]
-
-  for (const item of cases) {
-    test(`${item.mode} on ${item.driver}`, () => {
-      if (item.error) {
-        expect(() => resolveBackfillWriteMode(item.mode, item.driver)).toThrow(
-          item.error
-        )
-        return
-      }
-
-      expect(resolveBackfillWriteMode(item.mode, item.driver)).toBe(
-        item.expected as 'copy' | 'insert'
-      )
-    })
-  }
-})
-
-test('isPostgresDatabase narrows postgres pools only', async () => {
-  const directory = await mkdtemp(resolve(tmpdir(), 'foxer-rpc-test-'))
-  const pgliteContext = createDatabase({
-    config: { driver: 'pglite', directory },
-    logger: testLogger,
-  })
-
-  try {
-    expect(isPostgresDatabase(pgliteContext.db)).toBe(false)
-  } finally {
-    await pgliteContext.stop()
-    await rm(directory, { recursive: true, force: true })
-  }
-})
-
-test('copyIndexedBlockData rejects non-PostgreSQL databases', async () => {
-  const directory = await mkdtemp(resolve(tmpdir(), 'foxer-rpc-test-'))
-  const dbContext = createDatabase({
-    config: { driver: 'pglite', directory },
-    logger: testLogger,
-  })
-
-  try {
-    await expect(
-      copyIndexedBlockData({
-        db: dbContext.db,
-        batch: [sampleIndexedBatchEntry(sampleBlock())],
-      })
-    ).rejects.toThrow('COPY backfill requires a PostgreSQL database connection')
-  } finally {
-    await dbContext.stop()
-    await rm(directory, { recursive: true, force: true })
   }
 })
 

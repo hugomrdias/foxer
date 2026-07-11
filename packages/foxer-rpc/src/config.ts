@@ -14,20 +14,10 @@ dotenv.config({
   quiet: true,
 })
 
-export type DatabaseConfig =
-  | {
-      driver: 'postgres'
-      url: string
-    }
-  | {
-      driver: 'pglite'
-      directory: string
-    }
-
-export type BackfillWriteMode = 'auto' | 'copy' | 'insert'
+export type BackfillWriteMode = 'copy' | 'insert'
 
 export type InternalConfig = {
-  database?: DatabaseConfig
+  databaseUrl: string
   startBlock: bigint
   finality: bigint
   batchSize: bigint
@@ -73,7 +63,7 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === true || value === 'true' || value === '1')
     .default(false),
-  BACKFILL_WRITE_MODE: z.enum(['auto', 'copy', 'insert']).default('auto'),
+  BACKFILL_WRITE_MODE: z.enum(['copy', 'insert']).default('copy'),
   BACKFILL_FETCH_CONCURRENCY: z.coerce.number().int().positive().default(20),
   BACKFILL_COPY_CHUNK_BYTES: backfillCopyChunkBytesSchema,
   AUTH_SECRET: z.string().min(16).optional(),
@@ -84,7 +74,6 @@ export type CliConfig = {
   realtimeRpcUrl?: string
   databaseUrl?: string
   maxConnections?: number
-  pgliteDir?: string
   startBlock?: string
   finality?: string
   batchSize?: string
@@ -161,20 +150,18 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     throw new Error('RPC_URL is required')
   }
 
+  if (!env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required')
+  }
+
   const clients = createRpcClients({
     rpcUrl: env.RPC_URL,
     realtimeRpcUrl: env.REALTIME_RPC_URL,
   })
   const chainId = await clients.backfill.getChainId()
-  const database = env.DATABASE_URL
-    ? ({ driver: 'postgres', url: env.DATABASE_URL } as const)
-    : ({
-        driver: 'pglite',
-        directory: flags.pgliteDir ?? '.pglite',
-      } as const)
 
   return {
-    database,
+    databaseUrl: env.DATABASE_URL,
     startBlock: env.START_BLOCK,
     finality: env.FINALITY,
     batchSize: env.BATCH_SIZE,
@@ -191,30 +178,4 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     clients,
     authSecret: env.AUTH_SECRET,
   }
-}
-
-/**
- * Resolves the effective backfill writer for the configured database driver.
- *
- * `auto` selects COPY on PostgreSQL and inserts on PGlite. Explicit `copy` on
- * PGlite fails with a clear configuration error.
- */
-export function resolveBackfillWriteMode(
-  mode: BackfillWriteMode,
-  driver: DatabaseConfig['driver']
-): 'copy' | 'insert' {
-  if (mode === 'insert') {
-    return 'insert'
-  }
-
-  if (mode === 'copy') {
-    if (driver === 'pglite') {
-      throw new Error(
-        'BACKFILL_WRITE_MODE=copy requires PostgreSQL; use auto or insert for PGlite'
-      )
-    }
-    return 'copy'
-  }
-
-  return driver === 'postgres' ? 'copy' : 'insert'
 }

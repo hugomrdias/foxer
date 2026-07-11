@@ -57,7 +57,7 @@ export async function runApiServer(
 
   try {
     dbContext = dependencies.createDatabase({
-      config: config.database,
+      databaseUrl: config.databaseUrl,
       logger: args.logger,
       role: 'api',
       maxConnections: config.maxConnections,
@@ -99,11 +99,6 @@ export const serve: Command = command(
       level: argv.flags.logLevel,
       mode: 'json',
     })
-
-    if (!argv.flags.databaseUrl && !process.env.DATABASE_URL) {
-      logger.error('DATABASE_URL environment variable is not set')
-      gracefulExit(1)
-    }
 
     try {
       await runApiServer({

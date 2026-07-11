@@ -1,11 +1,7 @@
 import { expect, test } from 'bun:test'
 import type { Pool } from 'pg'
 
-import {
-  createDatabase,
-  isPostgresDatabase,
-  POSTGRES_POOL_MAX_SYNC,
-} from '../src/db/client.ts'
+import { createDatabase, POSTGRES_POOL_MAX_SYNC } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
 import { zeroLogsBloom } from '../src/utils/bloom.ts'
 import { hexToBytes } from '../src/utils/hex.ts'
@@ -20,13 +16,12 @@ const invalidPostgresUrl = 'postgres://invalid:invalid@127.0.0.1:1/invalid'
 
 test('postgres api pool uses the configured maximum', async () => {
   const dbContext = createDatabase({
-    config: { driver: 'postgres', url: invalidPostgresUrl },
+    databaseUrl: invalidPostgresUrl,
     logger,
     maxConnections: 12,
   })
 
   try {
-    expect(isPostgresDatabase(dbContext.db)).toBe(true)
     const pool = dbContext.db.$client as Pool
     expect(pool.options.max).toBe(12)
     expect(pool.options.application_name).toBe('foxer-rpc-api')
@@ -37,13 +32,12 @@ test('postgres api pool uses the configured maximum', async () => {
 
 test('postgres sync pool uses static sizing', async () => {
   const dbContext = createDatabase({
-    config: { driver: 'postgres', url: invalidPostgresUrl },
+    databaseUrl: invalidPostgresUrl,
     logger,
     role: 'sync',
   })
 
   try {
-    expect(isPostgresDatabase(dbContext.db)).toBe(true)
     const pool = dbContext.db.$client as Pool
     expect(pool.options.max).toBe(POSTGRES_POOL_MAX_SYNC)
     expect(pool.options.application_name).toBe('foxer-rpc-sync')

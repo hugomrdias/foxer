@@ -6,7 +6,7 @@ import type { PoolClient } from 'pg'
 import { from as copyFrom } from 'pg-copy-streams'
 
 import type { EncodedLog, IndexedBlockData } from '../../types.ts'
-import { type Database, isPostgresDatabase } from '../client.ts'
+import type { Database } from '../client.ts'
 import {
   countBlocks,
   countLogs,
@@ -204,10 +204,6 @@ export async function copyIndexedBlockData(args: {
   const chunkBytes = validateCopyChunkBytes(
     args.chunkBytes ?? DEFAULT_COPY_CHUNK_BYTES
   )
-
-  if (!isPostgresDatabase(args.db)) {
-    throw new Error('COPY backfill requires a PostgreSQL database connection')
-  }
 
   if (args.batch.length === 0) {
     return emptyCopyMetrics()

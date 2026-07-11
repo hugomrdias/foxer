@@ -1,34 +1,22 @@
-import { PGlite } from '@electric-sql/pglite'
 import { asc, desc, eq, sql } from 'drizzle-orm'
 import {
   drizzle as drizzleNodePostgres,
   type NodePgDatabase,
 } from 'drizzle-orm/node-postgres'
-import {
-  drizzle as drizzlePglite,
-  type PgliteDatabase,
-} from 'drizzle-orm/pglite'
 import { Pool } from 'pg'
 
-import type { DatabaseConfig } from '../config.ts'
 import type { Logger } from '../utils/logger.ts'
 import { schema } from './schema/index.ts'
 
 type PreparedQueries = ReturnType<typeof generatePrepared>
 
-export type Database =
-  | (PgliteDatabase & {
-      $client: PGlite
-      $prepared: PreparedQueries
-    })
-  | (NodePgDatabase & {
-      $client: Pool
-      $prepared: PreparedQueries
-    })
+export type Database = NodePgDatabase & {
+  $client: Pool
+  $prepared: PreparedQueries
+}
 
 export type DatabaseContext = {
   db: Database
-  driver: 'postgres' | 'pglite'
   stop: () => Promise<void>
 }
 
@@ -43,75 +31,39 @@ const POSTGRES_ROLE_APPLICATION_NAME: Record<DatabaseRole, string> = {
 }
 
 /**
- * Narrows the shared database union to the PostgreSQL node-postgres driver.
- */
-export function isPostgresDatabase(db: Database): db is NodePgDatabase & {
-  $client: Pool
-  $prepared: PreparedQueries
-} {
-  return db.$client instanceof Pool
-}
-
-/**
  * Opens the configured database and attaches prepared query helpers.
- *
- * Production uses node-postgres through Drizzle. Development can use PGlite,
- * which keeps local smoke tests self-contained. Both drivers expose the same
- * `$prepared` helpers so API and sync code do not need driver-specific paths.
  */
 export function createDatabase({
-  config,
+  databaseUrl,
   logger,
   role = 'api',
   maxConnections = 100,
 }: {
-  config?: DatabaseConfig
+  databaseUrl: string
   logger: Logger
   role?: DatabaseRole
   maxConnections?: number
 }): DatabaseContext {
-  if (config?.driver === 'postgres') {
-    const max = role === 'sync' ? POSTGRES_POOL_MAX_SYNC : maxConnections
-    const pool = new Pool({
-      application_name: POSTGRES_ROLE_APPLICATION_NAME[role],
-      connectionTimeoutMillis: 5_000,
-      idleTimeoutMillis: 30_000,
-      max,
-      connectionString: config.url,
-    })
-    pool.on('error', (err) => {
-      logger.error({ err }, 'postgres pool error')
-    })
+  const max = role === 'sync' ? POSTGRES_POOL_MAX_SYNC : maxConnections
+  const pool = new Pool({
+    application_name: POSTGRES_ROLE_APPLICATION_NAME[role],
+    connectionTimeoutMillis: 5_000,
+    idleTimeoutMillis: 30_000,
+    max,
+    connectionString: databaseUrl,
+  })
+  pool.on('error', (err) => {
+    logger.error({ err }, 'postgres pool error')
+  })
 
-    const db = drizzleNodePostgres({
-      client: pool,
-    }) as Database
-
-    db.$prepared = generatePrepared(db)
-
-    return {
-      db,
-      driver: 'postgres',
-      stop: async () => {
-        await pool.end()
-      },
-    }
-  }
-
-  const client = new PGlite(
-    config?.driver === 'pglite' ? config.directory : '.pglite'
-  )
-  const db = drizzlePglite({
-    client,
-  }) as Database
+  const db = drizzleNodePostgres({ client: pool }) as Database
 
   db.$prepared = generatePrepared(db)
 
   return {
     db,
-    driver: 'pglite',
     stop: async () => {
-      await client.close()
+      await pool.end()
     },
   }
 }
