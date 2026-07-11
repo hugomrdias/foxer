@@ -6,6 +6,7 @@ import type { Hash } from 'viem'
 
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
+import { createRpcClients } from '../src/rpc/client.ts'
 import {
   ensureParentContinuity,
   verifyRecentBlocks,
@@ -23,6 +24,8 @@ import {
   withTestDatabase,
   zeroLogsBloom,
 } from './helpers.ts'
+import { rpcBlock } from './rpc-fixtures.ts'
+import { mockUpstreamRpc, type RpcRequest, upstreamRpcUrl } from './upstream.ts'
 
 describe('reorg handling', () => {
   test('ensureParentContinuity returns null when parent matches', async () => {
@@ -89,17 +92,19 @@ describe('reorg handling', () => {
 function clientWithBlocks(
   blocks: Record<number, { hash: string; parentHash: string }>
 ) {
-  return {
-    getBlock: ({ blockNumber }: { blockNumber: bigint }) => {
+  mockUpstreamRpc({
+    eth_getBlockByNumber: ({ params }: RpcRequest) => {
+      const blockNumber = BigInt(String(params?.[0]))
       const block = blocks[Number(blockNumber)]
       if (!block) throw new Error(`missing block ${blockNumber}`)
       return {
-        number: blockNumber,
+        ...rpcBlock(blockNumber),
         hash: block.hash,
         parentHash: block.parentHash,
       }
     },
-  } as never
+  })
+  return createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill
 }
 
 async function expectCounts(

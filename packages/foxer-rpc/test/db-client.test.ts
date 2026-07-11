@@ -1,9 +1,6 @@
 /// <reference types="bun" />
 
 import { expect, test } from 'bun:test'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { resolve } from 'node:path'
 import type { Pool } from 'pg'
 
 import {
@@ -11,10 +8,10 @@ import {
   isPostgresDatabase,
   POSTGRES_POOL_MAX_SYNC,
 } from '../src/db/client.ts'
-import { runMigrations } from '../src/db/migrate.ts'
 import { schema } from '../src/db/schema/index.ts'
 import { zeroLogsBloom } from '../src/utils/bloom.ts'
 import { hexToBytes } from '../src/utils/hex.ts'
+import { withTestDatabase } from './helpers.ts'
 
 const logger = {
   error: () => undefined,
@@ -58,19 +55,7 @@ test('postgres sync pool uses static sizing', async () => {
 })
 
 test('getBlockByHash prefers real blocks over null-round placeholders', async () => {
-  const directory = await mkdtemp(resolve(tmpdir(), 'foxer-rpc-test-'))
-  const dbContext = createDatabase({
-    config: { driver: 'pglite', directory },
-    logger,
-  })
-
-  try {
-    await runMigrations({
-      dbContext,
-      folder: resolve(import.meta.dir, '../drizzle'),
-      logger,
-    })
-
+  await withTestDatabase(async (db) => {
     const hash =
       '0x1111111111111111111111111111111111111111111111111111111111111111'
     const parentHash =
@@ -78,7 +63,7 @@ test('getBlockByHash prefers real blocks over null-round placeholders', async ()
     const emptyRoot =
       '0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421'
 
-    await dbContext.db.insert(schema.blocks).values([
+    await db.insert(schema.blocks).values([
       {
         number: 11n,
         hash,
@@ -115,13 +100,10 @@ test('getBlockByHash prefers real blocks over null-round placeholders', async ()
       },
     ])
 
-    const [block] = await dbContext.db.$prepared.getBlockByHash.execute({
+    const [block] = await db.$prepared.getBlockByHash.execute({
       hash: hexToBytes(hash),
     })
     expect(block.number).toBe(10n)
     expect(block.isNullRound).toBe(false)
-  } finally {
-    await dbContext.stop()
-    await rm(directory, { recursive: true, force: true })
-  }
+  })
 })

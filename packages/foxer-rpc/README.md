@@ -170,6 +170,19 @@ Development mode also accepts:
 | --- | --- | --- |
 | `--dir` | `.pglite` | PGlite data directory |
 
+## Testing
+
+The integration suite uses Testcontainers to start PostgreSQL 17 and MSW to
+intercept upstream Ethereum JSON-RPC traffic. A Docker-compatible container
+runtime must be running before executing:
+
+```bash
+bun run --cwd packages/foxer-rpc test
+```
+
+Each database test clones a migrated template database, so tests remain
+isolated without paying the migration cost for every case.
+
 ## Authentication
 
 When `AUTH_SECRET` is set, all routes require a valid JWT except `GET /health` (for probes/load balancers) and `POST /admin/keys` (which uses the static secret to mint JWTs).

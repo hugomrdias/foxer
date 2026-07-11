@@ -33,7 +33,6 @@ import {
   runCopyTransaction,
   validateCopyChunkBytes,
 } from '../src/db/copy/writer.ts'
-import { runMigrations } from '../src/db/migrate.ts'
 import { schema } from '../src/db/schema/index.ts'
 import {
   encodeLogCopyRow,
@@ -43,6 +42,7 @@ import {
   sampleTransaction,
 } from './copy-fixtures.ts'
 import { testLogger } from './helpers.ts'
+import { createTestDatabaseContext } from './postgres.ts'
 
 describe('COPY metrics', () => {
   test('calculates actual rates and finite zero-duration rates', () => {
@@ -342,140 +342,120 @@ test('validates COPY chunk bytes at the public entry point', async () => {
   }
 })
 
-const postgresUrl = process.env.TEST_DATABASE_URL
+describe('copyIndexedBlockData on PostgreSQL', () => {
+  test('writes every block, transaction, and log column', async () => {
+    const dbContext = await createTestDatabaseContext()
+    const blockNumber = BigInt(Date.now())
+    let migrated = false
 
-if (postgresUrl) {
-  describe('copyIndexedBlockData on PostgreSQL', () => {
-    test('writes every block, transaction, and log column', async () => {
-      const dbContext = createDatabase({
-        config: { driver: 'postgres', url: postgresUrl },
-        logger: testLogger,
+    try {
+      migrated = true
+
+      await deleteTestBlock(dbContext.db, blockNumber)
+      const block = sampleBlock(blockNumber)
+      const tx = sampleTransaction(blockNumber)
+      const log = sampleLog(blockNumber)
+
+      const metrics = await copyIndexedBlockData({
+        db: dbContext.db,
+        batch: [sampleIndexedBatchEntry(block, [tx], [log])],
       })
-      const blockNumber = BigInt(Date.now())
-      let migrated = false
 
-      try {
-        await runMigrations({
-          dbContext,
-          folder: resolve(import.meta.dir, '../drizzle'),
-          logger: testLogger,
-        })
-        migrated = true
-
-        await deleteTestBlock(dbContext.db, blockNumber)
-        const block = sampleBlock(blockNumber)
-        const tx = sampleTransaction(blockNumber)
-        const log = sampleLog(blockNumber)
-
-        const metrics = await copyIndexedBlockData({
-          db: dbContext.db,
-          batch: [sampleIndexedBatchEntry(block, [tx], [log])],
-        })
-
-        expect(metrics.blocks.rows).toBe(1)
-        expect(metrics.blocks.encodedBytes).toBe(
-          encodeCopyHeader().length +
-            encodeBlockCopyRow(block).length +
-            encodeCopyTrailer().length
-        )
-        expect(metrics.blocks.chunks).toBe(1)
-        expect(metrics.transactions.rows).toBe(1)
-        expect(metrics.transactions.encodedBytes).toBe(
-          encodeCopyHeader().length +
-            encodeTransactionCopyRow(tx).length +
-            encodeCopyTrailer().length
-        )
-        expect(metrics.transactions.chunks).toBe(1)
-        expect(metrics.logs.rows).toBe(1)
-        expect(metrics.logs.encodedBytes).toBe(
-          encodeCopyHeader().length +
-            encodeLogCopyRow(log).length +
-            encodeCopyTrailer().length
-        )
-        expect(metrics.logs.chunks).toBe(1)
-        for (const tableMetrics of Object.values(metrics)) {
-          expect(tableMetrics.durationMs).toBeGreaterThanOrEqual(0)
-          expect(Number.isFinite(tableMetrics.mbPerSec)).toBe(true)
-          expect(Number.isFinite(tableMetrics.rowsPerSec)).toBe(true)
-        }
-
-        const [storedBlock] = await dbContext.db
-          .select()
-          .from(schema.blocks)
-          .where(eq(schema.blocks.number, blockNumber))
-        const [storedTx] = await dbContext.db
-          .select()
-          .from(schema.transactions)
-          .where(eq(schema.transactions.hash, tx.hash))
-        const [storedLog] = await dbContext.db
-          .select()
-          .from(schema.logs)
-          .where(eq(schema.logs.blockNumber, blockNumber))
-
-        expect(storedBlock).toEqual(block as typeof storedBlock)
-        expect(storedTx).toEqual(tx as typeof storedTx)
-        expect(storedLog).toEqual(log as typeof storedLog)
-      } finally {
-        try {
-          if (migrated) {
-            await deleteTestBlock(dbContext.db, blockNumber)
-          }
-        } finally {
-          await dbContext.stop()
-        }
+      expect(metrics.blocks.rows).toBe(1)
+      expect(metrics.blocks.encodedBytes).toBe(
+        encodeCopyHeader().length +
+          encodeBlockCopyRow(block).length +
+          encodeCopyTrailer().length
+      )
+      expect(metrics.blocks.chunks).toBe(1)
+      expect(metrics.transactions.rows).toBe(1)
+      expect(metrics.transactions.encodedBytes).toBe(
+        encodeCopyHeader().length +
+          encodeTransactionCopyRow(tx).length +
+          encodeCopyTrailer().length
+      )
+      expect(metrics.transactions.chunks).toBe(1)
+      expect(metrics.logs.rows).toBe(1)
+      expect(metrics.logs.encodedBytes).toBe(
+        encodeCopyHeader().length +
+          encodeLogCopyRow(log).length +
+          encodeCopyTrailer().length
+      )
+      expect(metrics.logs.chunks).toBe(1)
+      for (const tableMetrics of Object.values(metrics)) {
+        expect(tableMetrics.durationMs).toBeGreaterThanOrEqual(0)
+        expect(Number.isFinite(tableMetrics.mbPerSec)).toBe(true)
+        expect(Number.isFinite(tableMetrics.rowsPerSec)).toBe(true)
       }
-    })
 
-    test('rolls back the whole batch when a duplicate block fails', async () => {
-      const dbContext = createDatabase({
-        config: { driver: 'postgres', url: postgresUrl },
-        logger: testLogger,
-      })
-      const newBlockNumber = BigInt(Date.now()) + 10_000n
-      const duplicateBlockNumber = newBlockNumber + 1n
-      let migrated = false
+      const [storedBlock] = await dbContext.db
+        .select()
+        .from(schema.blocks)
+        .where(eq(schema.blocks.number, blockNumber))
+      const [storedTx] = await dbContext.db
+        .select()
+        .from(schema.transactions)
+        .where(eq(schema.transactions.hash, tx.hash))
+      const [storedLog] = await dbContext.db
+        .select()
+        .from(schema.logs)
+        .where(eq(schema.logs.blockNumber, blockNumber))
 
+      expect(storedBlock).toEqual(block as typeof storedBlock)
+      expect(storedTx).toEqual(tx as typeof storedTx)
+      expect(storedLog).toEqual(log as typeof storedLog)
+    } finally {
       try {
-        await runMigrations({
-          dbContext,
-          folder: resolve(import.meta.dir, '../drizzle'),
-          logger: testLogger,
-        })
-        migrated = true
-        await deleteTestBlock(dbContext.db, newBlockNumber)
-        await deleteTestBlock(dbContext.db, duplicateBlockNumber)
-        await dbContext.db
-          .insert(schema.blocks)
-          .values(sampleBlock(duplicateBlockNumber))
-
-        await expect(
-          copyIndexedBlockData({
-            db: dbContext.db,
-            batch: [
-              sampleIndexedBatchEntry(sampleBlock(newBlockNumber)),
-              sampleIndexedBatchEntry(sampleBlock(duplicateBlockNumber)),
-            ],
-          })
-        ).rejects.toThrow()
-
-        const newBlocks = await dbContext.db
-          .select()
-          .from(schema.blocks)
-          .where(eq(schema.blocks.number, newBlockNumber))
-        expect(newBlocks).toEqual([])
-      } finally {
-        try {
-          if (migrated) {
-            await deleteTestBlock(dbContext.db, newBlockNumber)
-            await deleteTestBlock(dbContext.db, duplicateBlockNumber)
-          }
-        } finally {
-          await dbContext.stop()
+        if (migrated) {
+          await deleteTestBlock(dbContext.db, blockNumber)
         }
+      } finally {
+        await dbContext.stop()
       }
-    })
+    }
   })
-}
+
+  test('rolls back the whole batch when a duplicate block fails', async () => {
+    const dbContext = await createTestDatabaseContext()
+    const newBlockNumber = BigInt(Date.now()) + 10_000n
+    const duplicateBlockNumber = newBlockNumber + 1n
+    let migrated = false
+
+    try {
+      migrated = true
+      await deleteTestBlock(dbContext.db, newBlockNumber)
+      await deleteTestBlock(dbContext.db, duplicateBlockNumber)
+      await dbContext.db
+        .insert(schema.blocks)
+        .values(sampleBlock(duplicateBlockNumber))
+
+      await expect(
+        copyIndexedBlockData({
+          db: dbContext.db,
+          batch: [
+            sampleIndexedBatchEntry(sampleBlock(newBlockNumber)),
+            sampleIndexedBatchEntry(sampleBlock(duplicateBlockNumber)),
+          ],
+        })
+      ).rejects.toThrow()
+
+      const newBlocks = await dbContext.db
+        .select()
+        .from(schema.blocks)
+        .where(eq(schema.blocks.number, newBlockNumber))
+      expect(newBlocks).toEqual([])
+    } finally {
+      try {
+        if (migrated) {
+          await deleteTestBlock(dbContext.db, newBlockNumber)
+          await deleteTestBlock(dbContext.db, duplicateBlockNumber)
+        }
+      } finally {
+        await dbContext.stop()
+      }
+    }
+  })
+})
 
 async function deleteTestBlock(db: Database, blockNumber: bigint) {
   await db.delete(schema.logs).where(eq(schema.logs.blockNumber, blockNumber))

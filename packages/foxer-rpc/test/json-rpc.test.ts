@@ -3,6 +3,8 @@
 import { describe, expect, test } from 'bun:test'
 
 import { handleJsonRpc } from '../src/api/json-rpc.ts'
+import { createRpcClients } from '../src/rpc/client.ts'
+import { mockUpstreamRpc, realtimeRpcUrl, upstreamRpcUrl } from './upstream.ts'
 
 const baseConfig = {
   chainId: 314_159,
@@ -66,24 +68,18 @@ describe('handleJsonRpc', () => {
   })
 
   test('proxies unsupported methods to the upstream rpc', async () => {
-    const requests: unknown[] = []
+    const requests = mockUpstreamRpc(
+      { eth_call: '0x1234' },
+      { url: realtimeRpcUrl }
+    )
     const response = await handleJsonRpc({
       ...args,
       config: {
         ...baseConfig,
-        clients: {
-          backfill: {
-            request: () => {
-              throw new Error('unexpected backfill proxy request')
-            },
-          },
-          live: {
-            request: (request: unknown) => {
-              requests.push(request)
-              return '0x1234'
-            },
-          },
-        },
+        clients: createRpcClients({
+          rpcUrl: upstreamRpcUrl,
+          realtimeRpcUrl,
+        }),
       },
       body: {
         jsonrpc: '2.0',
@@ -96,15 +92,10 @@ describe('handleJsonRpc', () => {
       },
     } as never)
 
-    expect(requests).toEqual([
-      {
-        method: 'eth_call',
-        params: [
-          { to: '0x0000000000000000000000000000000000000000' },
-          'latest',
-        ],
-      },
-    ])
+    expect(requests[0]).toMatchObject({
+      method: 'eth_call',
+      params: [{ to: '0x0000000000000000000000000000000000000000' }, 'latest'],
+    })
     expect(response).toEqual({
       jsonrpc: '2.0',
       id: 'call-1',
@@ -113,20 +104,15 @@ describe('handleJsonRpc', () => {
   })
 
   test('preserves batch responses for local and proxied methods', async () => {
+    mockUpstreamRpc({ eth_getCode: '0xabcd' }, { url: realtimeRpcUrl })
     const response = await handleJsonRpc({
       ...args,
       config: {
         ...baseConfig,
-        clients: {
-          backfill: {
-            request: () => {
-              throw new Error('unexpected backfill proxy request')
-            },
-          },
-          live: {
-            request: () => '0xabcd',
-          },
-        },
+        clients: createRpcClients({
+          rpcUrl: upstreamRpcUrl,
+          realtimeRpcUrl,
+        }),
       },
       body: [
         { jsonrpc: '2.0', id: 1, method: 'web3_clientVersion' },
@@ -141,22 +127,22 @@ describe('handleJsonRpc', () => {
   })
 
   test('forwards upstream json-rpc errors from proxied methods', async () => {
+    mockUpstreamRpc(
+      {
+        debug_traceBlockByHash: {
+          error: { code: -32601, message: 'Method not found' },
+        },
+      },
+      { url: realtimeRpcUrl }
+    )
     const response = await handleJsonRpc({
       ...args,
       config: {
         ...baseConfig,
-        clients: {
-          backfill: {
-            request: () => {
-              throw new Error('unexpected backfill proxy request')
-            },
-          },
-          live: {
-            request: () => {
-              throw { code: -32601, message: 'Method not found' }
-            },
-          },
-        },
+        clients: createRpcClients({
+          rpcUrl: upstreamRpcUrl,
+          realtimeRpcUrl,
+        }),
       },
       body: {
         jsonrpc: '2.0',
@@ -166,11 +152,14 @@ describe('handleJsonRpc', () => {
       },
     } as never)
 
-    expect(response).toEqual({
+    expect(response).toMatchObject({
       jsonrpc: '2.0',
       id: 1,
-      error: { code: -32601, message: 'Method not found' },
+      error: { code: -32601 },
     })
+    expect('error' in response && response.error?.message).toContain(
+      'Method not found'
+    )
   })
 
   test('returns invalid params for malformed block quantities', async () => {

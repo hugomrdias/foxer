@@ -1,23 +1,8 @@
 /// <reference types="bun" />
 
-import { describe, expect, mock, test } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 
-mock.module('@hono/node-server', () => ({
-  serve: (_options: unknown, onListen: () => void) => {
-    onListen()
-    return {}
-  },
-}))
-
-mock.module('http-shutdown', () => ({
-  default: () => ({
-    shutdown: (callback: (error?: Error) => void) => {
-      queueMicrotask(() => callback())
-    },
-  }),
-}))
-
-const { createApi } = await import('../src/api/create-api.ts')
+import { createApi } from '../src/api/create-api.ts'
 
 const mockDb = {
   $prepared: {
@@ -25,12 +10,6 @@ const mockDb = {
       execute: async () => [],
     },
   },
-} as never
-
-const mockLogger = {
-  error: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
 } as never
 
 const baseConfig = {
@@ -50,14 +29,25 @@ const baseConfig = {
 } as never
 
 describe('createApi', () => {
-  test('stop awaits graceful http-shutdown completion', async () => {
+  test('starts and gracefully stops a real HTTP server', async () => {
+    let markListening: () => void = () => undefined
+    const listening = new Promise<void>((resolve) => {
+      markListening = resolve
+    })
     const api = createApi({
       db: mockDb,
       config: baseConfig,
-      logger: mockLogger,
-      port: 8545,
+      logger: {
+        error: () => undefined,
+        info: (_context: unknown, message?: string) => {
+          if (message === 'json-rpc server listening') markListening()
+        },
+        warn: () => undefined,
+      } as never,
+      port: 0,
     })
 
+    await listening
     await expect(api.stop()).resolves.toBeUndefined()
   })
 })

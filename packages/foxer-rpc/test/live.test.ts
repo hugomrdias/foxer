@@ -1,65 +1,71 @@
 /// <reference types="bun" />
 
-import { expect, mock, test } from 'bun:test'
+import { expect, test } from 'bun:test'
 
-let finishActiveBlock: () => void = () => undefined
-let activeBlockStarted: () => void = () => undefined
-let queuedBlocks = 0
+import { schema } from '../src/db/schema/index.ts'
+import { createRpcClients } from '../src/rpc/client.ts'
+import { startLiveSync } from '../src/sync/live.ts'
+import { testLogger, withTestDatabase } from './helpers.ts'
+import { rpcBlock } from './rpc-fixtures.ts'
+import {
+  mockUpstreamRpc,
+  type RpcRequest,
+  realtimeRpcUrl,
+  upstreamRpcUrl,
+} from './upstream.ts'
 
-mock.module('../src/sync/queue-block.ts', () => ({
-  queueBlock: async () => {
-    queuedBlocks += 1
-    activeBlockStarted()
-    await new Promise<void>((resolve) => {
-      finishActiveBlock = resolve
+test('stop clears queued HTTP blocks and waits for active database work', async () => {
+  await withTestDatabase(async (db) => {
+    let releaseBlock: () => void = () => undefined
+    const blockGate = new Promise<void>((resolve) => {
+      releaseBlock = resolve
     })
-  },
-}))
+    let markBlockStarted: () => void = () => undefined
+    const blockStarted = new Promise<void>((resolve) => {
+      markBlockStarted = resolve
+    })
 
-const { startLiveSync } = await import('../src/sync/live.ts')
-
-test('stop clears queued blocks and waits for active work', async () => {
-  let onBlockNumber: (head: bigint) => void = () => undefined
-  let unwatchCalls = 0
-  const activeStarted = new Promise<void>((resolve) => {
-    activeBlockStarted = resolve
-  })
-
-  const sync = startLiveSync({
-    logger: { error: () => undefined, info: () => undefined } as never,
-    config: {} as never,
-    db: {} as never,
-    client: {
-      watchBlockNumber: (options: {
-        onBlockNumber: (head: bigint) => void
-      }) => {
-        onBlockNumber = options.onBlockNumber
-        return () => {
-          unwatchCalls += 1
-        }
+    mockUpstreamRpc(
+      {
+        eth_blockNumber: '0x2',
+        eth_getBlockByNumber: async ({ params }: RpcRequest) => {
+          const blockNumber = BigInt(String(params?.[0]))
+          if (blockNumber === 1n) {
+            markBlockStarted()
+            await blockGate
+          }
+          return rpcBlock(blockNumber)
+        },
       },
-    } as never,
-    initialCursor: 1n,
+      { url: realtimeRpcUrl }
+    )
+    const clients = createRpcClients({
+      rpcUrl: upstreamRpcUrl,
+      realtimeRpcUrl,
+    })
+    const sync = startLiveSync({
+      logger: testLogger,
+      config: { clients } as never,
+      db,
+      client: clients.live,
+      initialCursor: 1n,
+    })
+
+    await blockStarted
+    let stopped = false
+    const stop = sync.stop().then(() => {
+      stopped = true
+    })
+    await Promise.resolve()
+    expect(stopped).toBe(false)
+
+    releaseBlock()
+    await stop
+    expect(stopped).toBe(true)
+    expect(
+      (await db.select().from(schema.blocks)).map(({ number }) => number)
+    ).toEqual([1n])
+
+    await sync.stop()
   })
-
-  onBlockNumber(2n)
-  await activeStarted
-
-  let stopped = false
-  const stop = sync.stop().then(() => {
-    stopped = true
-  })
-  await Promise.resolve()
-
-  expect(unwatchCalls).toBe(1)
-  expect(stopped).toBe(false)
-
-  finishActiveBlock()
-  await stop
-
-  expect(stopped).toBe(true)
-  expect(queuedBlocks).toBe(1)
-
-  await sync.stop()
-  expect(unwatchCalls).toBe(1)
 })

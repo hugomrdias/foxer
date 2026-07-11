@@ -1,37 +1,18 @@
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { resolve } from 'node:path'
-
-import { createDatabase, type Database } from '../src/db/client.ts'
-import { runMigrations } from '../src/db/migrate.ts'
+import type { Database } from '../src/db/client.ts'
+import { createTestDatabaseContext } from './postgres.ts'
 
 export { zeroLogsBloom } from '../src/utils/bloom.ts'
-
-export const testLogger = {
-  error: () => undefined,
-  info: () => undefined,
-  warn: () => undefined,
-} as never
+export { testLogger } from './test-logger.ts'
 
 export async function withTestDatabase<T>(
   run: (db: Database) => Promise<T>
 ): Promise<T> {
-  const directory = await mkdtemp(resolve(tmpdir(), 'foxer-rpc-test-'))
-  const dbContext = createDatabase({
-    config: { driver: 'pglite', directory },
-    logger: testLogger,
-  })
+  const dbContext = await createTestDatabaseContext()
 
   try {
-    await runMigrations({
-      dbContext,
-      folder: resolve(import.meta.dir, '../drizzle'),
-      logger: testLogger,
-    })
     return await run(dbContext.db)
   } finally {
     await dbContext.stop()
-    await rm(directory, { recursive: true, force: true })
   }
 }
 

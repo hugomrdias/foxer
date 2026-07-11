@@ -1,0 +1,27 @@
+name: foxer-rpc
+env:
+  CI: true
+  FORCE_COLOR: 1
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "packages/foxer-rpc/**"
+      - .github/workflows/foxer-rpc.yml
+      - bun.lock
+  pull_request:
+    paths:
+      - "packages/foxer-rpc/**"
+      - .github/workflows/foxer-rpc.yml
+      - bun.lock
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd packages/foxer-rpc test
+      - run: bun run check --filter @hugomrdias/foxer-rpc
+      - run: bun run build --filter @hugomrdias/foxer-rpc
