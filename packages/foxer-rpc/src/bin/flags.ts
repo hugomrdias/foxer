@@ -46,8 +46,7 @@ export const globalFlags = {
   },
   maxConnections: {
     type: Number,
-    description:
-      'Total Postgres connections per process (2 reserved for live sync)',
+    description: 'Maximum Postgres connections for the JSON-RPC API pool',
   },
   dir: {
     type: String,

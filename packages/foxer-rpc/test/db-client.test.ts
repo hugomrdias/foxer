@@ -9,7 +9,7 @@ import type { Pool } from 'pg'
 import {
   createDatabase,
   isPostgresDatabase,
-  POSTGRES_POOL_MAX_LIVE_SYNC,
+  POSTGRES_POOL_MAX_SYNC,
 } from '../src/db/client.ts'
 import { runMigrations } from '../src/db/migrate.ts'
 import { schema } from '../src/db/schema/index.ts'
@@ -23,7 +23,7 @@ const logger = {
 
 const invalidPostgresUrl = 'postgres://invalid:invalid@127.0.0.1:1/invalid'
 
-test('postgres api-backfill pool reserves live-sync connections', async () => {
+test('postgres api pool uses the configured maximum', async () => {
   const dbContext = createDatabase({
     config: { driver: 'postgres', url: invalidPostgresUrl },
     logger,
@@ -33,25 +33,25 @@ test('postgres api-backfill pool reserves live-sync connections', async () => {
   try {
     expect(isPostgresDatabase(dbContext.db)).toBe(true)
     const pool = dbContext.db.$client as Pool
-    expect(pool.options.max).toBe(10)
-    expect(pool.options.application_name).toBe('foxer-rpc-api-backfill')
+    expect(pool.options.max).toBe(12)
+    expect(pool.options.application_name).toBe('foxer-rpc-api')
   } finally {
     await dbContext.stop()
   }
 })
 
-test('postgres live-sync pool uses dedicated sizing', async () => {
+test('postgres sync pool uses static sizing', async () => {
   const dbContext = createDatabase({
     config: { driver: 'postgres', url: invalidPostgresUrl },
     logger,
-    role: 'live-sync',
+    role: 'sync',
   })
 
   try {
     expect(isPostgresDatabase(dbContext.db)).toBe(true)
     const pool = dbContext.db.$client as Pool
-    expect(pool.options.max).toBe(POSTGRES_POOL_MAX_LIVE_SYNC)
-    expect(pool.options.application_name).toBe('foxer-rpc-live-sync')
+    expect(pool.options.max).toBe(POSTGRES_POOL_MAX_SYNC)
+    expect(pool.options.application_name).toBe('foxer-rpc-sync')
   } finally {
     await dbContext.stop()
   }

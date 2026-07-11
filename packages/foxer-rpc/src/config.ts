@@ -52,7 +52,7 @@ const backfillCopyChunkBytesSchema = z.coerce
   .max(MAX_COPY_CHUNK_BYTES)
   .default(DEFAULT_COPY_CHUNK_BYTES)
 
-const maxConnectionsSchema = z.coerce.number().int().min(3).default(20)
+const maxConnectionsSchema = z.coerce.number().int().min(1).default(100)
 
 const envSchema = z.object({
   RPC_URL: z.url().optional(),
@@ -109,7 +109,7 @@ export function resolveBackfillCopyChunkBytes(
   return backfillCopyChunkBytesSchema.parse(flagValue ?? envValue)
 }
 
-/** Resolves the total PostgreSQL connection budget with CLI precedence. */
+/** Resolves the API PostgreSQL pool size with CLI precedence. */
 export function resolveMaxConnections(
   flagValue: number | undefined,
   envValue: string | undefined

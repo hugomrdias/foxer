@@ -23,14 +23,8 @@ const migrationsFolder = resolve(__dirname, '../../drizzle')
  */
 export async function runServer(args: { logger: Logger; flags: CliConfig }) {
   const config = await createConfig(args.flags)
-  const apiDbContext = createDatabase({
-    config: config.database,
-    logger: args.logger,
-    role: 'api-backfill',
-    maxConnections: config.maxConnections,
-  })
-
-  let liveDbContext: DatabaseContext | undefined
+  let syncDbContext: DatabaseContext | undefined
+  let apiDbContext: DatabaseContext | undefined
   let api: ReturnType<typeof createApi> | undefined
   let sync: ReturnType<typeof startLiveSync> | undefined
 
@@ -61,18 +55,20 @@ export async function runServer(args: { logger: Logger; flags: CliConfig }) {
   const stopDatabases = async () => {
     const errors: unknown[] = []
 
-    if (liveDbContext && liveDbContext !== apiDbContext) {
+    if (apiDbContext && apiDbContext !== syncDbContext) {
       try {
-        await liveDbContext.stop()
+        await apiDbContext.stop()
       } catch (err) {
         errors.push(err)
       }
     }
 
-    try {
-      await apiDbContext.stop()
-    } catch (err) {
-      errors.push(err)
+    if (syncDbContext) {
+      try {
+        await syncDbContext.stop()
+      } catch (err) {
+        errors.push(err)
+      }
     }
 
     if (errors.length > 0) {
@@ -101,39 +97,45 @@ export async function runServer(args: { logger: Logger; flags: CliConfig }) {
   }
 
   try {
+    syncDbContext = createDatabase({
+      config: config.database,
+      logger: args.logger,
+      role: 'sync',
+    })
+
     await runMigrations({
-      dbContext: apiDbContext,
+      dbContext: syncDbContext,
       folder: migrationsFolder,
       logger: args.logger,
     })
 
     await verifyRecentBlocks({
       logger: args.logger,
-      db: apiDbContext.db,
+      db: syncDbContext.db,
       client: config.clients.backfill,
       depth: config.finality,
     })
 
     const nextCursor = await runBackfill({
       logger: args.logger,
-      db: apiDbContext.db,
+      db: syncDbContext.db,
       config,
     })
 
-    liveDbContext =
-      apiDbContext.driver === 'postgres'
+    apiDbContext =
+      syncDbContext.driver === 'postgres'
         ? createDatabase({
             config: config.database,
             logger: args.logger,
-            role: 'live-sync',
+            role: 'api',
             maxConnections: config.maxConnections,
           })
-        : apiDbContext
+        : syncDbContext
 
     sync = startLiveSync({
       logger: args.logger,
       config,
-      db: liveDbContext.db,
+      db: syncDbContext.db,
       client: config.clients.live,
       initialCursor: nextCursor,
     })

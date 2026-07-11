@@ -17,12 +17,13 @@ test('leaves backfill copy chunk bytes unset for config precedence', () => {
   expect('default' in globalFlags.backfillCopyChunkBytes).toBe(false)
 })
 
-test('resolves and validates the total Postgres connection budget', () => {
+test('resolves and validates the API Postgres pool size', () => {
   expect('default' in globalFlags.maxConnections).toBe(false)
-  expect(resolveMaxConnections(undefined, undefined)).toBe(20)
+  expect(resolveMaxConnections(undefined, undefined)).toBe(100)
   expect(resolveMaxConnections(undefined, '12')).toBe(12)
   expect(resolveMaxConnections(8, '12')).toBe(8)
-  expect(() => resolveMaxConnections(2, undefined)).toThrow()
+  expect(resolveMaxConnections(1, undefined)).toBe(1)
+  expect(() => resolveMaxConnections(0, undefined)).toThrow()
   expect(() => resolveMaxConnections(3.5, undefined)).toThrow()
 })
 
