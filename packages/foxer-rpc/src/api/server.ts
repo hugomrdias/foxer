@@ -15,6 +15,17 @@ const mintKeySchema = z.object({
   expiresInDays: z.coerce.number().int().positive().optional(),
 })
 
+function omitJsonRpcEnvelope(value: unknown): unknown {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return value
+  }
+
+  const copy: Record<string, unknown> = { ...value }
+  delete copy.jsonrpc
+  delete copy.id
+  return copy
+}
+
 /**
  * Builds the Hono app used by the CLI server.
  *
@@ -136,6 +147,11 @@ export function createApiServer({
         400
       )
     }
+
+    const jsonRpcBody = Array.isArray(body)
+      ? body.map(omitJsonRpcEnvelope)
+      : omitJsonRpcEnvelope(body)
+    c.var.logger.assign({ jsonRpcBody })
 
     const result = await handleJsonRpc({ db, config, logger, body })
     return c.json(result)

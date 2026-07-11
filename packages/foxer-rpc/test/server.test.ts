@@ -2,6 +2,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import { sign } from 'hono/jwt'
+import pino from 'pino'
 
 import { createApiServer } from '../src/api/server.ts'
 
@@ -53,6 +54,29 @@ function createServer(authSecret?: string) {
     } as never,
     logger: mockLogger,
   })
+}
+
+function createServerWithLogs() {
+  const logs: Record<string, unknown>[] = []
+  const logger = pino(
+    { base: undefined, timestamp: false },
+    {
+      write(line) {
+        logs.push(JSON.parse(line))
+      },
+    }
+  )
+  const app = createApiServer({
+    db: mockDb,
+    config: baseConfig as never,
+    logger,
+  })
+
+  return { app, logs }
+}
+
+function completedRequest(logs: Record<string, unknown>[]) {
+  return logs.find((log) => log.msg === 'Request completed')
 }
 
 describe('createApiServer auth', () => {
@@ -262,5 +286,105 @@ describe('createApiServer auth', () => {
     const app = createServer(authSecret)
     const health = await app.request('/health')
     expect(health.status).toBe(200)
+  })
+})
+
+describe('createApiServer request logging', () => {
+  test('adds the JSON-RPC body without its envelope to a single request log', async () => {
+    const { app, logs } = createServerWithLogs()
+    const body = {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'eth_chainId',
+      params: [],
+      extension: { trace: true },
+    }
+
+    const response = await app.request('/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      result: '0x4cb2f',
+    })
+    expect(completedRequest(logs)).toMatchObject({
+      jsonRpcBody: {
+        method: 'eth_chainId',
+        params: [],
+        extension: { trace: true },
+      },
+    })
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody.jsonrpc')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody.id')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
+  })
+
+  test('adds complete batch entries without their JSON-RPC envelopes', async () => {
+    const { app, logs } = createServerWithLogs()
+    const body = [
+      {
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_chainId',
+        params: [],
+        extension: 'first',
+      },
+      { jsonrpc: '2.0', id: 2, method: 'net_version', params: ['kept'] },
+      null,
+      'invalid entry',
+    ]
+
+    const response = await app.request('/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toHaveLength(4)
+    expect(completedRequest(logs)?.jsonRpcBody).toEqual([
+      {
+        method: 'eth_chainId',
+        params: [],
+        extension: 'first',
+      },
+      { method: 'net_version', params: ['kept'] },
+      null,
+      'invalid entry',
+    ])
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
+  })
+
+  test('does not add JSON-RPC metadata to non-RPC request logs', async () => {
+    const { app, logs } = createServerWithLogs()
+
+    const response = await app.request('/health')
+
+    expect(response.status).toBe(200)
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
+  })
+
+  test('does not add JSON-RPC metadata when parsing fails', async () => {
+    const { app, logs } = createServerWithLogs()
+
+    const response = await app.request('/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{',
+    })
+
+    expect(response.status).toBe(400)
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
+    expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
   })
 })
