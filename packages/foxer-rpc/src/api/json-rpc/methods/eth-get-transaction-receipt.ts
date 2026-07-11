@@ -12,7 +12,9 @@ export async function ethGetTransactionReceipt(
 ) {
   const hash = requireHex(params[0], 'transaction hash', 32)
   const tx = (
-    await db.$prepared.getTransactionByHash.execute({ hash: hexToBytes(hash) })
+    await db.$prepared.getReceiptTransactionByHash.execute({
+      hash: hexToBytes(hash),
+    })
   )[0]
   if (!tx) return null
   const [block, logs] = await Promise.all([

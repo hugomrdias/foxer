@@ -7,6 +7,7 @@ import { handleJsonRpc } from '../src/api/json-rpc.ts'
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
 import type { EncodedBlock, EncodedTransaction } from '../src/types.ts'
+import { hexToBytes } from '../src/utils/hex.ts'
 import {
   address,
   bytes32,
@@ -22,6 +23,39 @@ const tx1 = bytes32('a')
 const tx2 = bytes32('b')
 
 describe('eth_getBlockReceipts', () => {
+  test('receipt queries omit transaction calldata and unrelated columns', async () => {
+    await withTestDatabase(async (db) => {
+      await seedReceipts(db)
+
+      const [byHash] = await db.$prepared.getReceiptTransactionByHash.execute({
+        hash: hexToBytes(tx1),
+      })
+      const [byBlock] =
+        await db.$prepared.getReceiptTransactionsByBlockNumber.execute({
+          blockNumber: 1n,
+        })
+      const expectedColumns = [
+        'blockNumber',
+        'contractAddress',
+        'cumulativeGasUsed',
+        'effectiveGasPrice',
+        'from',
+        'hash',
+        'logsBloom',
+        'receiptGasUsed',
+        'status',
+        'to',
+        'transactionIndex',
+        'type',
+      ]
+
+      expect(Object.keys(byHash).sort()).toEqual(expectedColumns)
+      expect(Object.keys(byBlock).sort()).toEqual(expectedColumns)
+      expect(byHash).not.toHaveProperty('input')
+      expect(byBlock).not.toHaveProperty('input')
+    })
+  })
+
   test('resolves block numbers, tags, and hashes', async () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)

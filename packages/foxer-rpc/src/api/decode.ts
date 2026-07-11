@@ -5,6 +5,21 @@ import type { schema } from '../db/schema/index.ts'
 type BlockRow = typeof schema.blocks.$inferSelect
 type TransactionRow = typeof schema.transactions.$inferSelect
 type TransactionHashRow = Pick<TransactionRow, 'hash'>
+type ReceiptTransactionRow = Pick<
+  TransactionRow,
+  | 'hash'
+  | 'blockNumber'
+  | 'transactionIndex'
+  | 'from'
+  | 'to'
+  | 'type'
+  | 'status'
+  | 'receiptGasUsed'
+  | 'cumulativeGasUsed'
+  | 'effectiveGasPrice'
+  | 'contractAddress'
+  | 'logsBloom'
+>
 type LogRow = typeof schema.logs.$inferSelect
 type BlockTransactions =
   | { full: true; rows: TransactionRow[] }
@@ -105,7 +120,7 @@ export function decodeTransaction(
  * hashes restored.
  */
 export function decodeReceipt(
-  tx: TransactionRow,
+  tx: ReceiptTransactionRow,
   block: BlockRow,
   logs: LogRow[]
 ) {
@@ -133,7 +148,11 @@ export function decodeReceipt(
  * The log table omits `blockHash` and `transactionHash`; this function restores
  * them from the joined block and transaction rows.
  */
-export function decodeLog(log: LogRow, block: BlockRow, tx: TransactionRow) {
+export function decodeLog(
+  log: LogRow,
+  block: BlockRow,
+  tx: TransactionHashRow
+) {
   return {
     address: log.address,
     topics: [log.topic0, log.topic1, log.topic2, log.topic3].filter(Boolean),

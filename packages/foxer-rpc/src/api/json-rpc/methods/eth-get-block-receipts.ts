@@ -13,7 +13,7 @@ export async function ethGetBlockReceipts(
   if (!block) return null
 
   const [transactions, logs] = await Promise.all([
-    args.db.$prepared.getTransactionsByBlockNumber.execute({
+    args.db.$prepared.getReceiptTransactionsByBlockNumber.execute({
       blockNumber: block.number,
     }),
     args.db.$prepared.getLogsByBlockNumber.execute({

@@ -159,12 +159,26 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     .limit(1)
     .prepare('get_transaction_by_hash')
 
+  const getReceiptTransactionByHash = db
+    .select(receiptTransactionColumns)
+    .from(schema.transactions)
+    .where(eq(schema.transactions.hash, sql.placeholder('hash')))
+    .limit(1)
+    .prepare('get_receipt_transaction_by_hash')
+
   const getTransactionsByBlockNumber = db
     .select()
     .from(schema.transactions)
     .where(eq(schema.transactions.blockNumber, sql.placeholder('blockNumber')))
     .orderBy(asc(schema.transactions.transactionIndex))
     .prepare('get_transactions_by_block_number')
+
+  const getReceiptTransactionsByBlockNumber = db
+    .select(receiptTransactionColumns)
+    .from(schema.transactions)
+    .where(eq(schema.transactions.blockNumber, sql.placeholder('blockNumber')))
+    .orderBy(asc(schema.transactions.transactionIndex))
+    .prepare('get_receipt_transactions_by_block_number')
 
   const getTransactionHashesByBlockNumber = db
     .select({ hash: schema.transactions.hash })
@@ -219,11 +233,28 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     getBlockByNumber,
     getBlockByHash,
     getTransactionByHash,
+    getReceiptTransactionByHash,
     getTransactionsByBlockNumber,
+    getReceiptTransactionsByBlockNumber,
     getTransactionHashesByBlockNumber,
     getTransactionByBlockNumberAndIndex,
     getTransactionCountByBlockNumber,
     getLogsByBlockNumber,
     getLogsByTransactionPosition,
   }
+}
+
+const receiptTransactionColumns = {
+  hash: schema.transactions.hash,
+  blockNumber: schema.transactions.blockNumber,
+  transactionIndex: schema.transactions.transactionIndex,
+  from: schema.transactions.from,
+  to: schema.transactions.to,
+  type: schema.transactions.type,
+  status: schema.transactions.status,
+  receiptGasUsed: schema.transactions.receiptGasUsed,
+  cumulativeGasUsed: schema.transactions.cumulativeGasUsed,
+  effectiveGasPrice: schema.transactions.effectiveGasPrice,
+  contractAddress: schema.transactions.contractAddress,
+  logsBloom: schema.transactions.logsBloom,
 }
