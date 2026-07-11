@@ -151,6 +151,63 @@ describe('createApiServer auth', () => {
     expect(wrongSecret.status).toBe(401)
   })
 
+  test('with authSecret: POST / accepts ?token= query param', async () => {
+    const app = createServer(authSecret)
+
+    const mint = await app.request('/admin/keys', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${authSecret}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ sub: 'alice' }),
+    })
+    const { token } = await mint.json()
+
+    const rpc = await app.request(`/?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: jsonRpcBody,
+    })
+    expect(rpc.status).toBe(200)
+  })
+
+  test('with authSecret: POST / rejects invalid ?token= query param', async () => {
+    const app = createServer(authSecret)
+
+    const rpc = await app.request('/?token=not-a-jwt', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: jsonRpcBody,
+    })
+    expect(rpc.status).toBe(401)
+    expect(rpc.headers.get('www-authenticate')).not.toContain('not-a-jwt')
+  })
+
+  test('with authSecret: POST / prefers Authorization header over ?token=', async () => {
+    const app = createServer(authSecret)
+
+    const mint = await app.request('/admin/keys', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${authSecret}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ sub: 'alice' }),
+    })
+    const { token } = await mint.json()
+
+    const rpc = await app.request(`/?token=not-a-jwt`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        'content-type': 'application/json',
+      },
+      body: jsonRpcBody,
+    })
+    expect(rpc.status).toBe(200)
+  })
+
   test('with authSecret: POST / accepts a minted token', async () => {
     const app = createServer(authSecret)
 

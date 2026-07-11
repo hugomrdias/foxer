@@ -50,8 +50,34 @@ export function createApiServer({
   if (config.authSecret) {
     const authSecret = config.authSecret
     const requireJwt = jwt({ secret: authSecret, alg: 'HS256' })
+    const isAuthExempt = (path: string) =>
+      path === '/health' || path === '/admin/keys'
+    const queryTokenToBearer = async (
+      c: Parameters<typeof requireJwt>[0],
+      next: Parameters<typeof requireJwt>[1]
+    ) => {
+      const queryToken = c.req.query('token')
+      if (!c.req.header('Authorization') && queryToken) {
+        const headers = new Headers(c.req.raw.headers)
+        headers.set('Authorization', `Bearer ${queryToken}`)
+        const url = new URL(c.req.url)
+        url.searchParams.delete('token')
+        c.req.raw = new Request(url, {
+          headers,
+          method: c.req.raw.method,
+          body: c.req.raw.body,
+        })
+      }
+      await next()
+    }
     app.use('*', (c, next) => {
-      if (c.req.path === '/health' || c.req.path === '/admin/keys') {
+      if (isAuthExempt(c.req.path)) {
+        return next()
+      }
+      return queryTokenToBearer(c, next)
+    })
+    app.use('*', (c, next) => {
+      if (isAuthExempt(c.req.path)) {
         return next()
       }
       return requireJwt(c, next)

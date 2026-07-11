@@ -196,6 +196,8 @@ curl http://127.0.0.1:8545 \
   --data '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}'
 ```
 
+Alternatively, pass the JWT as a query parameter: `?token=<JWT>`. The `Authorization` header takes precedence when both are present. Query-string tokens can appear in access logs, browser history, and `Referer` headers, so prefer the Bearer header when possible.
+
 JWTs are stateless and cannot be revoked individually. Rotate `AUTH_SECRET` to invalidate all keys. Set `expiresInDays` when minting keys to limit their lifetime.
 
 ## Install
