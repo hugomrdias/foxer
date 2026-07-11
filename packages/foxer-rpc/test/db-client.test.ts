@@ -4,8 +4,13 @@ import { expect, test } from 'bun:test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
+import type { Pool } from 'pg'
 
-import { createDatabase } from '../src/db/client.ts'
+import {
+  createDatabase,
+  isPostgresDatabase,
+  POSTGRES_POOL_MAX_LIVE_SYNC,
+} from '../src/db/client.ts'
 import { runMigrations } from '../src/db/migrate.ts'
 import { schema } from '../src/db/schema/index.ts'
 import { hexToBytes } from '../src/utils/hex.ts'
@@ -14,6 +19,42 @@ const logger = {
   error: () => undefined,
   info: () => undefined,
 } as never
+
+const invalidPostgresUrl = 'postgres://invalid:invalid@127.0.0.1:1/invalid'
+
+test('postgres api-backfill pool reserves live-sync connections', async () => {
+  const dbContext = createDatabase({
+    config: { driver: 'postgres', url: invalidPostgresUrl },
+    logger,
+    maxConnections: 12,
+  })
+
+  try {
+    expect(isPostgresDatabase(dbContext.db)).toBe(true)
+    const pool = dbContext.db.$client as Pool
+    expect(pool.options.max).toBe(10)
+    expect(pool.options.application_name).toBe('foxer-rpc-api-backfill')
+  } finally {
+    await dbContext.stop()
+  }
+})
+
+test('postgres live-sync pool uses dedicated sizing', async () => {
+  const dbContext = createDatabase({
+    config: { driver: 'postgres', url: invalidPostgresUrl },
+    logger,
+    role: 'live-sync',
+  })
+
+  try {
+    expect(isPostgresDatabase(dbContext.db)).toBe(true)
+    const pool = dbContext.db.$client as Pool
+    expect(pool.options.max).toBe(POSTGRES_POOL_MAX_LIVE_SYNC)
+    expect(pool.options.application_name).toBe('foxer-rpc-live-sync')
+  } finally {
+    await dbContext.stop()
+  }
+})
 
 test('getBlockByHash prefers real blocks over null-round placeholders', async () => {
   const directory = await mkdtemp(resolve(tmpdir(), 'foxer-rpc-test-'))

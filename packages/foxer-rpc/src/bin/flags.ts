@@ -44,6 +44,11 @@ export const globalFlags = {
     type: String,
     description: 'Postgres connection URL',
   },
+  maxConnections: {
+    type: Number,
+    description:
+      'Total Postgres connections per process (2 reserved for live sync)',
+  },
   dir: {
     type: String,
     description: 'PGlite directory for dev mode',

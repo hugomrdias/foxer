@@ -17,7 +17,7 @@ export function createApi(options: {
   config: InternalConfig
   logger: Logger
   port: number
-}): { stop: () => void } {
+}): { stop: () => Promise<void> } {
   const app = createApiServer({
     logger: options.logger,
     db: options.db,
@@ -37,14 +37,17 @@ export function createApi(options: {
   const serverWithShutdown = shutdown(server)
 
   return {
-    stop: () => {
-      serverWithShutdown.shutdown((error) => {
-        if (error) {
-          options.logger.error({ error }, 'api server shutdown failed')
-          return
-        }
-        options.logger.info('api server shutdown complete')
-      })
-    },
+    stop: () =>
+      new Promise<void>((resolve, reject) => {
+        serverWithShutdown.shutdown((error) => {
+          if (error) {
+            options.logger.error({ error }, 'api server shutdown failed')
+            reject(error)
+            return
+          }
+          options.logger.info('api server shutdown complete')
+          resolve()
+        })
+      }),
   }
 }

@@ -3,7 +3,10 @@
 import { expect, test } from 'bun:test'
 
 import { globalFlags } from '../src/bin/flags.ts'
-import { resolveBackfillCopyChunkBytes } from '../src/config.ts'
+import {
+  resolveBackfillCopyChunkBytes,
+  resolveMaxConnections,
+} from '../src/config.ts'
 import { MAX_COPY_CHUNK_BYTES, MIN_COPY_CHUNK_BYTES } from '../src/db/copy.ts'
 
 test('leaves backfill fetch concurrency unset for config precedence', () => {
@@ -12,6 +15,15 @@ test('leaves backfill fetch concurrency unset for config precedence', () => {
 
 test('leaves backfill copy chunk bytes unset for config precedence', () => {
   expect('default' in globalFlags.backfillCopyChunkBytes).toBe(false)
+})
+
+test('resolves and validates the total Postgres connection budget', () => {
+  expect('default' in globalFlags.maxConnections).toBe(false)
+  expect(resolveMaxConnections(undefined, undefined)).toBe(20)
+  expect(resolveMaxConnections(undefined, '12')).toBe(12)
+  expect(resolveMaxConnections(8, '12')).toBe(8)
+  expect(() => resolveMaxConnections(2, undefined)).toThrow()
+  expect(() => resolveMaxConnections(3.5, undefined)).toThrow()
 })
 
 test('defaults backfill copy chunk bytes to 256 KiB', () => {

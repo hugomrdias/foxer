@@ -43,12 +43,13 @@ At startup, `foxer-rpc`:
 1. Reads configuration from CLI flags and environment variables.
 2. Connects to the upstream RPC node with `viem`.
 3. Reads the upstream `chainId`.
-4. Opens Postgres or PGlite.
+4. Opens Postgres or PGlite. Postgres uses two isolated pools (the configured total minus 2 for API/backfill, 2 for live sync); PGlite uses one shared client.
 5. Applies the shipped Drizzle migrations from `packages/foxer-rpc/drizzle`.
 6. Verifies recently indexed blocks against the upstream chain to detect reorgs.
-7. Backfills historical blocks up to `head - finality`.
-8. Starts live sync with `watchBlockNumber`.
-9. Starts the Hono JSON-RPC API.
+7. Backfills historical blocks up to `head - finality` through the API/backfill pool.
+8. Opens a dedicated live-sync Postgres pool (or reuses the PGlite client).
+9. Starts live sync with `watchBlockNumber` on the live-sync database context.
+10. Starts the Hono JSON-RPC API on the API/backfill database context.
 
 During sync, each block is fetched with transactions included. Receipts are fetched once per block with `eth_getBlockReceipts`, and log rows are derived from those receipts. This avoids one RPC call per transaction.
 
@@ -153,6 +154,7 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `RPC_URL` | `--rpc-url` | Required | Upstream Ethereum JSON-RPC URL |
 | `REALTIME_RPC_URL` | `--realtime-rpc-url` | `RPC_URL` | Optional upstream RPC URL for live polling |
 | `DATABASE_URL` | `--database-url` | None | Postgres connection URL |
+| `MAX_CONNECTIONS` | `--max-connections` | `20` | Total Postgres connections per process; 2 are reserved for live sync (minimum 3) |
 | `START_BLOCK` | `--start-block` | `0` | First block to sync when the DB is empty |
 | `FINALITY` | `--finality` | `30` | Blocks to leave behind the chain head during backfill |
 | `BATCH_SIZE` | `--batch-size` | `100` | Blocks fetched per backfill batch |
@@ -327,7 +329,11 @@ The `start` command:
 
 For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics. The values below assume about 8 GB of RAM dedicated to Postgres. Scale `shared_buffers` to roughly 25% of RAM and `effective_cache_size` to roughly 50-75%.
 
-`foxer-rpc` keeps a small connection pool (`max: 20` per process), so the default `max_connections = 100` is enough for a single instance and a few replicas without extra tuning.
+`foxer-rpc` keeps two small Postgres pools per process. `MAX_CONNECTIONS`/`--max-connections` controls the total budget (20 by default): 2 connections are reserved for live sync and the remainder is used by API/backfill. Backfill reuses the API pool because those phases do not overlap. Live sync and the JSON-RPC API run concurrently on separate pools so API load cannot exhaust connections used by sync. Pools are tagged with `application_name` values `foxer-rpc-api-backfill` and `foxer-rpc-live-sync` for observability. PGlite uses one shared client because it does not use Postgres pools and must not open the same local database twice.
+
+Plan PostgreSQL `max_connections` for every replica plus headroom: each process can hold up to its configured total, and isolation is application-side only.
+
+With the default `max_connections = 100`, a single instance and a few replicas usually need no extra tuning.
 
 ```conf
 shared_buffers = 2GB

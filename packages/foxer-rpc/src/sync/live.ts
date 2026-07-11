@@ -20,7 +20,7 @@ export function startLiveSync(args: {
   db: Database
   client: PublicClient
   initialCursor: bigint
-}): { stop: () => void } {
+}): { stop: () => Promise<void> } {
   const { config, db, client, logger } = args
   const pqueue = new PQueue({ concurrency: 1 })
 
@@ -31,11 +31,16 @@ export function startLiveSync(args: {
   let nextBlockToQueue = args.initialCursor
   let failedBlock: bigint | null = null
   let consecutiveFailures = 0
+  let stopped = false
 
   const unwatch = client.watchBlockNumber({
     emitMissed: true,
     emitOnBegin: true,
     onBlockNumber: (head) => {
+      if (stopped) {
+        return
+      }
+
       while (nextBlockToQueue <= head) {
         const blockNumber = nextBlockToQueue
         void pqueue.add(async () => {
@@ -90,7 +95,16 @@ export function startLiveSync(args: {
     'watching latest chain head'
   )
 
-  return { stop: unwatch }
+  return {
+    stop: async () => {
+      if (!stopped) {
+        stopped = true
+        unwatch()
+        pqueue.clear()
+      }
+      await pqueue.onIdle()
+    },
+  }
 }
 
 function sleep(ms: number) {

@@ -37,6 +37,7 @@ export type InternalConfig = {
   backfillWriteMode: BackfillWriteMode
   backfillFetchConcurrency: number
   backfillCopyChunkBytes: number
+  maxConnections: number
   port: number
   logLevel: LogLevel
   chainId: number
@@ -51,10 +52,13 @@ const backfillCopyChunkBytesSchema = z.coerce
   .max(MAX_COPY_CHUNK_BYTES)
   .default(DEFAULT_COPY_CHUNK_BYTES)
 
+const maxConnectionsSchema = z.coerce.number().int().min(3).default(20)
+
 const envSchema = z.object({
   RPC_URL: z.url().optional(),
   REALTIME_RPC_URL: z.url().optional(),
   DATABASE_URL: z.url().optional(),
+  MAX_CONNECTIONS: maxConnectionsSchema,
   START_BLOCK: z.coerce.bigint().default(0n),
   FINALITY: z.coerce.bigint().default(30n),
   BATCH_SIZE: z.coerce.bigint().default(100n),
@@ -79,6 +83,7 @@ export type CliConfig = {
   rpcUrl?: string
   realtimeRpcUrl?: string
   databaseUrl?: string
+  maxConnections?: number
   pgliteDir?: string
   startBlock?: string
   finality?: string
@@ -104,6 +109,14 @@ export function resolveBackfillCopyChunkBytes(
   return backfillCopyChunkBytesSchema.parse(flagValue ?? envValue)
 }
 
+/** Resolves the total PostgreSQL connection budget with CLI precedence. */
+export function resolveMaxConnections(
+  flagValue: number | undefined,
+  envValue: string | undefined
+): number {
+  return maxConnectionsSchema.parse(flagValue ?? envValue)
+}
+
 /**
  * Builds the runtime configuration used by the CLI, sync engine, and API.
  *
@@ -118,6 +131,10 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     RPC_URL: flags.rpcUrl ?? process.env.RPC_URL,
     REALTIME_RPC_URL: flags.realtimeRpcUrl ?? process.env.REALTIME_RPC_URL,
     DATABASE_URL: flags.databaseUrl ?? process.env.DATABASE_URL,
+    MAX_CONNECTIONS: resolveMaxConnections(
+      flags.maxConnections,
+      process.env.MAX_CONNECTIONS
+    ),
     START_BLOCK: flags.startBlock ?? process.env.START_BLOCK,
     FINALITY: flags.finality ?? process.env.FINALITY,
     BATCH_SIZE: flags.batchSize ?? process.env.BATCH_SIZE,
@@ -167,6 +184,7 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     backfillWriteMode: env.BACKFILL_WRITE_MODE,
     backfillFetchConcurrency: env.BACKFILL_FETCH_CONCURRENCY,
     backfillCopyChunkBytes: env.BACKFILL_COPY_CHUNK_BYTES,
+    maxConnections: env.MAX_CONNECTIONS,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     chainId,

@@ -32,6 +32,16 @@ export type DatabaseContext = {
   stop: () => Promise<void>
 }
 
+export type DatabaseRole = 'api-backfill' | 'live-sync'
+
+/** Live sync is sequential and only needs a small dedicated pool. */
+export const POSTGRES_POOL_MAX_LIVE_SYNC = 2
+
+const POSTGRES_ROLE_APPLICATION_NAME: Record<DatabaseRole, string> = {
+  'api-backfill': 'foxer-rpc-api-backfill',
+  'live-sync': 'foxer-rpc-live-sync',
+}
+
 /**
  * Narrows the shared database union to the PostgreSQL node-postgres driver.
  */
@@ -52,16 +62,24 @@ export function isPostgresDatabase(db: Database): db is NodePgDatabase & {
 export function createDatabase({
   config,
   logger,
+  role = 'api-backfill',
+  maxConnections = 20,
 }: {
   config?: DatabaseConfig
   logger: Logger
+  role?: DatabaseRole
+  maxConnections?: number
 }): DatabaseContext {
   if (config?.driver === 'postgres') {
+    const max =
+      role === 'live-sync'
+        ? POSTGRES_POOL_MAX_LIVE_SYNC
+        : maxConnections - POSTGRES_POOL_MAX_LIVE_SYNC
     const pool = new Pool({
-      application_name: 'foxer-rpc',
+      application_name: POSTGRES_ROLE_APPLICATION_NAME[role],
       connectionTimeoutMillis: 5_000,
       idleTimeoutMillis: 30_000,
-      max: 20,
+      max,
       connectionString: config.url,
     })
     pool.on('error', (err) => {
