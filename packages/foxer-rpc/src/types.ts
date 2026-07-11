@@ -35,6 +35,7 @@ export type ChainReceipt = {
   status: 'success' | 'reverted'
   effectiveGasPrice: bigint
   type: TransactionType | Hex
+  logsBloom: Hex
 }
 
 export type EncodedBlock = Schema['blocks']['$inferInsert']

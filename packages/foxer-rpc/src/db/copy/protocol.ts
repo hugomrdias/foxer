@@ -228,6 +228,7 @@ export function encodeTransactionCopyRow(tx: EncodedTransaction): Buffer {
       ? null
       : encodeCopyNumeric78(tx.effectiveGasPrice),
     tx.contractAddress == null ? null : encodeCopyBytea(tx.contractAddress),
+    encodeCopyBytea(tx.logsBloom),
   ])
 }
 

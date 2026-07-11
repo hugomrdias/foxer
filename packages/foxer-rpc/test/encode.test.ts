@@ -10,6 +10,7 @@ import {
 } from '../src/api/decode.ts'
 import {
   encodeBlock,
+  encodeBlockData,
   encodeNullRoundBlock,
   encodeTransaction,
   encodeTransactionType,
@@ -62,6 +63,45 @@ test('stores the canonical zero bloom for null rounds', () => {
   expect(encoded.block.logsBloom).toBe(zeroLogsBloom)
 })
 
+test('rejects block transactions without matching receipts', () => {
+  const tx = transaction({ hash: bytes32('9') })
+
+  expect(() => encodeBlockData(chainBlock({ transactions: [tx] }), [])).toThrow(
+    `transaction ${tx.hash} has no matching receipt`
+  )
+})
+
+test('persists receipt logs blooms and returns stored values unchanged', async () => {
+  await withTestDatabase(async (db) => {
+    const txHash = bytes32('8')
+    const receiptBloom = `0x${'cd'.repeat(256)}` as Hex
+    const tx = encodeTransaction(
+      transaction({ hash: txHash }),
+      receipt({ transactionHash: txHash, logsBloom: receiptBloom })
+    )
+    const block = blockRow(1n)
+
+    await db.insert(schema.blocks).values(block)
+    await db.insert(schema.transactions).values(tx)
+
+    const [storedBlock] = await db.select().from(schema.blocks)
+    const [storedTx] = await db.select().from(schema.transactions)
+    expect(storedTx.logsBloom).toBe(receiptBloom)
+    expect(decodeReceipt(storedTx, storedBlock, []).logsBloom).toBe(
+      receiptBloom
+    )
+
+    const unvalidatedStoredBloom = '0xdead'
+    expect(
+      decodeReceipt(
+        { ...storedTx, logsBloom: unvalidatedStoredBloom },
+        storedBlock,
+        []
+      ).logsBloom
+    ).toBe(unvalidatedStoredBloom)
+  })
+})
+
 test('normalizes transaction signature components to canonical 32-byte hex', () => {
   const txHash = bytes32('f')
   const reportedS =
@@ -74,7 +114,8 @@ test('normalizes transaction signature components to canonical 32-byte hex', () 
       hash: txHash,
       r: '0xf' as Hex,
       s: reportedS,
-    })
+    }),
+    receipt({ transactionHash: txHash })
   )
 
   expect(encoded.r).toBe(
@@ -90,7 +131,10 @@ test('preserves already 32-byte and lowercases uppercase signature hex', () => {
   const r = bytes32('c').toUpperCase() as Hex
   const s = bytes32('d')
 
-  const encoded = encodeTransaction(transaction({ hash: txHash, r, s }))
+  const encoded = encodeTransaction(
+    transaction({ hash: txHash, r, s }),
+    receipt({ transactionHash: txHash })
+  )
 
   expect(encoded.r).toBe(bytes32('c'))
   expect(encoded.s).toBe(bytes32('d'))
@@ -102,7 +146,8 @@ test('keeps missing signature components as null', () => {
       hash: bytes32('2'),
       r: undefined,
       s: undefined,
-    })
+    }),
+    receipt({ transactionHash: bytes32('2') })
   )
 
   expect(encoded.r).toBeNull()
@@ -115,14 +160,16 @@ test('rejects invalid and oversized transaction signature components', () => {
   for (const empty of ['0x', '0X'] as Hex[]) {
     expect(() =>
       encodeTransaction(
-        transaction({ hash: txHash, r: empty, s: bytes32('d') })
+        transaction({ hash: txHash, r: empty, s: bytes32('d') }),
+        receipt({ transactionHash: txHash })
       )
     ).toThrow(`Transaction ${txHash} r: invalid hex value: ${empty}`)
   }
 
   expect(() =>
     encodeTransaction(
-      transaction({ hash: txHash, r: '0xzz' as Hex, s: bytes32('d') })
+      transaction({ hash: txHash, r: '0xzz' as Hex, s: bytes32('d') }),
+      receipt({ transactionHash: txHash })
     )
   ).toThrow(`Transaction ${txHash} r: invalid hex value: 0xzz`)
 
@@ -132,7 +179,8 @@ test('rejects invalid and oversized transaction signature components', () => {
         hash: txHash,
         r: bytes32('c'),
         s: `0x${'ff'.repeat(65)}` as Hex,
-      })
+      }),
+      receipt({ transactionHash: txHash })
     )
   ).toThrow(`Transaction ${txHash} s: hex value exceeds 32 bytes`)
 })
@@ -164,7 +212,8 @@ test('roundtrips normalized signature components through Drizzle', async () => {
         hash: txHash,
         r: '0xabc' as Hex,
         s: reportedS,
-      })
+      }),
+      receipt({ transactionHash: txHash })
     )
     const block = blockRow(1n)
 
@@ -274,6 +323,7 @@ function receipt(overrides: Partial<ChainReceipt>): ChainReceipt {
     status: 'success',
     effectiveGasPrice: 1n,
     type: 'eip1559',
+    logsBloom: zeroLogsBloom,
     ...overrides,
   }
 }

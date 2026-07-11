@@ -28,6 +28,7 @@ import { encodeTransaction } from '../src/db/encode.ts'
 import { iterateBlocks } from '../src/db/indexed-batch.ts'
 import type { EncodedLog } from '../src/types.ts'
 import {
+  copyReceipt,
   copyTransaction,
   encodeCopyChunks,
   encodeCopyField,
@@ -74,7 +75,8 @@ describe('binary COPY protocol', () => {
         hash: bytes32('f'),
         r: '0xabc' as Hex,
         s: reportedS,
-      })
+      }),
+      copyReceipt({ transactionHash: bytes32('f') })
     )
 
     expect(() => encodeTransactionCopyRow(tx)).not.toThrow()
@@ -94,6 +96,20 @@ describe('binary COPY protocol', () => {
 
     expect(() => encodeTransactionCopyRow(tx)).toThrow(
       'Invalid normalized hex value'
+    )
+  })
+
+  test('encodes the stored receipt bloom as the final transaction field', () => {
+    const logsBloom = `0x${'ab'.repeat(256)}` as Hex
+    const row = encodeTransactionCopyRow({
+      ...sampleTransaction(),
+      logsBloom,
+    })
+
+    expect(row.readInt16BE(0)).toBe(23)
+    expect(row.readInt32BE(row.length - 260)).toBe(256)
+    expect(row.subarray(row.length - 256).toString('hex')).toBe(
+      logsBloom.slice(2)
     )
   })
 
@@ -216,6 +232,7 @@ describe('binary COPY protocol', () => {
       'cumulative_gas_used',
       'effective_gas_price',
       'contract_address',
+      'logs_bloom',
     ])
     expect(LOG_COPY_COLUMNS).toEqual([
       'block_number',
@@ -234,7 +251,7 @@ describe('binary COPY protocol', () => {
     const log = sampleLog()
 
     expect(encodeBlockCopyRow(block).subarray(0, 2).readInt16BE(0)).toBe(15)
-    expect(encodeTransactionCopyRow(tx).subarray(0, 2).readInt16BE(0)).toBe(22)
+    expect(encodeTransactionCopyRow(tx).subarray(0, 2).readInt16BE(0)).toBe(23)
     expect(encodeLogCopyRow(log).subarray(0, 2).readInt16BE(0)).toBe(9)
   })
 })

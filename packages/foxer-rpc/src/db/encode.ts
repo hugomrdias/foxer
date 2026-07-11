@@ -52,15 +52,15 @@ export function encodeBlock(block: ChainBlock): EncodedBlock {
 }
 
 /**
- * Converts a viem transaction plus its optional receipt into one DB row.
+ * Converts a viem transaction and its required receipt into one DB row.
  *
  * Receipt fields are merged into `transactions` to avoid a separate receipts
- * table. Missing receipt values are represented as `null`, which can happen for
- * malformed upstream responses or placeholder/null-round data.
+ * table. Receipt hex values have already been validated and normalized by the
+ * upstream ingestion boundary.
  */
 export function encodeTransaction(
   tx: ChainTransaction,
-  receipt?: ChainReceipt
+  receipt: ChainReceipt
 ): EncodedTransaction {
   if (tx.blockNumber == null || tx.transactionIndex == null) {
     throw new Error(`Transaction ${tx.hash} is missing block position`)
@@ -84,13 +84,14 @@ export function encodeTransaction(
     r: tx.r == null ? null : normalizeSignatureComponent(tx.r, 'r', tx.hash),
     s: tx.s == null ? null : normalizeSignatureComponent(tx.s, 's', tx.hash),
     accessList: tx.accessList ?? null,
-    status: encodeStatus(receipt?.status),
-    receiptGasUsed: receipt?.gasUsed ?? null,
-    cumulativeGasUsed: receipt?.cumulativeGasUsed ?? null,
-    effectiveGasPrice: receipt?.effectiveGasPrice ?? null,
-    contractAddress: receipt?.contractAddress
+    status: encodeStatus(receipt.status),
+    receiptGasUsed: receipt.gasUsed,
+    cumulativeGasUsed: receipt.cumulativeGasUsed,
+    effectiveGasPrice: receipt.effectiveGasPrice,
+    contractAddress: receipt.contractAddress
       ? normalizeHex(receipt.contractAddress)
       : null,
+    logsBloom: receipt.logsBloom,
   }
 }
 
@@ -165,10 +166,13 @@ export function encodeBlockData(
   const transactions = new Array<EncodedTransaction>(block.transactions.length)
   for (let i = 0; i < block.transactions.length; i++) {
     const tx = block.transactions[i]
-    transactions[i] = encodeTransaction(
-      tx,
-      receiptByHash.get(normalizeHex(tx.hash))
-    )
+    const receipt = receiptByHash.get(normalizeHex(tx.hash))
+    if (!receipt) {
+      throw new Error(
+        `Block ${block.number} transaction ${tx.hash} has no matching receipt`
+      )
+    }
+    transactions[i] = encodeTransaction(tx, receipt)
   }
 
   const logs = new Array<EncodedLog>(logCount)
@@ -229,8 +233,7 @@ export function encodeNullRoundBlock(options: {
 /**
  * Maps receipt status strings to Ethereum JSON-RPC status numbers.
  */
-function encodeStatus(status: ChainReceipt['status'] | undefined) {
-  if (status == null) return null
+function encodeStatus(status: ChainReceipt['status']) {
   return status === 'success' ? 1 : 0
 }
 

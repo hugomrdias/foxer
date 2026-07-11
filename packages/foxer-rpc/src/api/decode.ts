@@ -1,7 +1,6 @@
 import type { Hex } from 'viem'
 
 import type { schema } from '../db/schema/index.ts'
-import { createLogsBloom, zeroLogsBloom } from '../utils/bloom.ts'
 
 type BlockRow = typeof schema.blocks.$inferSelect
 type TransactionRow = typeof schema.transactions.$inferSelect
@@ -121,7 +120,7 @@ export function decodeReceipt(
     gasUsed: quantity(tx.receiptGasUsed),
     contractAddress: tx.contractAddress,
     logs: logs.map((log) => decodeLog(log, block, tx)),
-    logsBloom: logsBloom(logs),
+    logsBloom: tx.logsBloom,
     status: quantity(tx.status),
     type: quantity(tx.type),
     effectiveGasPrice: quantity(tx.effectiveGasPrice),
@@ -146,17 +145,4 @@ export function decodeLog(log: LogRow, block: BlockRow, tx: TransactionRow) {
     logIndex: quantity(log.logIndex),
     removed: false,
   }
-}
-
-/**
- * Builds a receipt/block logs bloom from log addresses and topics on demand.
- */
-function logsBloom(logs: LogRow[]) {
-  if (logs.length === 0) return zeroLogsBloom
-  const values = logs.flatMap((log) =>
-    [log.address, log.topic0, log.topic1, log.topic2, log.topic3].filter(
-      Boolean
-    )
-  ) as Hex[]
-  return createLogsBloom(values)
 }

@@ -181,6 +181,7 @@ function txRow(
     cumulativeGasUsed: 21_000n,
     effectiveGasPrice: 1n,
     contractAddress: null,
+    logsBloom: zeroLogsBloom,
   }
 }
 

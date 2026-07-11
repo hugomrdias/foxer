@@ -2,6 +2,7 @@
 
 import { encodeCopyHeader, encodeCopyTrailer } from '../src/db/copy/protocol.ts'
 import type {
+  ChainReceipt,
   ChainTransaction,
   EncodedBlock,
   EncodedLog,
@@ -239,6 +240,7 @@ export function sampleTransaction(blockNumber = 1n): EncodedTransaction {
     cumulativeGasUsed: 21_000n,
     effectiveGasPrice: 2n,
     contractAddress: address('e'),
+    logsBloom: zeroLogsBloom,
   }
 }
 
@@ -283,4 +285,26 @@ export function copyTransaction(
     accessList: [],
     ...overrides,
   } as unknown as ChainTransaction
+}
+
+export function copyReceipt(
+  overrides: Partial<ChainReceipt> = {}
+): ChainReceipt {
+  return {
+    transactionHash: bytes32('a'),
+    transactionIndex: 0,
+    blockHash: bytes32('1'),
+    blockNumber: 1n,
+    from: address('a'),
+    to: address('b'),
+    cumulativeGasUsed: 21_000n,
+    gasUsed: 21_000n,
+    contractAddress: null,
+    logs: [],
+    status: 'success',
+    effectiveGasPrice: 1n,
+    type: 'eip1559',
+    logsBloom: zeroLogsBloom,
+    ...overrides,
+  }
 }

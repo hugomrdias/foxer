@@ -52,6 +52,7 @@ function sampleIndexedBlock(
     cumulativeGasUsed: 21_000n,
     effectiveGasPrice: 1n,
     contractAddress: null,
+    logsBloom: zeroLogsBloom,
   }))
 
   const logs = Array.from({ length: logCount }, (_, index) => ({

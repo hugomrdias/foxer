@@ -48,6 +48,7 @@ export const TRANSACTION_COPY_COLUMNS = [
   'cumulative_gas_used',
   'effective_gas_price',
   'contract_address',
+  'logs_bloom',
 ] as const
 
 /** Fixed column order for `logs` COPY ingestion. */

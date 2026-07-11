@@ -77,6 +77,7 @@ async function insertSampleRows(db: Database) {
     gas: 21_000n,
     gasPrice: 1n,
     type: 0,
+    logsBloom: zeroLogsBloom,
   })
 
   await db.insert(schema.logs).values({
@@ -161,6 +162,7 @@ describe('backfill indexes', () => {
           gas: 21_000n,
           gasPrice: 1n,
           type: 0,
+          logsBloom: zeroLogsBloom,
         })
       }).toThrow()
     })

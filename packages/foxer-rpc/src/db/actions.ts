@@ -17,7 +17,7 @@ import { schema } from './schema/index.ts'
 import { withTransaction } from './transaction.ts'
 
 const BLOCK_INSERT_WIDTH = 15
-const TRANSACTION_INSERT_WIDTH = 22
+const TRANSACTION_INSERT_WIDTH = 23
 const LOG_INSERT_WIDTH = 9
 
 /**

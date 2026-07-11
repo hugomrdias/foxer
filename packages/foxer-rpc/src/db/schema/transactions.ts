@@ -34,6 +34,7 @@ export const transactions = snakeCase.table(
     cumulativeGasUsed: int8(),
     effectiveGasPrice: numeric78(),
     contractAddress: address(),
+    logsBloom: bytea().notNull(),
   },
   (table) => [
     uniqueIndex('transactions_block_number_index_unique').on(

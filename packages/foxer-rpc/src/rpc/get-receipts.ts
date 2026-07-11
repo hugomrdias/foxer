@@ -1,13 +1,13 @@
 import type { PublicClient, TransactionReceipt } from 'viem'
 
 import type { ChainLog, ChainReceipt } from '../types.ts'
-import { normalizeHex } from '../utils/hex.ts'
+import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
 
 /**
  * Fetches all receipts for a block with viem's `eth_getBlockReceipts` action.
  *
  * Viem formats receipt quantities into bigint/number values for us; this module
- * only normalizes hex casing and fills the optional fields our encoder expects.
+ * normalizes hex values and validates the persisted logs bloom width.
  */
 export async function getBlockReceipts(options: {
   client: PublicClient
@@ -39,6 +39,11 @@ function normalizeReceipt(receipt: TransactionReceipt): ChainReceipt {
     status: receipt.status,
     effectiveGasPrice: receipt.effectiveGasPrice,
     type: receipt.type,
+    logsBloom: normalizeFixedWidthHex(
+      receipt.logsBloom,
+      256,
+      `Receipt ${receipt.transactionHash} logs bloom`
+    ),
   }
 }
 
