@@ -44,7 +44,19 @@ describe('eth_getLogs', () => {
         toBlock: '0x2',
         address: [address2],
       })
-      expect(byAddressOr.result.map((log) => log.address)).toEqual([address2])
+      expect(byAddressOr.result).toEqual([
+        {
+          address: address2,
+          topics: [topic1, topic2],
+          data: '0x1234',
+          blockNumber: '0x1',
+          transactionHash: tx1,
+          transactionIndex: '0x0',
+          blockHash: block1,
+          logIndex: '0x1',
+          removed: false,
+        },
+      ])
 
       const emptyAddressOr = await getLogs(db, {
         fromBlock: '0x1',
@@ -122,7 +134,17 @@ async function rpc(
       params: [filter],
     },
   } as never)) as {
-    result: Array<{ address: string; blockHash: string; logIndex: string }>
+    result: Array<{
+      address: string
+      topics: string[]
+      data: string
+      blockNumber: string
+      transactionHash: string
+      transactionIndex: string
+      blockHash: string
+      logIndex: string
+      removed: boolean
+    }>
     error?: { code: number; message: string }
   }
 }
@@ -155,7 +177,7 @@ async function seedLogs(db: Database) {
       topic1: topic2,
       topic2: null,
       topic3: null,
-      data: '0x',
+      data: '0x1234',
     },
     {
       blockNumber: 2n,

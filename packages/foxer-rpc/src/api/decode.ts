@@ -3,6 +3,7 @@ import type { Hex } from 'viem'
 import type { schema } from '../db/schema/index.ts'
 
 type BlockRow = typeof schema.blocks.$inferSelect
+type BlockHashRow = Pick<BlockRow, 'hash'>
 type TransactionRow = typeof schema.transactions.$inferSelect
 type TransactionHashRow = Pick<TransactionRow, 'hash'>
 type ReceiptTransactionRow = Pick<
@@ -150,7 +151,7 @@ export function decodeReceipt(
  */
 export function decodeLog(
   log: LogRow,
-  block: BlockRow,
+  block: BlockHashRow,
   tx: TransactionHashRow
 ) {
   return {

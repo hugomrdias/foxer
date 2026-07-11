@@ -70,8 +70,8 @@ export async function ethGetLogs(args: MethodContext, params: unknown[]) {
   const rows = await args.db
     .select({
       log: schema.logs,
-      block: schema.blocks,
-      tx: schema.transactions,
+      block: { hash: schema.blocks.hash },
+      tx: { hash: schema.transactions.hash },
     })
     .from(schema.logs)
     .innerJoin(schema.blocks, eq(schema.logs.blockNumber, schema.blocks.number))
