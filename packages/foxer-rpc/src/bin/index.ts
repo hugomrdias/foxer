@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { cli } from 'cleye'
 
 import { dev } from './dev.ts'
+import { serve } from './serve.ts'
 import { start } from './start.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -18,7 +19,7 @@ const packageJson = JSON.parse(
 const argv = cli({
   name: 'foxer-rpc',
   version: packageJson.version,
-  commands: [dev, start],
+  commands: [dev, start, serve],
   help: {
     version: packageJson.version,
   },

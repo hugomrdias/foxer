@@ -318,22 +318,44 @@ PORT=8545 \
 bun run src/bin/index.ts start
 ```
 
-The `start` command:
+The `start` command runs the combined sync and API deployment:
 
 - requires `DATABASE_URL`
 - uses JSON logs
 - runs migrations automatically
 - starts the sync engine and JSON-RPC server
 
+For deployments with API replicas in multiple regions, run one `start` process
+near Postgres to own migrations and sync, then run `serve` for each API-only
+replica:
+
+```bash
+RPC_URL='https://api.calibration.node.glif.io/rpc/v1' \
+DATABASE_URL='postgres://postgres:postgres@db.example.com:5432/foxer_rpc' \
+PORT=8545 \
+bun run src/bin/index.ts serve
+```
+
+The `serve` command:
+
+- requires `DATABASE_URL` and uses only the API Postgres pool
+- uses `MAX_CONNECTIONS`/`--max-connections` to size that pool
+- serves the JSON-RPC API and proxies unsupported methods through `RPC_URL`
+- does not run migrations, startup verification, backfill, or live sync
+
+Run `serve` only against a database maintained by a `start` deployment. This
+keeps the single sync writer near Postgres while API-only replicas can be placed
+closer to clients.
+
 ## Recommended Production Settings
 
 For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics. The values below assume about 8 GB of RAM dedicated to Postgres. Scale `shared_buffers` to roughly 25% of RAM and `effective_cache_size` to roughly 50-75%.
 
-`foxer-rpc` keeps two Postgres pools per process. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. Pools are tagged with `application_name` values `foxer-rpc-api` and `foxer-rpc-sync` for observability. PGlite uses one shared client because it does not use Postgres pools and must not open the same local database twice.
+The combined `start` deployment keeps two Postgres pools. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. API-only `serve` deployments open only the API pool. Pools are tagged with `application_name` values `foxer-rpc-api` and `foxer-rpc-sync` for observability. PGlite uses one shared client in development because it does not use Postgres pools and must not open the same local database twice.
 
-Plan PostgreSQL `max_connections` for every replica plus headroom: each process can hold up to its configured API maximum plus one sync connection.
+Plan PostgreSQL `max_connections` for every replica plus headroom: each `start` process can hold up to its configured API maximum plus one sync connection, while each `serve` process can hold up to its configured API maximum.
 
-For one process using the defaults, configure PostgreSQL with at least 101 application connections plus operational headroom (for example, `max_connections = 110`).
+For one `start` process using the defaults, configure PostgreSQL with at least 101 application connections plus operational headroom (for example, `max_connections = 110`).
 
 ```conf
 shared_buffers = 2GB
