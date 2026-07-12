@@ -161,8 +161,9 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `PORT` | `--port` | `8545` | JSON-RPC server port |
 | `LOG_LEVEL` | `--log-level` | `info` | Pino log level |
 | `MAX_LOGS_BLOCK_RANGE` | `--max-logs-block-range` | `2000` | Maximum block range for `eth_getLogs` |
-| `BACKFILL_WRITE_MODE` | `--backfill-write-mode` | `copy` | Backfill with PostgreSQL binary COPY or batched `insert` statements |
 | `AUTH_SECRET` | `--auth-secret` | None | Enables JWT auth on all routes except `/health` |
+
+Historical backfill always writes blocks, transactions, and logs with PostgreSQL binary COPY.
 
 ## Testing
 

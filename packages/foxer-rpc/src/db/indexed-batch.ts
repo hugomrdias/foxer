@@ -72,7 +72,7 @@ export function* iterateLogs(
 }
 
 /**
- * Flattens blocks into a preallocated array for Drizzle insert fallback.
+ * Flattens blocks into a preallocated array for the Drizzle insert writer.
  */
 export function flattenBlocks(
   batch: readonly IndexedBlockData[]
@@ -85,7 +85,7 @@ export function flattenBlocks(
 }
 
 /**
- * Flattens transactions into a preallocated array for Drizzle insert fallback.
+ * Flattens transactions into a preallocated array for the Drizzle insert writer.
  */
 export function flattenTransactions(
   batch: readonly IndexedBlockData[]
@@ -102,7 +102,7 @@ export function flattenTransactions(
 }
 
 /**
- * Flattens logs into a preallocated array for Drizzle insert fallback.
+ * Flattens logs into a preallocated array for the Drizzle insert writer.
  */
 export function flattenLogs(batch: readonly IndexedBlockData[]): EncodedLog[] {
   const logs = new Array<EncodedLog>(countLogs(batch))

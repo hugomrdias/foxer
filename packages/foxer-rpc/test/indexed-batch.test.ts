@@ -148,7 +148,7 @@ describe('indexed batch utilities', () => {
     expect(logs.length).toBe(countLogs(batch))
   })
 
-  test('insert fallback accepts large indexed batches without spread flattening', async () => {
+  test('insert writer accepts large indexed batches without spread flattening', async () => {
     await withTestDatabase(async (db) => {
       const batch = buildLargeBatch(200)
       await expect(

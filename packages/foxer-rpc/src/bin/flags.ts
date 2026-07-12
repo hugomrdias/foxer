@@ -1,5 +1,3 @@
-import type { BackfillWriteMode } from '../config.ts'
-
 const LogLevels = [
   'trace',
   'debug',
@@ -17,18 +15,6 @@ const LogLevel = (logLevel: LogLevels) => {
   }
 
   return logLevel
-}
-
-const BackfillWriteModes = ['copy', 'insert'] as const
-
-const BackfillWriteModeFlag = (mode: string): BackfillWriteMode => {
-  if (!BackfillWriteModes.includes(mode as BackfillWriteMode)) {
-    throw new Error(
-      `Invalid backfill write mode: "${mode}". Expected copy or insert.`
-    )
-  }
-
-  return mode as BackfillWriteMode
 }
 
 export const globalFlags = {
@@ -82,10 +68,6 @@ export const globalFlags = {
     type: Boolean,
     description:
       'Drop and rebuild non-constraint indexes during large historical backfills',
-  },
-  backfillWriteMode: {
-    type: BackfillWriteModeFlag,
-    description: 'Backfill writer: PostgreSQL COPY or batched inserts',
   },
   backfillFetchConcurrency: {
     type: Number,

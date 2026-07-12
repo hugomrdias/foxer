@@ -14,8 +14,6 @@ dotenv.config({
   quiet: true,
 })
 
-export type BackfillWriteMode = 'copy' | 'insert'
-
 export type InternalConfig = {
   databaseUrl: string
   startBlock: bigint
@@ -23,7 +21,6 @@ export type InternalConfig = {
   batchSize: bigint
   maxLogsBlockRange: bigint
   deferBackfillIndexes: boolean
-  backfillWriteMode: BackfillWriteMode
   backfillFetchConcurrency: number
   backfillCopyChunkBytes: number
   maxConnections: number
@@ -61,7 +58,6 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === true || value === 'true' || value === '1')
     .default(false),
-  BACKFILL_WRITE_MODE: z.enum(['copy', 'insert']).default('copy'),
   BACKFILL_FETCH_CONCURRENCY: z.coerce.number().int().positive().default(20),
   BACKFILL_COPY_CHUNK_BYTES: backfillCopyChunkBytesSchema,
   AUTH_SECRET: z.string().min(16).optional(),
@@ -77,7 +73,6 @@ export type CliConfig = {
   batchSize?: string
   maxLogsBlockRange?: string
   deferBackfillIndexes?: boolean
-  backfillWriteMode?: BackfillWriteMode
   backfillFetchConcurrency?: number
   backfillCopyChunkBytes?: number
   port?: number
@@ -130,8 +125,6 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
       flags.maxLogsBlockRange ?? process.env.MAX_LOGS_BLOCK_RANGE,
     DEFER_BACKFILL_INDEXES:
       flags.deferBackfillIndexes ?? process.env.DEFER_BACKFILL_INDEXES,
-    BACKFILL_WRITE_MODE:
-      flags.backfillWriteMode ?? process.env.BACKFILL_WRITE_MODE,
     BACKFILL_FETCH_CONCURRENCY:
       flags.backfillFetchConcurrency ?? process.env.BACKFILL_FETCH_CONCURRENCY,
     BACKFILL_COPY_CHUNK_BYTES: resolveBackfillCopyChunkBytes(
@@ -162,7 +155,6 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     batchSize: env.BATCH_SIZE,
     maxLogsBlockRange: env.MAX_LOGS_BLOCK_RANGE,
     deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
-    backfillWriteMode: env.BACKFILL_WRITE_MODE,
     backfillFetchConcurrency: env.BACKFILL_FETCH_CONCURRENCY,
     backfillCopyChunkBytes: env.BACKFILL_COPY_CHUNK_BYTES,
     maxConnections: env.MAX_CONNECTIONS,

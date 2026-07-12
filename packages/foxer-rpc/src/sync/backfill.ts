@@ -1,5 +1,4 @@
 import type { InternalConfig } from '../config.ts'
-import { insertIndexedBlockData } from '../db/actions.ts'
 import {
   anyManagedIndexMissing,
   dropManagedBackfillIndexes,
@@ -71,8 +70,6 @@ export async function runBackfill(args: {
       backfillFetchConcurrency: config.backfillFetchConcurrency,
       backfillCopyChunkBytes: config.backfillCopyChunkBytes,
       deferBackfillIndexes: deferIndexes,
-      backfillWriteMode: config.backfillWriteMode,
-      backfillWriter: config.backfillWriteMode,
     },
     'starting backfill'
   )
@@ -104,31 +101,20 @@ export async function runBackfill(args: {
       )
 
       const writeClock = startClock()
-      const copyMetrics =
-        config.backfillWriteMode === 'copy'
-          ? await copyIndexedBlockData({
-              db,
-              batch: indexedBlocks,
-              chunkBytes: config.backfillCopyChunkBytes,
-            })
-          : undefined
-      if (config.backfillWriteMode !== 'copy') {
-        await insertIndexedBlockData({ db, batch: indexedBlocks })
-      }
+      const copyMetrics = await copyIndexedBlockData({
+        db,
+        batch: indexedBlocks,
+        chunkBytes: config.backfillCopyChunkBytes,
+      })
       logger.debug(
         {
           blocks: countBlocks(indexedBlocks),
           transactions: countTransactions(indexedBlocks),
           logs: countLogs(indexedBlocks),
           duration: writeClock(),
-          backfillWriter: config.backfillWriteMode,
-          ...(copyMetrics
-            ? {
-                copyBlocks: copyMetrics.blocks,
-                copyTransactions: copyMetrics.transactions,
-                copyLogs: copyMetrics.logs,
-              }
-            : {}),
+          copyBlocks: copyMetrics.blocks,
+          copyTransactions: copyMetrics.transactions,
+          copyLogs: copyMetrics.logs,
         },
         'wrote indexed block data'
       )

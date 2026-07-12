@@ -7,6 +7,10 @@ import {
 } from '../src/config.ts'
 import { MAX_COPY_CHUNK_BYTES, MIN_COPY_CHUNK_BYTES } from '../src/db/copy.ts'
 
+test('does not expose a configurable backfill write mode', () => {
+  expect('backfillWriteMode' in globalFlags).toBe(false)
+})
+
 test('leaves backfill fetch concurrency unset for config precedence', () => {
   expect('default' in globalFlags.backfillFetchConcurrency).toBe(false)
 })
