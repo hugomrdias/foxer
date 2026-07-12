@@ -1,63 +1,45 @@
 import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
-import type { Hash } from 'viem'
 import { streamEthGetBlockReceipts } from '../src/api/json-rpc/methods/eth-get-block-receipts-stream.ts'
 import { streamJsonRpc } from '../src/api/json-rpc/stream.ts'
-import { createApiServer } from '../src/api/server.ts'
 import { type Database, receiptTransactionColumns } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
-import type { EncodedBlock, EncodedTransaction } from '../src/types.ts'
-import { hexToBytes } from '../src/utils/hex.ts'
 import {
-  address,
-  bytes32,
-  emptyRoot,
-  testLogger,
-  withTestDatabase,
-  zeroLogsBloom,
-} from './helpers.ts'
-
-const block1 = bytes32('1')
-const block2 = bytes32('2')
-const tx1 = bytes32('a')
-const tx2 = bytes32('b')
-const tx3 = bytes32('e')
+  block1,
+  block2,
+  blockRow,
+  createReceiptTestApi,
+  logRow,
+  seedReceipts,
+  transactionRow,
+  tx1,
+  tx2,
+  tx3,
+} from './fixtures/receipts.ts'
+import { bytes32, withTestDatabase } from './helpers.ts'
 
 describe('eth_getBlockReceipts', () => {
-  test('receipt queries omit transaction calldata and unrelated columns', async () => {
-    await withTestDatabase(async (db) => {
-      await seedReceipts(db)
-
-      const [byHash] = await db.$prepared.getReceiptTransactionByHash.execute({
-        hash: hexToBytes(tx1),
-      })
-      const expectedColumns = [
-        'blockNumber',
-        'contractAddress',
-        'cumulativeGasUsed',
-        'effectiveGasPrice',
-        'from',
-        'hash',
-        'logsBloom',
-        'receiptGasUsed',
-        'status',
-        'to',
-        'transactionIndex',
-        'type',
-      ]
-
-      expect(Object.keys(byHash).sort()).toEqual(expectedColumns)
-      expect(Object.keys(receiptTransactionColumns).sort()).toEqual(
-        expectedColumns
-      )
-      expect(byHash).not.toHaveProperty('input')
-    })
+  test('receipt selections omit transaction calldata and unrelated columns', () => {
+    expect(Object.keys(receiptTransactionColumns).sort()).toEqual([
+      'blockNumber',
+      'contractAddress',
+      'cumulativeGasUsed',
+      'effectiveGasPrice',
+      'from',
+      'hash',
+      'logsBloom',
+      'receiptGasUsed',
+      'status',
+      'to',
+      'transactionIndex',
+      'type',
+    ])
   })
 
   test('resolves block numbers, tags, and hashes', async () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
-      const app = createTestApi(db)
+      const app = createReceiptTestApi(db)
 
       const byNumber = await rpc(app, '0x1')
       if (!byNumber.result) throw new Error('expected receipts by number')
@@ -94,14 +76,14 @@ describe('eth_getBlockReceipts', () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
 
-      const response = await rpc(createTestApi(db), bytes32('f'))
+      const response = await rpc(createReceiptTestApi(db), bytes32('f'))
       expect(response.result).toBeNull()
     })
   })
 
   test('returns invalid params for malformed block identifiers', async () => {
     await withTestDatabase(async (db) => {
-      const response = await rpc(createTestApi(db), '0xzz')
+      const response = await rpc(createReceiptTestApi(db), '0xzz')
       expect(response.error).toEqual({
         code: -32602,
         message: 'invalid block parameter',
@@ -112,7 +94,7 @@ describe('eth_getBlockReceipts', () => {
   test('streams the same result across log batch sizes and HTTP', async () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
-      await db.insert(schema.transactions).values(txRow(1n, 1, tx3))
+      await db.insert(schema.transactions).values(transactionRow(1n, 1, tx3))
       await db
         .insert(schema.logs)
         .values([
@@ -123,7 +105,7 @@ describe('eth_getBlockReceipts', () => {
 
       const batchOne = JSON.parse(await renderPreparedStream(db, '0x1', 1))
       const batchTwo = JSON.parse(await renderPreparedStream(db, block1, 2))
-      const app = createTestApi(db)
+      const app = createReceiptTestApi(db)
 
       expect(batchTwo.result).toEqual(batchOne.result)
       expect((await rpc(app, '0x1')).result).toEqual(batchOne.result)
@@ -136,7 +118,7 @@ describe('eth_getBlockReceipts', () => {
   test('streams singleton HTTP requests and rejects batches', async () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
-      const app = createTestApi(db)
+      const app = createReceiptTestApi(db)
 
       const response = await app.request('/', {
         method: 'POST',
@@ -173,7 +155,7 @@ describe('eth_getBlockReceipts', () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
       await db.insert(schema.blocks).values(blockRow(3n, bytes32('3'), block2))
-      const app = createTestApi(db)
+      const app = createReceiptTestApi(db)
       const idleBefore = db.$client.idleCount
 
       const unknown = await postBlockReceiptRequest(app, bytes32('f'))
@@ -194,7 +176,7 @@ describe('eth_getBlockReceipts', () => {
   test('streams through gzip compression', async () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
-      const response = await createTestApi(db).request('/', {
+      const response = await createReceiptTestApi(db).request('/', {
         method: 'POST',
         headers: {
           'accept-encoding': 'gzip',
@@ -219,7 +201,7 @@ describe('eth_getBlockReceipts', () => {
       await db.update(schema.logs).set({ data: `0x${'ab'.repeat(70_000)}` })
 
       const idleBefore = db.$client.idleCount
-      const response = await createTestApi(db).request('/', {
+      const response = await createReceiptTestApi(db).request('/', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: requestBody('0x1'),
@@ -254,28 +236,6 @@ async function renderPreparedStream(
   return (await app.request('/')).text()
 }
 
-function createTestApi(db: Database) {
-  return createApiServer({
-    db,
-    logger: testLogger,
-    config: {
-      chainId: 314_159,
-      clients: {
-        backfill: {
-          request: () => {
-            throw new Error('unexpected proxy request')
-          },
-        },
-        live: {
-          request: () => {
-            throw new Error('unexpected proxy request')
-          },
-        },
-      },
-    } as never,
-  })
-}
-
 function requestBody(block: unknown) {
   return JSON.stringify({
     jsonrpc: '2.0',
@@ -286,7 +246,7 @@ function requestBody(block: unknown) {
 }
 
 function postBlockReceiptRequest(
-  app: ReturnType<typeof createTestApi>,
+  app: ReturnType<typeof createReceiptTestApi>,
   block: unknown
 ) {
   return app.request('/', {
@@ -296,7 +256,10 @@ function postBlockReceiptRequest(
   })
 }
 
-async function rpc(app: ReturnType<typeof createTestApi>, block: unknown) {
+async function rpc(
+  app: ReturnType<typeof createReceiptTestApi>,
+  block: unknown
+) {
   return (await (await postBlockReceiptRequest(app, block)).json()) as {
     jsonrpc: '2.0'
     id: number
@@ -312,86 +275,5 @@ async function rpc(app: ReturnType<typeof createTestApi>, block: unknown) {
       }>
     }> | null
     error?: { code: number; message: string }
-  }
-}
-
-async function seedReceipts(db: Database) {
-  await db
-    .insert(schema.blocks)
-    .values([blockRow(1n, block1, bytes32('0')), blockRow(2n, block2, block1)])
-  await db
-    .insert(schema.transactions)
-    .values([txRow(1n, 0, tx1), txRow(2n, 0, tx2)])
-  await db.insert(schema.logs).values([logRow(1n, 0, 0, '1')])
-}
-
-function logRow(
-  blockNumber: bigint,
-  logIndex: number,
-  transactionIndex: number,
-  marker: string
-) {
-  return {
-    blockNumber,
-    logIndex,
-    transactionIndex,
-    address: address(marker),
-    topic0: bytes32(marker),
-    topic1: null,
-    topic2: null,
-    topic3: null,
-    data: '0x' as const,
-  }
-}
-
-function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
-  return {
-    number,
-    hash,
-    isNullRound: false,
-    parentHash,
-    timestamp: number,
-    miner: address('0'),
-    gasUsed: 21_000n,
-    gasLimit: 30_000_000n,
-    baseFeePerGas: 1_000_000_000n,
-    size: 1n,
-    stateRoot: emptyRoot,
-    receiptsRoot: emptyRoot,
-    transactionsRoot: emptyRoot,
-    extraData: '0x',
-    logsBloom: zeroLogsBloom,
-  }
-}
-
-function txRow(
-  blockNumber: bigint,
-  transactionIndex: number,
-  hash: Hash
-): EncodedTransaction {
-  return {
-    hash,
-    blockNumber,
-    transactionIndex,
-    from: address('a'),
-    to: address('b'),
-    input: '0x',
-    value: 0n,
-    nonce: transactionIndex,
-    gas: 21_000n,
-    gasPrice: 1n,
-    maxFeePerGas: 1n,
-    maxPriorityFeePerGas: 1n,
-    type: 2,
-    v: 1n,
-    r: bytes32('c'),
-    s: bytes32('d'),
-    accessList: null,
-    status: 1,
-    receiptGasUsed: 21_000n,
-    cumulativeGasUsed: 21_000n,
-    effectiveGasPrice: 1n,
-    contractAddress: null,
-    logsBloom: zeroLogsBloom,
   }
 }

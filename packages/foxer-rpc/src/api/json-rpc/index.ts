@@ -10,7 +10,7 @@ import { ethGetLogs } from './methods/eth-get-logs.ts'
 import { ethGetTransactionByBlockHashAndIndex } from './methods/eth-get-transaction-by-block-hash-and-index.ts'
 import { ethGetTransactionByBlockNumberAndIndex } from './methods/eth-get-transaction-by-block-number-and-index.ts'
 import { ethGetTransactionByHash } from './methods/eth-get-transaction-by-hash.ts'
-import { ethGetTransactionReceipt } from './methods/eth-get-transaction-receipt.ts'
+import { streamEthGetTransactionReceipt } from './methods/eth-get-transaction-receipt-stream.ts'
 import { netVersion } from './methods/net-version.ts'
 import { web3ClientVersion } from './methods/web3-client-version.ts'
 import { error, ok } from './response.ts'
@@ -32,6 +32,7 @@ export function handleJsonRpc(
 export function isStreamedRequest(body: JsonRpcRequest): boolean {
   switch (body.method) {
     case 'eth_getBlockReceipts':
+    case 'eth_getTransactionReceipt':
       return true
     default:
       return false
@@ -52,6 +53,12 @@ export function handleJsonRpcStream(
   switch (args.body.method) {
     case 'eth_getBlockReceipts':
       return streamEthGetBlockReceipts({ db: args.db }, params, args.stream)
+    case 'eth_getTransactionReceipt':
+      return streamEthGetTransactionReceipt(
+        { db: args.db },
+        params,
+        args.stream
+      )
     default:
       throw new Error(`JSON-RPC method is not streamed: ${args.body.method}`)
   }
@@ -98,8 +105,6 @@ async function dispatch(
         return ok(id, await ethGetBlockTransactionCountByNumber(args, params))
       case 'eth_getBlockTransactionCountByHash':
         return ok(id, await ethGetBlockTransactionCountByHash(args.db, params))
-      case 'eth_getTransactionReceipt':
-        return ok(id, await ethGetTransactionReceipt(args.db, params))
       case 'eth_getLogs':
         return ok(id, await ethGetLogs(args, params))
       default:

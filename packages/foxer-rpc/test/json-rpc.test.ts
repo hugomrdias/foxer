@@ -42,6 +42,14 @@ describe('handleJsonRpc', () => {
       isStreamedRequest({
         jsonrpc: '2.0',
         id: 2,
+        method: 'eth_getTransactionReceipt',
+        params: ['0x0'],
+      })
+    ).toBe(true)
+    expect(
+      isStreamedRequest({
+        jsonrpc: '2.0',
+        id: 3,
         method: 'eth_chainId',
         params: [],
       })

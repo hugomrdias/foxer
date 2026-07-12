@@ -1,19 +1,18 @@
-import { and, asc, desc, eq, gt } from 'drizzle-orm'
-import {
-  drizzle as drizzleNodePostgres,
-  type NodePgDatabase,
-} from 'drizzle-orm/node-postgres'
-import type { PoolClient } from 'pg'
+import { asc, desc, eq } from 'drizzle-orm'
 
 import { type Database, receiptTransactionColumns } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog, decodeReceiptFields } from '../../decode.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
 import { requireHex, requireQuantity } from '../validation.ts'
+import {
+  RECEIPT_LOG_BATCH_SIZE,
+  type ReceiptConnectionDatabase,
+  ReceiptStreamSession,
+} from './receipt-stream-session.ts'
 
-export const BLOCK_RECEIPT_LOG_BATCH_SIZE = 16_384
+export const BLOCK_RECEIPT_LOG_BATCH_SIZE = RECEIPT_LOG_BATCH_SIZE
 
-type ConnectionDatabase = NodePgDatabase & { $client: PoolClient }
 type BlockReference = Pick<typeof schema.blocks.$inferSelect, 'number' | 'hash'>
 type ReceiptTransaction = Awaited<
   ReturnType<typeof selectReceiptTransactions>
@@ -22,7 +21,7 @@ type ReceiptTransaction = Awaited<
 type PreparedBlockReceiptData = {
   block: BlockReference
   transactions: ReceiptTransaction[]
-  session: BlockReceiptStreamSession
+  session: ReceiptStreamSession
 }
 
 /**
@@ -37,56 +36,34 @@ export async function streamEthGetBlockReceipts(
   stream: JsonRpcMethodStream,
   options: { batchSize?: number } = {}
 ) {
-  const client = await args.db.$client.connect()
-  const connectionDb = drizzleNodePostgres({ client })
-  let transactionOpen = false
+  const session = await ReceiptStreamSession.open(
+    args.db,
+    options.batchSize ?? BLOCK_RECEIPT_LOG_BATCH_SIZE
+  )
   let block: BlockReference | null = null
   let transactions: ReceiptTransaction[] = []
-  let session: BlockReceiptStreamSession | undefined
 
   try {
-    await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
-    transactionOpen = true
-
-    block = await resolveBlockReference(connectionDb, params[0])
+    block = await resolveBlockReference(session.db, params[0])
     if (block) {
-      transactions = await selectReceiptTransactions(connectionDb, block.number)
-      if (transactions.length === 0) {
-        await client.query('ROLLBACK')
-        transactionOpen = false
-        client.release()
-      } else {
-        session = new BlockReceiptStreamSession({
-          batchSize: options.batchSize ?? BLOCK_RECEIPT_LOG_BATCH_SIZE,
-          blockNumber: block.number,
-          client,
-          db: connectionDb,
-        })
-        transactionOpen = false
-      }
-    } else {
-      await client.query('ROLLBACK')
-      transactionOpen = false
-      client.release()
+      transactions = await selectReceiptTransactions(session.db, block.number)
     }
   } catch (cause) {
-    if (transactionOpen) {
-      try {
-        await client.query('ROLLBACK')
-      } catch {
-        client.release(true)
-        throw cause
-      }
+    try {
+      await session.rollback()
+    } catch {
+      // Preserve the query failure after forcing the connection closed.
     }
-    client.release()
     throw cause
   }
 
   if (!block) {
+    await session.rollback()
     await stream.result(null)
     return
   }
-  if (!session) {
+  if (transactions.length === 0) {
+    await session.rollback()
     await stream.resultArray(() => undefined)
     return
   }
@@ -106,7 +83,9 @@ async function writePreparedBlockReceiptResult(args: {
   stream: JsonRpcMethodStream
 }) {
   await args.stream.resultArray(async (receipts) => {
-    const logs = args.prepared.session.logs()
+    const logs = args.prepared.session.logs({
+      blockNumber: args.prepared.block.number,
+    })
     let nextLog = await logs.next()
 
     for (
@@ -150,83 +129,8 @@ async function writePreparedBlockReceiptResult(args: {
   })
 }
 
-class BlockReceiptStreamSession {
-  readonly batchSize: number
-  readonly blockNumber: bigint
-  readonly client: PoolClient
-  readonly db: ConnectionDatabase
-  private closed = false
-
-  constructor(args: {
-    batchSize: number
-    blockNumber: bigint
-    client: PoolClient
-    db: ConnectionDatabase
-  }) {
-    if (!Number.isSafeInteger(args.batchSize) || args.batchSize <= 0) {
-      throw new Error('block receipt log batch size must be a positive integer')
-    }
-    this.batchSize = args.batchSize
-    this.blockNumber = args.blockNumber
-    this.client = args.client
-    this.db = args.db
-  }
-
-  async *logs() {
-    let lastLogIndex = -1
-
-    while (true) {
-      const rows = await this.db
-        .select()
-        .from(schema.logs)
-        .where(
-          and(
-            eq(schema.logs.blockNumber, this.blockNumber),
-            gt(schema.logs.logIndex, lastLogIndex)
-          )
-        )
-        .orderBy(asc(schema.logs.logIndex))
-        .limit(this.batchSize)
-
-      if (rows.length === 0) return
-
-      for (const row of rows) {
-        if (row.logIndex <= lastLogIndex) {
-          throw new Error(
-            `Block ${this.blockNumber} logs are not strictly ordered by log index`
-          )
-        }
-        lastLogIndex = row.logIndex
-        yield row
-      }
-
-      if (rows.length < this.batchSize) return
-    }
-  }
-
-  async commit() {
-    await this.close('COMMIT')
-  }
-
-  async rollback() {
-    await this.close('ROLLBACK')
-  }
-
-  private async close(statement: 'COMMIT' | 'ROLLBACK') {
-    if (this.closed) return
-    this.closed = true
-    try {
-      await this.client.query(statement)
-      this.client.release()
-    } catch (cause) {
-      this.client.release(true)
-      throw cause
-    }
-  }
-}
-
 async function resolveBlockReference(
-  db: ConnectionDatabase,
+  db: ReceiptConnectionDatabase,
   value: unknown
 ): Promise<BlockReference | null> {
   if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
@@ -266,7 +170,7 @@ async function resolveBlockReference(
 }
 
 function selectReceiptTransactions(
-  db: ConnectionDatabase,
+  db: ReceiptConnectionDatabase,
   blockNumber: bigint
 ) {
   return db

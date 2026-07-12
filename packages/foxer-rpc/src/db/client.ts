@@ -111,13 +111,6 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     .limit(1)
     .prepare('get_transaction_by_hash')
 
-  const getReceiptTransactionByHash = db
-    .select(receiptTransactionColumns)
-    .from(schema.transactions)
-    .where(eq(schema.transactions.hash, sql.placeholder('hash')))
-    .limit(1)
-    .prepare('get_receipt_transaction_by_hash')
-
   const getTransactionsByBlockNumber = db
     .select()
     .from(schema.transactions)
@@ -153,30 +146,15 @@ function generatePrepared(db: Omit<Database, '$prepared'>) {
     .where(eq(schema.transactions.blockNumber, sql.placeholder('blockNumber')))
     .prepare('get_transaction_count_by_block_number')
 
-  const getLogsByTransactionPosition = db
-    .select()
-    .from(schema.logs)
-    .where(
-      sql`${schema.logs.blockNumber} = ${sql.placeholder(
-        'blockNumber'
-      )} AND ${schema.logs.transactionIndex} = ${sql.placeholder(
-        'transactionIndex'
-      )}`
-    )
-    .orderBy(asc(schema.logs.logIndex))
-    .prepare('get_logs_by_transaction_position')
-
   return {
     getLatestBlock,
     getBlockByNumber,
     getBlockByHash,
     getTransactionByHash,
-    getReceiptTransactionByHash,
     getTransactionsByBlockNumber,
     getTransactionHashesByBlockNumber,
     getTransactionByBlockNumberAndIndex,
     getTransactionCountByBlockNumber,
-    getLogsByTransactionPosition,
   }
 }
 
