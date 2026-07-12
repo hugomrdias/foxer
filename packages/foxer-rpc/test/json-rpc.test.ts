@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import { handleJsonRpc, isStreamedRequest } from '../src/api/json-rpc.ts'
+import { handleJsonRpc, isStreamedRequest } from '../src/api/json-rpc/index.ts'
 import { createRpcClients } from '../src/rpc/client.ts'
 import { mockUpstreamRpc, realtimeRpcUrl, upstreamRpcUrl } from './upstream.ts'
 

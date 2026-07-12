@@ -8,13 +8,13 @@ import { z } from 'zod'
 import type { InternalConfig } from '../config.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
-import { error, isRequest } from './json-rpc/response.ts'
-import { streamJsonRpc } from './json-rpc/stream.ts'
 import {
   handleJsonRpc,
   handleJsonRpcStream,
   isStreamedRequest,
-} from './json-rpc.ts'
+} from './json-rpc/index.ts'
+import { error, isRequest } from './json-rpc/response.ts'
+import { streamJsonRpc } from './json-rpc/stream.ts'
 
 const mintKeySchema = z.object({
   sub: z.string().min(1),
