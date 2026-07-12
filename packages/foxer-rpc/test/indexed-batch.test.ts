@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test'
 import { insertIndexedBlockData } from '../src/db/actions.ts'
 import {
+  appendToBackfillBatch,
+  consumeLogs,
+  consumeTransactions,
   countBlocks,
   countLogs,
   countTransactions,
+  createBackfillBatch,
   flattenBlocks,
   flattenLogs,
   flattenTransactions,
@@ -146,6 +150,49 @@ describe('indexed batch utilities', () => {
     expect(blocks.length).toBe(countBlocks(batch))
     expect(transactions.length).toBe(countTransactions(batch))
     expect(logs.length).toBe(countLogs(batch))
+  })
+
+  test('tracks supplied weight without cloning row arrays', () => {
+    const heavy = sampleIndexedBlock(2n, 1, 1_000)
+    const transactions = heavy.transactions
+    const logs = heavy.logs
+    const batch = createBackfillBatch()
+
+    appendToBackfillBatch(batch, heavy, 123)
+
+    expect(batch.estimatedBytes).toBe(123)
+    expect(batch.items).toHaveLength(1)
+    expect(batch.items[0]).toBe(heavy)
+    expect(batch.transactionCount).toBe(1)
+    expect(batch.logCount).toBe(1_000)
+    expect(heavy.transactions).toBe(transactions)
+    expect(heavy.logs).toBe(logs)
+    expect(heavy.transactions).toHaveLength(1)
+    expect(heavy.logs).toHaveLength(1_000)
+  })
+
+  test('consuming iterators release each block array as streaming advances', () => {
+    const first = sampleIndexedBlock(1n, 2, 2)
+    const second = sampleIndexedBlock(2n, 1, 1)
+    const items = [first, second]
+
+    const transactions = consumeTransactions(items)
+    expect(transactions.next().value?.transactionIndex).toBe(0)
+    expect(transactions.next().value?.transactionIndex).toBe(1)
+    expect(first.transactions).toHaveLength(2)
+    expect(transactions.next().value?.transactionIndex).toBe(0)
+    expect(first.transactions).toEqual([])
+    expect(transactions.next().done).toBe(true)
+    expect(second.transactions).toEqual([])
+
+    const logs = consumeLogs(items)
+    expect(logs.next().value?.logIndex).toBe(0)
+    expect(logs.next().value?.logIndex).toBe(1)
+    expect(first.logs).toHaveLength(2)
+    expect(logs.next().value?.logIndex).toBe(0)
+    expect(first.logs).toEqual([])
+    expect(logs.next().done).toBe(true)
+    expect(second.logs).toEqual([])
   })
 
   test('insert writer accepts large indexed batches without spread flattening', async () => {

@@ -1,10 +1,13 @@
 import type { Hash, PublicClient } from 'viem'
 
 import type { Database } from '../db/client.ts'
-import { encodeBlockData, encodeNullRoundBlock } from '../db/encode.ts'
-import type { IndexedBlockData } from '../types.ts'
+import {
+  encodeWeightedBlockDataFromRpcReceipts,
+  encodeWeightedNullRoundBlock,
+} from '../db/encode.ts'
+import type { WeightedIndexedBlockData } from '../types.ts'
 import { normalizeHex } from '../utils/hex.ts'
-import { getBlockReceipts } from './get-receipts.ts'
+import { getEncodedBlockReceipts } from './get-receipts.ts'
 
 export type BlockIdentity = {
   number: bigint
@@ -23,7 +26,7 @@ export async function safeGetBlock(options: {
   client: PublicClient
   blockNumber: bigint
   db: Database
-}): Promise<IndexedBlockData> {
+}): Promise<WeightedIndexedBlockData> {
   const { client, blockNumber, db } = options
   try {
     const block = await client.getBlock({
@@ -31,12 +34,11 @@ export async function safeGetBlock(options: {
       includeTransactions: true,
     })
 
-    const receipts =
-      block.transactions.length === 0
-        ? []
-        : await getBlockReceipts({ client, blockNumber })
+    if (block.transactions.length === 0) {
+      return encodeWeightedBlockDataFromRpcReceipts(block, [])
+    }
 
-    return encodeBlockData(block, receipts)
+    return getEncodedBlockReceipts({ client, block })
   } catch (error) {
     if (isNullRoundRpcError(error)) {
       let previousBlock:
@@ -70,7 +72,7 @@ export async function safeGetBlock(options: {
         }
       }
 
-      return encodeNullRoundBlock({
+      return encodeWeightedNullRoundBlock({
         number: blockNumber,
         hash: previousBlock.hash,
         timestamp: previousBlock.timestamp,

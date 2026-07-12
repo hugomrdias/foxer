@@ -1,6 +1,7 @@
+import type { TransactionReceipt } from 'viem'
+
 import { encodeCopyHeader, encodeCopyTrailer } from '../src/db/copy/protocol.ts'
 import type {
-  ChainReceipt,
   ChainTransaction,
   EncodedBlock,
   EncodedLog,
@@ -286,8 +287,8 @@ export function copyTransaction(
 }
 
 export function copyReceipt(
-  overrides: Partial<ChainReceipt> = {}
-): ChainReceipt {
+  overrides: Partial<TransactionReceipt> = {}
+): TransactionReceipt {
   return {
     transactionHash: bytes32('a'),
     transactionIndex: 0,
@@ -304,5 +305,5 @@ export function copyReceipt(
     type: 'eip1559',
     logsBloom: zeroLogsBloom,
     ...overrides,
-  }
+  } as TransactionReceipt
 }

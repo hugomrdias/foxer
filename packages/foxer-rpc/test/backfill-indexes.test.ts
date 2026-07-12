@@ -195,8 +195,7 @@ describe('backfill indexes', () => {
       const config = {
         startBlock: 0n,
         finality: 0n,
-        batchSize: 1n,
-        backfillFetchConcurrency: 1,
+        backfillMemoryLimitBytes: 8 * 1024 * 1024,
         deferBackfillIndexes: true,
         clients: {
           backfill: {

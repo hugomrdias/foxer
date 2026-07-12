@@ -1,43 +1,73 @@
 import { expect, test } from 'bun:test'
 
 import { createRpcClients } from '../src/rpc/client.ts'
-import { getBlockReceipts } from '../src/rpc/get-receipts.ts'
+import { getEncodedBlockReceipts } from '../src/rpc/get-receipts.ts'
+import type { ChainBlock } from '../src/types.ts'
+import { copyTransaction } from './copy-fixtures.ts'
+import { address, bytes32, emptyRoot, zeroLogsBloom } from './helpers.ts'
 import { rpcReceipt } from './rpc-fixtures.ts'
 import { mockUpstreamRpc, upstreamRpcUrl } from './upstream.ts'
 
-test('getBlockReceipts uses HTTP and normalizes viem receipt fields', async () => {
+test('receipt ingestion fetches HTTP data and returns canonical weighted rows', async () => {
   const requests = mockUpstreamRpc({ eth_getBlockReceipts: [rpcReceipt()] })
   const client = createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill
 
-  const [receipt] = await getBlockReceipts({ client, blockNumber: 123n })
+  const weighted = await getEncodedBlockReceipts({
+    client,
+    block: blockWithTransaction(),
+  })
+  const [transaction] = weighted.data.transactions
 
   expect(requests.map(({ method }) => method)).toEqual(['eth_getBlockReceipts'])
-  expect(receipt.transactionHash).toBe(
-    '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-  )
-  expect(receipt.transactionIndex).toBe(1)
-  expect(receipt.status).toBe('success')
-  expect(receipt.effectiveGasPrice).toBe(100n)
-  expect(receipt.logs[0]?.data).toBe('0xabcd')
-  expect(receipt.logsBloom).toBe(`0x${'00'.repeat(255)}ab`)
+  expect(weighted.estimatedBytes).toBeGreaterThan(0)
+  expect(transaction.hash).toBe(bytes32('a'))
+  expect(transaction.status).toBe(1)
+  expect(transaction.effectiveGasPrice).toBe(100n)
+  expect(transaction.logsBloom).toBe(`0x${'00'.repeat(255)}ab`)
+  expect(weighted.data.logs[0]?.data).toBe('0xabcd')
 })
 
-test('getBlockReceipts rejects malformed receipt logs blooms from HTTP', async () => {
+test('receipt ingestion rejects malformed receipt logs blooms from HTTP', async () => {
   mockUpstreamRpc({ eth_getBlockReceipts: [rpcReceipt('0xzz')] })
   const client = createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill
 
-  await expect(getBlockReceipts({ client, blockNumber: 123n })).rejects.toThrow(
-    'invalid hex value'
-  )
+  await expect(
+    getEncodedBlockReceipts({ client, block: blockWithTransaction() })
+  ).rejects.toThrow('invalid hex value')
 })
 
-test('getBlockReceipts rejects receipt logs blooms wider than 256 bytes', async () => {
+test('receipt ingestion rejects receipt logs blooms wider than 256 bytes', async () => {
   mockUpstreamRpc({
     eth_getBlockReceipts: [rpcReceipt(`0x${'ff'.repeat(257)}`)],
   })
   const client = createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill
 
-  await expect(getBlockReceipts({ client, blockNumber: 123n })).rejects.toThrow(
-    'hex value exceeds 256 bytes'
-  )
+  await expect(
+    getEncodedBlockReceipts({ client, block: blockWithTransaction() })
+  ).rejects.toThrow('hex value exceeds 256 bytes')
 })
+
+function blockWithTransaction(): ChainBlock {
+  return {
+    number: 123n,
+    hash: bytes32('1'),
+    parentHash: bytes32('0'),
+    timestamp: 123n,
+    miner: address('0'),
+    gasUsed: 21_000n,
+    gasLimit: 30_000_000n,
+    baseFeePerGas: 1_000_000_000n,
+    size: 1n,
+    stateRoot: emptyRoot,
+    receiptsRoot: emptyRoot,
+    transactionsRoot: emptyRoot,
+    extraData: '0x',
+    logsBloom: zeroLogsBloom,
+    transactions: [
+      copyTransaction({
+        blockNumber: 123n,
+        hash: bytes32('a'),
+      }),
+    ],
+  } as unknown as ChainBlock
+}

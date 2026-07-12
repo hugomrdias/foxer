@@ -5,15 +5,12 @@ import { pipeline } from 'node:stream/promises'
 import type { PoolClient } from 'pg'
 import { from as copyFrom } from 'pg-copy-streams'
 
-import type { EncodedLog, IndexedBlockData } from '../../types.ts'
+import type { BackfillBatch, EncodedLog } from '../../types.ts'
 import type { Database } from '../client.ts'
 import {
-  countBlocks,
-  countLogs,
-  countTransactions,
+  consumeLogs,
+  consumeTransactions,
   iterateBlocks,
-  iterateLogs,
-  iterateTransactions,
 } from '../indexed-batch.ts'
 import {
   type CopyChunkStats,
@@ -27,8 +24,6 @@ import {
   BLOCK_COPY_COLUMNS,
   DEFAULT_COPY_CHUNK_BYTES,
   LOG_COPY_COLUMNS,
-  MAX_COPY_CHUNK_BYTES,
-  MIN_COPY_CHUNK_BYTES,
   TRANSACTION_COPY_COLUMNS,
 } from './constants.ts'
 import {
@@ -44,22 +39,6 @@ export type CopyMetrics = {
   blocks: CopyTableMetrics
   transactions: CopyTableMetrics
   logs: CopyTableMetrics
-}
-
-/**
- * Validates a public COPY chunk-size option.
- */
-export function validateCopyChunkBytes(chunkBytes: number): number {
-  if (
-    !Number.isSafeInteger(chunkBytes) ||
-    chunkBytes < MIN_COPY_CHUNK_BYTES ||
-    chunkBytes > MAX_COPY_CHUNK_BYTES
-  ) {
-    throw new Error(
-      `COPY chunk bytes must be a safe integer between ${MIN_COPY_CHUNK_BYTES} and ${MAX_COPY_CHUNK_BYTES}`
-    )
-  }
-  return chunkBytes
 }
 
 function toError(value: unknown): Error {
@@ -198,48 +177,47 @@ function emptyCopyMetrics(): CopyMetrics {
  */
 export async function copyIndexedBlockData(args: {
   db: Database
-  batch: IndexedBlockData[]
-  chunkBytes?: number
+  batch: BackfillBatch
 }): Promise<CopyMetrics> {
-  const chunkBytes = validateCopyChunkBytes(
-    args.chunkBytes ?? DEFAULT_COPY_CHUNK_BYTES
-  )
-
-  if (args.batch.length === 0) {
+  if (args.batch.items.length === 0) {
     return emptyCopyMetrics()
   }
 
   const metrics = emptyCopyMetrics()
   const client = await args.db.$client.connect()
   await runCopyTransaction(client, async () => {
-    if (countBlocks(args.batch) > 0) {
+    if (args.batch.items.length > 0) {
       metrics.blocks = await copyTableRows(
         client,
         'blocks',
         BLOCK_COPY_COLUMNS,
-        iterateBlocks(args.batch),
+        iterateBlocks(args.batch.items),
         encodeBlockCopyRow,
-        chunkBytes
+        DEFAULT_COPY_CHUNK_BYTES
       )
     }
-    if (countTransactions(args.batch) > 0) {
+    if (args.batch.transactionCount > 0) {
       metrics.transactions = await copyTableRows(
         client,
         'transactions',
         TRANSACTION_COPY_COLUMNS,
-        iterateTransactions(args.batch),
+        consumeTransactions(args.batch.items),
         encodeTransactionCopyRow,
-        chunkBytes
+        DEFAULT_COPY_CHUNK_BYTES
       )
     }
-    if (countLogs(args.batch) > 0) {
+    if (args.batch.logCount > 0) {
       metrics.logs = await copyLogTableRows(
         client,
-        iterateLogs(args.batch),
-        chunkBytes
+        consumeLogs(args.batch.items),
+        DEFAULT_COPY_CHUNK_BYTES
       )
     }
   })
+  args.batch.items.length = 0
+  args.batch.transactionCount = 0
+  args.batch.logCount = 0
+  args.batch.estimatedBytes = 0
 
   return metrics
 }

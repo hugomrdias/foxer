@@ -2,21 +2,22 @@ import { expect, test } from 'bun:test'
 
 import { globalFlags } from '../src/bin/flags.ts'
 import {
-  resolveBackfillCopyChunkBytes,
+  MAX_BACKFILL_MEMORY_LIMIT_MB,
+  MIN_BACKFILL_MEMORY_LIMIT_MB,
+  resolveBackfillMemoryLimitBytes,
   resolveMaxConnections,
 } from '../src/config.ts'
-import { MAX_COPY_CHUNK_BYTES, MIN_COPY_CHUNK_BYTES } from '../src/db/copy.ts'
 
 test('does not expose a configurable backfill write mode', () => {
   expect('backfillWriteMode' in globalFlags).toBe(false)
 })
 
-test('leaves backfill fetch concurrency unset for config precedence', () => {
-  expect('default' in globalFlags.backfillFetchConcurrency).toBe(false)
-})
-
-test('leaves backfill copy chunk bytes unset for config precedence', () => {
-  expect('default' in globalFlags.backfillCopyChunkBytes).toBe(false)
+test('exposes only one backfill ingestion tuning flag', () => {
+  expect('batchSize' in globalFlags).toBe(false)
+  expect('backfillFetchConcurrency' in globalFlags).toBe(false)
+  expect('backfillCopyChunkBytes' in globalFlags).toBe(false)
+  expect('backfillMemoryLimitMb' in globalFlags).toBe(true)
+  expect('default' in globalFlags.backfillMemoryLimitMb).toBe(false)
 })
 
 test('resolves and validates the API Postgres pool size', () => {
@@ -29,30 +30,34 @@ test('resolves and validates the API Postgres pool size', () => {
   expect(() => resolveMaxConnections(3.5, undefined)).toThrow()
 })
 
-test('defaults backfill copy chunk bytes to 256 KiB', () => {
-  expect(resolveBackfillCopyChunkBytes(undefined, undefined)).toBe(256 * 1024)
-})
-
-test('reads backfill copy chunk bytes from env when flag is unset', () => {
-  expect(resolveBackfillCopyChunkBytes(undefined, '65536')).toBe(65_536)
-})
-
-test('prefers CLI backfill copy chunk bytes over env', () => {
-  expect(resolveBackfillCopyChunkBytes(131_072, '65536')).toBe(131_072)
-})
-
-test('rejects backfill copy chunk bytes outside the safe range', () => {
-  expect(resolveBackfillCopyChunkBytes(MIN_COPY_CHUNK_BYTES, undefined)).toBe(
-    MIN_COPY_CHUNK_BYTES
+test('defaults the backfill memory limit to 64 MiB', () => {
+  expect(resolveBackfillMemoryLimitBytes(undefined, undefined)).toBe(
+    64 * 1024 * 1024
   )
-  expect(resolveBackfillCopyChunkBytes(MAX_COPY_CHUNK_BYTES, undefined)).toBe(
-    MAX_COPY_CHUNK_BYTES
+})
+
+test('reads the backfill memory limit from env when the flag is unset', () => {
+  expect(resolveBackfillMemoryLimitBytes(undefined, '32')).toBe(
+    32 * 1024 * 1024
   )
+})
+
+test('prefers the CLI backfill memory limit over env', () => {
+  expect(resolveBackfillMemoryLimitBytes(128, '32')).toBe(128 * 1024 * 1024)
+})
+
+test('rejects backfill memory limits outside the safe range', () => {
+  expect(
+    resolveBackfillMemoryLimitBytes(MIN_BACKFILL_MEMORY_LIMIT_MB, undefined)
+  ).toBe(MIN_BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024)
+  expect(
+    resolveBackfillMemoryLimitBytes(MAX_BACKFILL_MEMORY_LIMIT_MB, undefined)
+  ).toBe(MAX_BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024)
   expect(() =>
-    resolveBackfillCopyChunkBytes(undefined, String(MIN_COPY_CHUNK_BYTES - 1))
+    resolveBackfillMemoryLimitBytes(MIN_BACKFILL_MEMORY_LIMIT_MB - 1, undefined)
   ).toThrow()
   expect(() =>
-    resolveBackfillCopyChunkBytes(undefined, String(MAX_COPY_CHUNK_BYTES + 1))
+    resolveBackfillMemoryLimitBytes(MAX_BACKFILL_MEMORY_LIMIT_MB + 1, undefined)
   ).toThrow()
-  expect(() => resolveBackfillCopyChunkBytes(16_384.5, undefined)).toThrow()
+  expect(() => resolveBackfillMemoryLimitBytes(16.5, undefined)).toThrow()
 })

@@ -1,11 +1,6 @@
 import dotenv from 'dotenv'
 import { z } from 'zod'
 
-import {
-  DEFAULT_COPY_CHUNK_BYTES,
-  MAX_COPY_CHUNK_BYTES,
-  MIN_COPY_CHUNK_BYTES,
-} from './db/copy.ts'
 import { createRpcClients, type RpcClients } from './rpc/client.ts'
 import type { LogLevel } from './utils/logger.ts'
 
@@ -18,11 +13,9 @@ export type InternalConfig = {
   databaseUrl: string
   startBlock: bigint
   finality: bigint
-  batchSize: bigint
   maxLogsBlockRange: bigint
   deferBackfillIndexes: boolean
-  backfillFetchConcurrency: number
-  backfillCopyChunkBytes: number
+  backfillMemoryLimitBytes: number
   maxConnections: number
   port: number
   logLevel: LogLevel
@@ -31,12 +24,16 @@ export type InternalConfig = {
   authSecret?: string
 }
 
-const backfillCopyChunkBytesSchema = z.coerce
+export const DEFAULT_BACKFILL_MEMORY_LIMIT_MB = 64
+export const MIN_BACKFILL_MEMORY_LIMIT_MB = 8
+export const MAX_BACKFILL_MEMORY_LIMIT_MB = 4_096
+
+const backfillMemoryLimitMbSchema = z.coerce
   .number()
   .int()
-  .min(MIN_COPY_CHUNK_BYTES)
-  .max(MAX_COPY_CHUNK_BYTES)
-  .default(DEFAULT_COPY_CHUNK_BYTES)
+  .min(MIN_BACKFILL_MEMORY_LIMIT_MB)
+  .max(MAX_BACKFILL_MEMORY_LIMIT_MB)
+  .default(DEFAULT_BACKFILL_MEMORY_LIMIT_MB)
 
 const maxConnectionsSchema = z.coerce.number().int().min(1).default(100)
 
@@ -47,7 +44,6 @@ const envSchema = z.object({
   MAX_CONNECTIONS: maxConnectionsSchema,
   START_BLOCK: z.coerce.bigint().default(0n),
   FINALITY: z.coerce.bigint().default(30n),
-  BATCH_SIZE: z.coerce.bigint().default(100n),
   PORT: z.coerce.number().int().positive().default(8545),
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
@@ -58,8 +54,7 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === true || value === 'true' || value === '1')
     .default(false),
-  BACKFILL_FETCH_CONCURRENCY: z.coerce.number().int().positive().default(20),
-  BACKFILL_COPY_CHUNK_BYTES: backfillCopyChunkBytesSchema,
+  BACKFILL_MEMORY_LIMIT_MB: backfillMemoryLimitMbSchema,
   AUTH_SECRET: z.string().min(16).optional(),
 })
 
@@ -70,24 +65,22 @@ export type CliConfig = {
   maxConnections?: number
   startBlock?: string
   finality?: string
-  batchSize?: string
   maxLogsBlockRange?: string
   deferBackfillIndexes?: boolean
-  backfillFetchConcurrency?: number
-  backfillCopyChunkBytes?: number
+  backfillMemoryLimitMb?: number
   port?: number
   logLevel?: LogLevel
   authSecret?: string
 }
 
 /**
- * Resolves validated COPY chunk bytes with CLI-over-environment precedence.
+ * Resolves the retained backfill-data target with CLI-over-environment precedence.
  */
-export function resolveBackfillCopyChunkBytes(
+export function resolveBackfillMemoryLimitBytes(
   flagValue: number | undefined,
   envValue: string | undefined
 ): number {
-  return backfillCopyChunkBytesSchema.parse(flagValue ?? envValue)
+  return backfillMemoryLimitMbSchema.parse(flagValue ?? envValue) * 1024 * 1024
 }
 
 /** Resolves the API PostgreSQL pool size with CLI precedence. */
@@ -118,19 +111,14 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     ),
     START_BLOCK: flags.startBlock ?? process.env.START_BLOCK,
     FINALITY: flags.finality ?? process.env.FINALITY,
-    BATCH_SIZE: flags.batchSize ?? process.env.BATCH_SIZE,
     PORT: flags.port ?? process.env.PORT,
     LOG_LEVEL: flags.logLevel ?? process.env.LOG_LEVEL,
     MAX_LOGS_BLOCK_RANGE:
       flags.maxLogsBlockRange ?? process.env.MAX_LOGS_BLOCK_RANGE,
     DEFER_BACKFILL_INDEXES:
       flags.deferBackfillIndexes ?? process.env.DEFER_BACKFILL_INDEXES,
-    BACKFILL_FETCH_CONCURRENCY:
-      flags.backfillFetchConcurrency ?? process.env.BACKFILL_FETCH_CONCURRENCY,
-    BACKFILL_COPY_CHUNK_BYTES: resolveBackfillCopyChunkBytes(
-      flags.backfillCopyChunkBytes,
-      process.env.BACKFILL_COPY_CHUNK_BYTES
-    ),
+    BACKFILL_MEMORY_LIMIT_MB:
+      flags.backfillMemoryLimitMb ?? process.env.BACKFILL_MEMORY_LIMIT_MB,
     AUTH_SECRET: flags.authSecret ?? process.env.AUTH_SECRET,
   })
 
@@ -152,11 +140,9 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     databaseUrl: env.DATABASE_URL,
     startBlock: env.START_BLOCK,
     finality: env.FINALITY,
-    batchSize: env.BATCH_SIZE,
     maxLogsBlockRange: env.MAX_LOGS_BLOCK_RANGE,
     deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
-    backfillFetchConcurrency: env.BACKFILL_FETCH_CONCURRENCY,
-    backfillCopyChunkBytes: env.BACKFILL_COPY_CHUNK_BYTES,
+    backfillMemoryLimitBytes: env.BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024,
     maxConnections: env.MAX_CONNECTIONS,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,

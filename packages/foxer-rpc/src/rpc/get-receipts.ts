@@ -1,65 +1,21 @@
-import type { PublicClient, TransactionReceipt } from 'viem'
+import type { PublicClient } from 'viem'
 
-import type { ChainLog, ChainReceipt } from '../types.ts'
-import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
+import { encodeWeightedBlockDataFromRpcReceipts } from '../db/encode.ts'
+import type { ChainBlock, WeightedIndexedBlockData } from '../types.ts'
 
 /**
- * Fetches all receipts for a block with viem's `eth_getBlockReceipts` action.
+ * Fetches and immediately encodes all receipts for a block.
  *
- * Viem formats receipt quantities into bigint/number values for us; this module
- * normalizes hex values and validates the persisted logs bloom width.
+ * The raw viem receipt graph stays local to this ingestion boundary. The
+ * canonical encoder validates and retains normalized receipt values exactly
+ * once while producing final database rows and their memory weight.
  */
-export async function getBlockReceipts(options: {
+export async function getEncodedBlockReceipts(options: {
   client: PublicClient
-  blockNumber: bigint
-}): Promise<ChainReceipt[]> {
+  block: ChainBlock
+}): Promise<WeightedIndexedBlockData> {
   const receipts = await options.client.getBlockReceipts({
-    blockNumber: options.blockNumber,
+    blockNumber: options.block.number,
   })
-  return receipts.map(normalizeReceipt)
-}
-
-/**
- * Normalizes viem receipt fields into the compact internal shape used by encode.
- */
-function normalizeReceipt(receipt: TransactionReceipt): ChainReceipt {
-  return {
-    transactionHash: normalizeHex(receipt.transactionHash),
-    transactionIndex: receipt.transactionIndex,
-    blockHash: normalizeHex(receipt.blockHash),
-    blockNumber: receipt.blockNumber,
-    from: normalizeHex(receipt.from),
-    to: receipt.to ? normalizeHex(receipt.to) : null,
-    cumulativeGasUsed: receipt.cumulativeGasUsed,
-    gasUsed: receipt.gasUsed,
-    contractAddress: receipt.contractAddress
-      ? normalizeHex(receipt.contractAddress)
-      : null,
-    logs: receipt.logs.map(normalizeLog),
-    status: receipt.status,
-    effectiveGasPrice: receipt.effectiveGasPrice,
-    type: receipt.type,
-    logsBloom: normalizeFixedWidthHex(
-      receipt.logsBloom,
-      256,
-      `Receipt ${receipt.transactionHash} logs bloom`
-    ),
-  }
-}
-
-/**
- * Normalizes one viem log into the non-removed internal log shape.
- */
-function normalizeLog(log: TransactionReceipt['logs'][number]): ChainLog {
-  return {
-    address: normalizeHex(log.address),
-    topics: log.topics.map(normalizeHex),
-    data: normalizeHex(log.data),
-    blockNumber: log.blockNumber,
-    transactionHash: normalizeHex(log.transactionHash),
-    transactionIndex: log.transactionIndex,
-    blockHash: normalizeHex(log.blockHash),
-    logIndex: log.logIndex,
-    removed: Boolean(log.removed),
-  }
+  return encodeWeightedBlockDataFromRpcReceipts(options.block, receipts)
 }

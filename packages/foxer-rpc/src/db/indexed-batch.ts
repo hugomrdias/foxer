@@ -1,9 +1,34 @@
 import type {
+  BackfillBatch,
   EncodedBlock,
   EncodedLog,
   EncodedTransaction,
   IndexedBlockData,
 } from '../types.ts'
+
+/** Creates an empty ownership container for one adaptive backfill write. */
+export function createBackfillBatch(): BackfillBatch {
+  return {
+    items: [],
+    transactionCount: 0,
+    logCount: 0,
+    estimatedBytes: 0,
+  }
+}
+
+/**
+ * Transfers one fetched block into a COPY batch without cloning row arrays.
+ */
+export function appendToBackfillBatch(
+  batch: BackfillBatch,
+  data: IndexedBlockData,
+  estimatedBytes: number
+): void {
+  batch.items.push(data)
+  batch.transactionCount += data.transactions.length
+  batch.logCount += data.logs.length
+  batch.estimatedBytes += estimatedBytes
+}
 
 /**
  * Returns the number of blocks in a backfill batch.
@@ -67,6 +92,34 @@ export function* iterateLogs(
   for (const item of batch) {
     for (const log of item.logs) {
       yield log
+    }
+  }
+}
+
+/**
+ * Lazily yields transactions and releases each source array after consumption.
+ */
+export function* consumeTransactions(
+  batch: readonly IndexedBlockData[]
+): Generator<EncodedTransaction> {
+  for (const item of batch) {
+    try {
+      yield* item.transactions
+    } finally {
+      item.transactions.length = 0
+    }
+  }
+}
+
+/** Lazily yields logs and releases each source array after consumption. */
+export function* consumeLogs(
+  batch: readonly IndexedBlockData[]
+): Generator<EncodedLog> {
+  for (const item of batch) {
+    try {
+      yield* item.logs
+    } finally {
+      item.logs.length = 0
     }
   }
 }

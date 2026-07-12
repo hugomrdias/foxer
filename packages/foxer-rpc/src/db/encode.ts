@@ -1,17 +1,22 @@
-import type { Hash, Hex } from 'viem'
+import type { Hash, Hex, TransactionReceipt } from 'viem'
 
 import type {
   ChainBlock,
-  ChainLog,
-  ChainReceipt,
   ChainTransaction,
   EncodedBlock,
   EncodedLog,
   EncodedTransaction,
   IndexedBlockData,
+  WeightedIndexedBlockData,
 } from '../types.ts'
 import { zeroLogsBloom } from '../utils/bloom.ts'
 import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
+import {
+  indexedBlockContainerBytes,
+  retainedBlockBytes,
+  retainedLogBytes,
+  retainedTransactionBytes,
+} from './retained-size.ts'
 
 /**
  * Converts a viem block into the compact `blocks` insert shape.
@@ -55,12 +60,12 @@ export function encodeBlock(block: ChainBlock): EncodedBlock {
  * Converts a viem transaction and its required receipt into one DB row.
  *
  * Receipt fields are merged into `transactions` to avoid a separate receipts
- * table. Receipt hex values have already been validated and normalized by the
- * upstream ingestion boundary.
+ * table. Receipt hex values are validated and normalized here so persisted rows
+ * are the canonical ingestion boundary consumed unchanged by API reads.
  */
 export function encodeTransaction(
   tx: ChainTransaction,
-  receipt: ChainReceipt
+  receipt: TransactionReceipt
 ): EncodedTransaction {
   if (tx.blockNumber == null || tx.transactionIndex == null) {
     throw new Error(`Transaction ${tx.hash} is missing block position`)
@@ -84,14 +89,18 @@ export function encodeTransaction(
     r: tx.r == null ? null : normalizeSignatureComponent(tx.r, 'r', tx.hash),
     s: tx.s == null ? null : normalizeSignatureComponent(tx.s, 's', tx.hash),
     accessList: tx.accessList ?? null,
-    status: encodeStatus(receipt.status),
+    status: receipt.status === 'success' ? 1 : 0,
     receiptGasUsed: receipt.gasUsed,
     cumulativeGasUsed: receipt.cumulativeGasUsed,
     effectiveGasPrice: receipt.effectiveGasPrice,
     contractAddress: receipt.contractAddress
       ? normalizeHex(receipt.contractAddress)
       : null,
-    logsBloom: receipt.logsBloom,
+    logsBloom: normalizeFixedWidthHex(
+      receipt.logsBloom,
+      256,
+      `Receipt ${receipt.transactionHash} logs bloom`
+    ),
   }
 }
 
@@ -127,11 +136,7 @@ export function encodeTransactionType(type: ChainTransaction['type'] | Hex) {
  * `logIndex`) plus address/topics/data. `blockHash` and `transactionHash` are
  * recovered by joins at API time to keep the high-cardinality log table smaller.
  */
-export function encodeReceiptLogs(receipt: ChainReceipt): EncodedLog[] {
-  return receipt.logs.map(encodeLog)
-}
-
-function encodeLog(log: ChainLog): EncodedLog {
+function encodeLog(log: TransactionReceipt['logs'][number]): EncodedLog {
   return {
     blockNumber: log.blockNumber,
     logIndex: log.logIndex,
@@ -146,16 +151,16 @@ function encodeLog(log: ChainLog): EncodedLog {
 }
 
 /**
- * Combines a fetched block and its block receipts into all rows needed by sync.
- *
- * Receipts are keyed by transaction hash so each transaction can be enriched
- * with its receipt fields, while logs are flattened from every receipt.
+ * Encodes raw viem receipts directly into final database rows.
  */
-export function encodeBlockData(
+export function encodeWeightedBlockDataFromRpcReceipts(
   block: ChainBlock,
-  receipts: ChainReceipt[]
-): IndexedBlockData {
-  const receiptByHash = new Map<ReturnType<typeof normalizeHex>, ChainReceipt>()
+  receipts: TransactionReceipt[]
+): WeightedIndexedBlockData {
+  const receiptByHash = new Map<
+    ReturnType<typeof normalizeHex>,
+    TransactionReceipt
+  >()
   let logCount = 0
 
   for (const receipt of receipts) {
@@ -164,6 +169,10 @@ export function encodeBlockData(
   }
 
   const transactions = new Array<EncodedTransaction>(block.transactions.length)
+  let estimatedBytes = indexedBlockContainerBytes(
+    block.transactions.length,
+    logCount
+  )
   for (let i = 0; i < block.transactions.length; i++) {
     const tx = block.transactions[i]
     const receipt = receiptByHash.get(normalizeHex(tx.hash))
@@ -172,22 +181,31 @@ export function encodeBlockData(
         `Block ${block.number} transaction ${tx.hash} has no matching receipt`
       )
     }
-    transactions[i] = encodeTransaction(tx, receipt)
+    const encoded = encodeTransaction(tx, receipt)
+    transactions[i] = encoded
+    estimatedBytes += retainedTransactionBytes(encoded)
   }
 
   const logs = new Array<EncodedLog>(logCount)
   let logIndex = 0
   for (const receipt of receipts) {
     for (const log of receipt.logs) {
-      logs[logIndex] = encodeLog(log)
+      const encoded = encodeLog(log)
+      logs[logIndex] = encoded
+      estimatedBytes += retainedLogBytes(encoded)
       logIndex += 1
     }
   }
 
+  const encodedBlock = encodeBlock(block)
+  estimatedBytes += retainedBlockBytes(encodedBlock)
   return {
-    block: encodeBlock(block),
-    transactions,
-    logs,
+    data: {
+      block: encodedBlock,
+      transactions,
+      logs,
+    },
+    estimatedBytes,
   }
 }
 
@@ -230,11 +248,18 @@ export function encodeNullRoundBlock(options: {
   }
 }
 
-/**
- * Maps receipt status strings to Ethereum JSON-RPC status numbers.
- */
-function encodeStatus(status: ChainReceipt['status']) {
-  return status === 'success' ? 1 : 0
+/** Encodes and weights one null-round placeholder without reflective traversal. */
+export function encodeWeightedNullRoundBlock(options: {
+  number: bigint
+  hash: Hash
+  timestamp: bigint
+}): WeightedIndexedBlockData {
+  const data = encodeNullRoundBlock(options)
+  return {
+    data,
+    estimatedBytes:
+      indexedBlockContainerBytes(0, 0) + retainedBlockBytes(data.block),
+  }
 }
 
 /**

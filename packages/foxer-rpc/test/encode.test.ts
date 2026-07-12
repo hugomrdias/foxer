@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import type { Hex } from 'viem'
+import type { Hex, TransactionReceipt } from 'viem'
 
 import {
   decodeBlock,
@@ -8,15 +8,15 @@ import {
 } from '../src/api/decode.ts'
 import {
   encodeBlock,
-  encodeBlockData,
   encodeNullRoundBlock,
   encodeTransaction,
   encodeTransactionType,
+  encodeWeightedBlockDataFromRpcReceipts,
+  encodeWeightedNullRoundBlock,
 } from '../src/db/encode.ts'
 import { schema } from '../src/db/schema/index.ts'
 import type {
   ChainBlock,
-  ChainReceipt,
   ChainTransaction,
   EncodedBlock,
 } from '../src/types.ts'
@@ -59,14 +59,112 @@ test('stores the canonical zero bloom for null rounds', () => {
   })
 
   expect(encoded.block.logsBloom).toBe(zeroLogsBloom)
+
+  const weighted = encodeWeightedNullRoundBlock({
+    number: 2n,
+    hash: bytes32('1'),
+    timestamp: 1n,
+  })
+  expect(weighted.data).toEqual(encoded)
+  expect(weighted.estimatedBytes).toBeGreaterThan(0)
 })
 
 test('rejects block transactions without matching receipts', () => {
   const tx = transaction({ hash: bytes32('9') })
 
-  expect(() => encodeBlockData(chainBlock({ transactions: [tx] }), [])).toThrow(
-    `transaction ${tx.hash} has no matching receipt`
+  expect(() =>
+    encodeWeightedBlockDataFromRpcReceipts(
+      chainBlock({ transactions: [tx] }),
+      []
+    )
+  ).toThrow(`transaction ${tx.hash} has no matching receipt`)
+})
+
+test('encodes raw RPC receipts directly into final transaction and log rows', () => {
+  const txHash = bytes32('9')
+  const tx = transaction({ hash: txHash })
+  const rawReceipt = receipt({
+    transactionHash: txHash,
+    logs: [
+      {
+        address: address('c'),
+        topics: [bytes32('d')],
+        data: '0xABCD',
+        blockNumber: 1n,
+        transactionHash: txHash,
+        transactionIndex: 0,
+        blockHash: bytes32('1'),
+        logIndex: 0,
+        removed: false,
+      },
+    ],
+  }) as unknown as TransactionReceipt
+
+  const weighted = encodeWeightedBlockDataFromRpcReceipts(
+    chainBlock({ transactions: [tx] }),
+    [rawReceipt]
   )
+  const encoded = weighted.data
+
+  expect(weighted.estimatedBytes).toBeGreaterThan(0)
+  expect(encoded.transactions).toHaveLength(1)
+  expect(encoded.transactions[0].hash).toBe(txHash)
+  expect(encoded.transactions[0].logsBloom).toBe(zeroLogsBloom)
+  expect(encoded.logs).toEqual([
+    {
+      blockNumber: 1n,
+      logIndex: 0,
+      transactionIndex: 0,
+      address: address('c'),
+      topic0: bytes32('d'),
+      topic1: null,
+      topic2: null,
+      topic3: null,
+      data: '0xabcd',
+    },
+  ])
+})
+
+test('weights calldata, access lists, and log payloads while encoding', () => {
+  const txHash = bytes32('7')
+  const baseReceipt = receipt({
+    transactionHash: txHash,
+  }) as unknown as TransactionReceipt
+  const small = encodeWeightedBlockDataFromRpcReceipts(
+    chainBlock({ transactions: [transaction({ hash: txHash })] }),
+    [baseReceipt]
+  )
+  const large = encodeWeightedBlockDataFromRpcReceipts(
+    chainBlock({
+      transactions: [
+        transaction({
+          hash: txHash,
+          input: `0x${'ab'.repeat(1_024)}`,
+          accessList: [{ address: address('f'), storageKeys: [bytes32('e')] }],
+        }),
+      ],
+    }),
+    [
+      {
+        ...baseReceipt,
+        logs: [
+          {
+            address: address('c'),
+            topics: [bytes32('d')],
+            data: `0x${'cd'.repeat(1_024)}`,
+            blockNumber: 1n,
+            transactionHash: txHash,
+            transactionIndex: 0,
+            blockHash: bytes32('1'),
+            logIndex: 0,
+            removed: false,
+          },
+        ],
+      },
+    ]
+  )
+
+  expect(large.estimatedBytes).toBeGreaterThan(small.estimatedBytes)
 })
 
 test('persists receipt logs blooms and returns stored values unchanged', async () => {
@@ -306,7 +404,7 @@ function transaction(
   } as unknown as ChainTransaction
 }
 
-function receipt(overrides: Partial<ChainReceipt>): ChainReceipt {
+function receipt(overrides: Partial<TransactionReceipt>): TransactionReceipt {
   return {
     transactionHash: bytes32('a'),
     transactionIndex: 0,
@@ -323,7 +421,7 @@ function receipt(overrides: Partial<ChainReceipt>): ChainReceipt {
     type: 'eip1559',
     logsBloom: zeroLogsBloom,
     ...overrides,
-  }
+  } as TransactionReceipt
 }
 
 function chainBlock(overrides: Partial<ChainBlock> = {}): ChainBlock {

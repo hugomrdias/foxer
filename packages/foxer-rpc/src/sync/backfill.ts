@@ -7,14 +7,12 @@ import {
 import type { Database } from '../db/client.ts'
 import { copyIndexedBlockData } from '../db/copy.ts'
 import {
-  countBlocks,
-  countLogs,
-  countTransactions,
+  appendToBackfillBatch,
+  createBackfillBatch,
 } from '../db/indexed-batch.ts'
-import { windowEnd } from '../utils/cursor.ts'
 import type { Logger } from '../utils/logger.ts'
 import { startClock } from '../utils/timer.ts'
-import { fetchBlocksInOrder } from './fetch-blocks.ts'
+import { createOrderedBlockFetcher } from './fetch-blocks.ts'
 
 /**
  * Runs the historical catch-up phase up to the chain's safe head.
@@ -66,9 +64,7 @@ export async function runBackfill(args: {
     {
       fromBlock: cursor.toString(),
       toBlock: safeHead.toString(),
-      batchSize: config.batchSize.toString(),
-      backfillFetchConcurrency: config.backfillFetchConcurrency,
-      backfillCopyChunkBytes: config.backfillCopyChunkBytes,
+      backfillMemoryLimitMb: config.backfillMemoryLimitBytes / (1024 * 1024),
       deferBackfillIndexes: deferIndexes,
     },
     'starting backfill'
@@ -79,22 +75,69 @@ export async function runBackfill(args: {
       await dropManagedBackfillIndexes({ db, logger })
     }
 
+    let peakObservedRss = process.memoryUsage.rss()
+    const fetcher = createOrderedBlockFetcher({
+      client,
+      db,
+      fromBlock: cursor,
+      toBlock: safeHead,
+      memoryLimitBytes: config.backfillMemoryLimitBytes,
+      onBlockReady: () => {
+        peakObservedRss = Math.max(peakObservedRss, process.memoryUsage.rss())
+      },
+    })
+
     while (cursor <= safeHead) {
       const batchStartMs = Date.now()
-      const toBlock = windowEnd(cursor, config.batchSize, safeHead)
+      const fromBlock = cursor
+      const batch = createBackfillBatch()
 
       const fetchClock = startClock()
-      const indexedBlocks = await fetchBlocksInOrder({
-        client,
-        db,
-        fromBlock: cursor,
-        toBlock,
-        concurrency: config.backfillFetchConcurrency,
-      })
+      while (cursor <= safeHead) {
+        const remainingBytes =
+          config.backfillMemoryLimitBytes - batch.estimatedBytes
+        if (
+          batch.items.length > 0 &&
+          remainingBytes < fetcher.nextReservationBytes
+        ) {
+          break
+        }
+
+        const weighted = await fetcher.next(batch.estimatedBytes)
+        if (!weighted) break
+        appendToBackfillBatch(batch, weighted.data, weighted.estimatedBytes)
+        cursor = weighted.data.block.number + 1n
+        if (batch.estimatedBytes >= config.backfillMemoryLimitBytes) break
+      }
+
+      if (batch.items.length === 0) {
+        throw new Error(`Backfill fetcher stopped before block ${cursor}`)
+      }
+
+      const toBlock = batch.items.at(-1)?.block.number ?? fromBlock
+      const blocks = batch.items.length
+      const transactions = batch.transactionCount
+      const logs = batch.logCount
+      const estimatedBytes = batch.estimatedBytes
+      const oversizedBlock =
+        blocks === 1 && estimatedBytes > config.backfillMemoryLimitBytes
+      const memoryBeforeCopy = process.memoryUsage()
+      peakObservedRss = Math.max(peakObservedRss, memoryBeforeCopy.rss)
       logger.debug(
         {
-          fromBlock: cursor.toString(),
+          fromBlock: fromBlock.toString(),
           toBlock: toBlock.toString(),
+          blocks,
+          transactions,
+          logs,
+          estimatedRetainedBytes: estimatedBytes,
+          peakFetchConcurrency: fetcher.peakInFlight,
+          peakObservedRss,
+          rssBeforeCopy: memoryBeforeCopy.rss,
+          heapUsedBeforeCopy: memoryBeforeCopy.heapUsed,
+          externalBeforeCopy: memoryBeforeCopy.external,
+          arrayBuffersBeforeCopy: memoryBeforeCopy.arrayBuffers,
+          oversizedBlock,
           duration: fetchClock(),
         },
         'fetched onchain block data'
@@ -103,14 +146,16 @@ export async function runBackfill(args: {
       const writeClock = startClock()
       const copyMetrics = await copyIndexedBlockData({
         db,
-        batch: indexedBlocks,
-        chunkBytes: config.backfillCopyChunkBytes,
+        batch,
       })
       logger.debug(
         {
-          blocks: countBlocks(indexedBlocks),
-          transactions: countTransactions(indexedBlocks),
-          logs: countLogs(indexedBlocks),
+          blocks,
+          transactions,
+          logs,
+          estimatedRetainedBytes: estimatedBytes,
+          peakFetchConcurrency: fetcher.peakInFlight,
+          oversizedBlock,
           duration: writeClock(),
           copyBlocks: copyMetrics.blocks,
           copyTransactions: copyMetrics.transactions,
@@ -120,22 +165,26 @@ export async function runBackfill(args: {
       )
 
       const elapsed = Date.now() - batchStartMs
-      const blocksInRange = Number(toBlock - cursor + 1n)
+      const blocksInRange = Number(toBlock - fromBlock + 1n)
       const throughput =
         elapsed > 0 ? blocksInRange / (elapsed / 1000) : blocksInRange
       logger.info(
         {
           indexedUpTo: toBlock.toString(),
+          estimatedRetainedBytes: estimatedBytes,
+          blocks,
+          transactions,
+          logs,
+          oversizedBlock,
+          peakObservedRss,
           duration: elapsed,
           throughput: Number(throughput.toFixed(2)),
         },
         'backfill batch completed'
       )
-
-      cursor = toBlock + 1n
     }
 
-    logger.info({ duration: endClock() }, 'backfill completed')
+    logger.info({ duration: endClock(), peakObservedRss }, 'backfill completed')
     return cursor
   } finally {
     if (deferIndexesForBackfill) {

@@ -6,10 +6,6 @@ import { Pool, type PoolClient } from 'pg'
 import type { Database } from '../src/db/client.ts'
 import { createCopyTableMetrics } from '../src/db/copy/chunks.ts'
 import {
-  MAX_COPY_CHUNK_BYTES,
-  MIN_COPY_CHUNK_BYTES,
-} from '../src/db/copy/constants.ts'
-import {
   encodeBlockCopyRow,
   encodeCopyHeader,
   encodeCopyTrailer,
@@ -18,9 +14,13 @@ import {
 import {
   copyIndexedBlockData,
   runCopyTransaction,
-  validateCopyChunkBytes,
 } from '../src/db/copy/writer.ts'
+import {
+  appendToBackfillBatch,
+  createBackfillBatch,
+} from '../src/db/indexed-batch.ts'
 import { schema } from '../src/db/schema/index.ts'
+import type { IndexedBlockData } from '../src/types.ts'
 import {
   encodeLogCopyRow,
   sampleBlock,
@@ -155,17 +155,23 @@ test('copies tables in blocks, transactions, logs order', async () => {
   pool.connect = (() => Promise.resolve(client)) as typeof pool.connect
 
   try {
+    const entry = sampleIndexedBatchEntry(
+      sampleBlock(),
+      [sampleTransaction()],
+      [sampleLog()]
+    )
+    const batch = backfillBatch([entry])
     await copyIndexedBlockData({
       db: { $client: pool } as Database,
-      batch: [
-        sampleIndexedBatchEntry(
-          sampleBlock(),
-          [sampleTransaction()],
-          [sampleLog()]
-        ),
-      ],
+      batch,
     })
     expect(copyTables).toEqual(['blocks', 'transactions', 'logs'])
+    expect(batch.items).toEqual([])
+    expect(batch.transactionCount).toBe(0)
+    expect(batch.logCount).toBe(0)
+    expect(batch.estimatedBytes).toBe(0)
+    expect(entry.transactions).toEqual([])
+    expect(entry.logs).toEqual([])
   } finally {
     await pool.end()
   }
@@ -182,7 +188,7 @@ test('copyIndexedBlockData returns before connecting for empty batches', async (
   try {
     const metrics = await copyIndexedBlockData({
       db: { $client: pool } as Database,
-      batch: [],
+      batch: backfillBatch([]),
     })
     expect(connectCalls).toBe(0)
     expect(metrics).toEqual({
@@ -216,47 +222,6 @@ test('copyIndexedBlockData returns before connecting for empty batches', async (
   }
 })
 
-test('validates COPY chunk bytes at the public entry point', async () => {
-  const pool = new Pool()
-  const db = { $client: pool } as Database
-
-  try {
-    expect(validateCopyChunkBytes(MIN_COPY_CHUNK_BYTES)).toBe(
-      MIN_COPY_CHUNK_BYTES
-    )
-    expect(validateCopyChunkBytes(MAX_COPY_CHUNK_BYTES)).toBe(
-      MAX_COPY_CHUNK_BYTES
-    )
-    await expect(
-      copyIndexedBlockData({
-        db,
-        batch: [],
-        chunkBytes: MIN_COPY_CHUNK_BYTES,
-      })
-    ).resolves.toBeDefined()
-    await expect(
-      copyIndexedBlockData({
-        db,
-        batch: [],
-        chunkBytes: MAX_COPY_CHUNK_BYTES,
-      })
-    ).resolves.toBeDefined()
-
-    for (const chunkBytes of [
-      MIN_COPY_CHUNK_BYTES - 1,
-      MAX_COPY_CHUNK_BYTES + 1,
-      16_384.5,
-      Number.NaN,
-    ]) {
-      await expect(
-        copyIndexedBlockData({ db, batch: [], chunkBytes })
-      ).rejects.toThrow('COPY chunk bytes must be a safe integer')
-    }
-  } finally {
-    await pool.end()
-  }
-})
-
 describe('copyIndexedBlockData on PostgreSQL', () => {
   test('writes every block, transaction, and log column', async () => {
     const dbContext = await createTestDatabaseContext()
@@ -273,7 +238,7 @@ describe('copyIndexedBlockData on PostgreSQL', () => {
 
       const metrics = await copyIndexedBlockData({
         db: dbContext.db,
-        batch: [sampleIndexedBatchEntry(block, [tx], [log])],
+        batch: backfillBatch([sampleIndexedBatchEntry(block, [tx], [log])]),
       })
 
       expect(metrics.blocks.rows).toBe(1)
@@ -347,10 +312,10 @@ describe('copyIndexedBlockData on PostgreSQL', () => {
       await expect(
         copyIndexedBlockData({
           db: dbContext.db,
-          batch: [
+          batch: backfillBatch([
             sampleIndexedBatchEntry(sampleBlock(newBlockNumber)),
             sampleIndexedBatchEntry(sampleBlock(duplicateBlockNumber)),
-          ],
+          ]),
         })
       ).rejects.toThrow()
 
@@ -371,6 +336,14 @@ describe('copyIndexedBlockData on PostgreSQL', () => {
     }
   })
 })
+
+function backfillBatch(entries: IndexedBlockData[]) {
+  const batch = createBackfillBatch()
+  for (const entry of entries) {
+    appendToBackfillBatch(batch, entry, 1)
+  }
+  return batch
+}
 
 async function deleteTestBlock(db: Database, blockNumber: bigint) {
   await db.delete(schema.logs).where(eq(schema.logs.blockNumber, blockNumber))

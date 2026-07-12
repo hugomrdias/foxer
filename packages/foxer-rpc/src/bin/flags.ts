@@ -42,10 +42,6 @@ export const globalFlags = {
     type: String,
     description: 'Finality depth to leave behind chain head',
   },
-  batchSize: {
-    type: String,
-    description: 'Backfill block batch size',
-  },
   maxLogsBlockRange: {
     type: String,
     description: 'Maximum eth_getLogs block range',
@@ -69,13 +65,8 @@ export const globalFlags = {
     description:
       'Drop and rebuild non-constraint indexes during large historical backfills',
   },
-  backfillFetchConcurrency: {
+  backfillMemoryLimitMb: {
     type: Number,
-    description: 'Concurrent block fetches during backfill',
-  },
-  backfillCopyChunkBytes: {
-    type: Number,
-    description:
-      'Target byte size for PostgreSQL COPY stream chunks during backfill (16 KiB to 16 MiB)',
+    description: 'Target memory in MiB for fetched and encoded backfill data',
   },
 } as const
