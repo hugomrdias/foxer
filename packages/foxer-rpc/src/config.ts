@@ -22,7 +22,6 @@ export type InternalConfig = {
   finality: bigint
   batchSize: bigint
   maxLogsBlockRange: bigint
-  maxLogsResultRows: number
   deferBackfillIndexes: boolean
   backfillWriteMode: BackfillWriteMode
   backfillFetchConcurrency: number
@@ -56,8 +55,7 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal'])
     .default('info'),
-  MAX_LOGS_BLOCK_RANGE: z.coerce.bigint().default(10_000n),
-  MAX_LOGS_RESULT_ROWS: z.coerce.number().int().positive().default(10_000),
+  MAX_LOGS_BLOCK_RANGE: z.coerce.bigint().default(2_000n),
   DEFER_BACKFILL_INDEXES: z
     .union([z.boolean(), z.string()])
     .optional()
@@ -78,7 +76,6 @@ export type CliConfig = {
   finality?: string
   batchSize?: string
   maxLogsBlockRange?: string
-  maxLogsResultRows?: number
   deferBackfillIndexes?: boolean
   backfillWriteMode?: BackfillWriteMode
   backfillFetchConcurrency?: number
@@ -131,8 +128,6 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     LOG_LEVEL: flags.logLevel ?? process.env.LOG_LEVEL,
     MAX_LOGS_BLOCK_RANGE:
       flags.maxLogsBlockRange ?? process.env.MAX_LOGS_BLOCK_RANGE,
-    MAX_LOGS_RESULT_ROWS:
-      flags.maxLogsResultRows ?? process.env.MAX_LOGS_RESULT_ROWS,
     DEFER_BACKFILL_INDEXES:
       flags.deferBackfillIndexes ?? process.env.DEFER_BACKFILL_INDEXES,
     BACKFILL_WRITE_MODE:
@@ -166,7 +161,6 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     finality: env.FINALITY,
     batchSize: env.BATCH_SIZE,
     maxLogsBlockRange: env.MAX_LOGS_BLOCK_RANGE,
-    maxLogsResultRows: env.MAX_LOGS_RESULT_ROWS,
     deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
     backfillWriteMode: env.BACKFILL_WRITE_MODE,
     backfillFetchConcurrency: env.BACKFILL_FETCH_CONCURRENCY,

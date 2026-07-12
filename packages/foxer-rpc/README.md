@@ -160,8 +160,7 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `BATCH_SIZE` | `--batch-size` | `100` | Blocks fetched per backfill batch |
 | `PORT` | `--port` | `8545` | JSON-RPC server port |
 | `LOG_LEVEL` | `--log-level` | `info` | Pino log level |
-| `MAX_LOGS_BLOCK_RANGE` | `--max-logs-block-range` | `10000` | Maximum block range for `eth_getLogs` |
-| `MAX_LOGS_RESULT_ROWS` | `--max-logs-result-rows` | `10000` | Maximum rows returned by `eth_getLogs` |
+| `MAX_LOGS_BLOCK_RANGE` | `--max-logs-block-range` | `2000` | Maximum block range for `eth_getLogs` |
 | `BACKFILL_WRITE_MODE` | `--backfill-write-mode` | `copy` | Backfill with PostgreSQL binary COPY or batched `insert` statements |
 | `AUTH_SECRET` | `--auth-secret` | None | Enables JWT auth on all routes except `/health` |
 
@@ -583,5 +582,5 @@ docker compose up
 - For production, use Postgres and a reliable upstream archive RPC.
 - Use `REALTIME_RPC_URL` if you want live polling to hit a different upstream endpoint than backfill.
 - Set `FINALITY` high enough for the chain and upstream RPC behavior you trust.
-- Keep `MAX_LOGS_BLOCK_RANGE` and `MAX_LOGS_RESULT_ROWS` bounded if the endpoint is exposed to untrusted clients.
+- Keep `MAX_LOGS_BLOCK_RANGE` bounded if the endpoint is exposed to untrusted clients.
 - If a deployment crashes, restart it. The cursor is derived from the latest stored block, and recent blocks are verified on startup.

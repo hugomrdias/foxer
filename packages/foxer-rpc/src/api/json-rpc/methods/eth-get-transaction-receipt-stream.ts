@@ -6,9 +6,9 @@ import { decodeLog, decodeReceiptFields } from '../../decode.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
 import { requireHex } from '../validation.ts'
 import {
-  RECEIPT_LOG_BATCH_SIZE,
-  ReceiptStreamSession,
-} from './receipt-stream-session.ts'
+  LOG_STREAM_BATCH_SIZE,
+  LogStreamSession,
+} from './log-stream-session.ts'
 
 /** Streams one transaction receipt and its ordered logs from one DB snapshot. */
 export async function streamEthGetTransactionReceipt(
@@ -18,9 +18,9 @@ export async function streamEthGetTransactionReceipt(
   options: { batchSize?: number } = {}
 ) {
   const hash = requireHex(params[0], 'transaction hash', 32)
-  const session = await ReceiptStreamSession.open(
+  const session = await LogStreamSession.open(
     args.db,
-    options.batchSize ?? RECEIPT_LOG_BATCH_SIZE
+    options.batchSize ?? LOG_STREAM_BATCH_SIZE
   )
 
   let tx: Awaited<ReturnType<typeof selectReceiptTransaction>>[number]
@@ -57,7 +57,7 @@ export async function streamEthGetTransactionReceipt(
   await stream.resultObject(async (receipt) => {
     await receipt.values(decodeReceiptFields(tx, block))
     await receipt.array('logs', async (logs) => {
-      for await (const log of session.logs({
+      for await (const log of session.receiptLogs({
         blockNumber: tx.blockNumber,
         transactionIndex: tx.transactionIndex,
       })) {
@@ -68,7 +68,7 @@ export async function streamEthGetTransactionReceipt(
 }
 
 function selectReceiptTransaction(
-  session: ReceiptStreamSession,
+  session: LogStreamSession,
   hash: typeof schema.transactions.$inferSelect.hash
 ) {
   return session.db

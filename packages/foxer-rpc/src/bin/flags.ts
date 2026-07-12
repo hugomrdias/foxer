@@ -64,10 +64,6 @@ export const globalFlags = {
     type: String,
     description: 'Maximum eth_getLogs block range',
   },
-  maxLogsResultRows: {
-    type: Number,
-    description: 'Maximum eth_getLogs result rows',
-  },
   logLevel: {
     type: LogLevel,
     description: 'The log level to use',

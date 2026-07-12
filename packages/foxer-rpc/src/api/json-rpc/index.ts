@@ -6,7 +6,7 @@ import { ethGetBlockByNumber } from './methods/eth-get-block-by-number.ts'
 import { streamEthGetBlockReceipts } from './methods/eth-get-block-receipts-stream.ts'
 import { ethGetBlockTransactionCountByHash } from './methods/eth-get-block-transaction-count-by-hash.ts'
 import { ethGetBlockTransactionCountByNumber } from './methods/eth-get-block-transaction-count-by-number.ts'
-import { ethGetLogs } from './methods/eth-get-logs.ts'
+import { streamEthGetLogs } from './methods/eth-get-logs-stream.ts'
 import { ethGetTransactionByBlockHashAndIndex } from './methods/eth-get-transaction-by-block-hash-and-index.ts'
 import { ethGetTransactionByBlockNumberAndIndex } from './methods/eth-get-transaction-by-block-number-and-index.ts'
 import { ethGetTransactionByHash } from './methods/eth-get-transaction-by-hash.ts'
@@ -32,6 +32,7 @@ export function handleJsonRpc(
 export function isStreamedRequest(body: JsonRpcRequest): boolean {
   switch (body.method) {
     case 'eth_getBlockReceipts':
+    case 'eth_getLogs':
     case 'eth_getTransactionReceipt':
       return true
     default:
@@ -53,6 +54,12 @@ export function handleJsonRpcStream(
   switch (args.body.method) {
     case 'eth_getBlockReceipts':
       return streamEthGetBlockReceipts({ db: args.db }, params, args.stream)
+    case 'eth_getLogs':
+      return streamEthGetLogs(
+        { config: args.config, db: args.db },
+        params,
+        args.stream
+      )
     case 'eth_getTransactionReceipt':
       return streamEthGetTransactionReceipt(
         { db: args.db },
@@ -105,8 +112,6 @@ async function dispatch(
         return ok(id, await ethGetBlockTransactionCountByNumber(args, params))
       case 'eth_getBlockTransactionCountByHash':
         return ok(id, await ethGetBlockTransactionCountByHash(args.db, params))
-      case 'eth_getLogs':
-        return ok(id, await ethGetLogs(args, params))
       default:
         return proxy(args, body)
     }

@@ -8,38 +8,38 @@ import type { PoolClient } from 'pg'
 import type { Database } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 
-export const RECEIPT_LOG_BATCH_SIZE = 16_384
+export const LOG_STREAM_BATCH_SIZE = 16_384
 
-export type ReceiptConnectionDatabase = NodePgDatabase & {
+export type LogStreamConnectionDatabase = NodePgDatabase & {
   $client: PoolClient
 }
 
-/** Owns one read-only receipt snapshot and pages its logs in index order. */
-export class ReceiptStreamSession {
+/** Owns one read-only log snapshot and its database connection. */
+export class LogStreamSession {
   readonly batchSize: number
   readonly client: PoolClient
-  readonly db: ReceiptConnectionDatabase
+  readonly db: LogStreamConnectionDatabase
   private closed = false
 
   private constructor(args: {
     batchSize: number
     client: PoolClient
-    db: ReceiptConnectionDatabase
+    db: LogStreamConnectionDatabase
   }) {
     this.batchSize = args.batchSize
     this.client = args.client
     this.db = args.db
   }
 
-  static async open(database: Database, batchSize = RECEIPT_LOG_BATCH_SIZE) {
+  static async open(database: Database, batchSize = LOG_STREAM_BATCH_SIZE) {
     if (!Number.isSafeInteger(batchSize) || batchSize <= 0) {
-      throw new Error('receipt log batch size must be a positive integer')
+      throw new Error('log stream batch size must be a positive integer')
     }
 
     const client = await database.$client.connect()
     try {
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
-      return new ReceiptStreamSession({
+      return new LogStreamSession({
         batchSize,
         client,
         db: drizzleNodePostgres({ client }),
@@ -50,7 +50,7 @@ export class ReceiptStreamSession {
     }
   }
 
-  async *logs(args: { blockNumber: bigint; transactionIndex?: number }) {
+  async *receiptLogs(args: { blockNumber: bigint; transactionIndex?: number }) {
     let lastLogIndex = -1
 
     while (true) {

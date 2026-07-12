@@ -1,50 +1,42 @@
 import { describe, expect, test } from 'bun:test'
-import type { Hash } from 'viem'
+import { Hono } from 'hono'
 
-import { handleJsonRpc } from '../src/api/json-rpc.ts'
+import { streamEthGetLogs } from '../src/api/json-rpc/methods/eth-get-logs-stream.ts'
+import { streamJsonRpc } from '../src/api/json-rpc/stream.ts'
+import { createApiServer } from '../src/api/server.ts'
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
-import type { EncodedBlock, EncodedTransaction } from '../src/types.ts'
 import {
-  address,
-  bytes32,
-  emptyRoot,
-  testLogger,
-  withTestDatabase,
-  zeroLogsBloom,
-} from './helpers.ts'
-
-const block1 = bytes32('1')
-const block2 = bytes32('2')
-const tx1 = bytes32('a')
-const tx2 = bytes32('b')
-const address1 = address('1')
-const address2 = address('2')
-const topic1 = bytes32('3')
-const topic2 = bytes32('4')
-const topic3 = bytes32('5')
+  address1,
+  address2,
+  block1,
+  seedLogs,
+  topic1,
+  topic2,
+  topic3,
+  tx1,
+} from './fixtures/logs.ts'
+import { bytes32, testLogger, withTestDatabase } from './helpers.ts'
 
 describe('eth_getLogs', () => {
-  test('applies address, topic, blockHash, and cap filters', async () => {
+  test('applies address, topic, and block hash filters', async () => {
     await withTestDatabase(async (db) => {
       await seedLogs(db)
+      const app = createTestApi(db)
 
-      const byAddress = await getLogs(db, {
+      const byAddress = await getLogs(app, {
         fromBlock: '0x1',
         toBlock: '0x2',
         address: address1,
       })
-      expect(byAddress.result.map((log) => log.logIndex)).toEqual([
-        '0x0',
-        '0x0',
-      ])
+      expect(byAddress.map((log) => log.logIndex)).toEqual(['0x0', '0x0'])
 
-      const byAddressOr = await getLogs(db, {
+      const byAddressOr = await getLogs(app, {
         fromBlock: '0x1',
         toBlock: '0x2',
         address: [address2],
       })
-      expect(byAddressOr.result).toEqual([
+      expect(byAddressOr).toEqual([
         {
           address: address2,
           topics: [topic1, topic2],
@@ -58,83 +50,164 @@ describe('eth_getLogs', () => {
         },
       ])
 
-      const emptyAddressOr = await getLogs(db, {
-        fromBlock: '0x1',
-        toBlock: '0x2',
-        address: [],
-      })
-      expect(emptyAddressOr.result).toEqual([])
+      expect(
+        await getLogs(app, {
+          fromBlock: '0x1',
+          toBlock: '0x2',
+          address: [],
+        })
+      ).toEqual([])
 
-      const byTopicWildcard = await getLogs(db, {
+      const byTopicWildcard = await getLogs(app, {
         fromBlock: '0x1',
         toBlock: '0x2',
         topics: [null, topic2],
       })
-      expect(byTopicWildcard.result.map((log) => log.logIndex)).toEqual(['0x1'])
+      expect(byTopicWildcard.map((log) => log.logIndex)).toEqual(['0x1'])
 
-      const byTopicOr = await getLogs(db, {
+      const byTopicOr = await getLogs(app, {
         fromBlock: '0x1',
         toBlock: '0x2',
         topics: [[topic1, topic3]],
       })
-      expect(byTopicOr.result).toHaveLength(3)
+      expect(byTopicOr).toHaveLength(3)
 
-      const byBlockHash = await getLogs(db, { blockHash: block1 })
-      expect(byBlockHash.result.map((log) => log.blockHash)).toEqual([
-        block1,
-        block1,
-      ])
+      const byBlockHash = await getLogs(app, { blockHash: block1 })
+      expect(byBlockHash.map((log) => log.blockHash)).toEqual([block1, block1])
+      expect(await getLogs(app, { blockHash: bytes32('f') })).toEqual([])
+    })
+  })
 
-      const blockHashConflict = await rpc(db, {
+  test('streams the same ordered result across batches and HTTP', async () => {
+    await withTestDatabase(async (db) => {
+      await seedLogs(db)
+      const filter = { fromBlock: '0x1', toBlock: '0x2' }
+      const direct = JSON.parse(await renderStream(db, filter, 1))
+      const response = await postRequest(createTestApi(db), filter)
+
+      expect(response.headers.get('content-type')).toContain('application/json')
+      expect(await response.json()).toEqual(direct)
+      expect(
+        direct.result.map((log: { blockNumber: string }) => log.blockNumber)
+      ).toEqual(['0x1', '0x1', '0x2'])
+    })
+  })
+
+  test('returns filter and block-range errors before streaming', async () => {
+    await withTestDatabase(async (db) => {
+      await seedLogs(db)
+
+      const conflict = await postRequest(createTestApi(db), {
         blockHash: block1,
         fromBlock: '0x1',
       })
-      expect(blockHashConflict.error?.code).toBe(-32602)
+      expect(await conflict.json()).toMatchObject({ error: { code: -32602 } })
 
-      const rangeTooLarge = await rpc(
-        db,
-        { fromBlock: '0x1', toBlock: '0x2' },
-        { maxLogsBlockRange: 0n }
-      )
-      expect(rangeTooLarge.error?.code).toBe(-32005)
+      const range = await postRequest(createTestApi(db, 0n), {
+        fromBlock: '0x1',
+        toBlock: '0x2',
+      })
+      expect(await range.json()).toMatchObject({
+        error: {
+          code: -32005,
+          data: { maxBlockRange: '0' },
+          message: 'eth_getLogs block range too large',
+        },
+      })
+    })
+  })
 
-      const resultTooLarge = await rpc(
-        db,
-        { fromBlock: '0x1', toBlock: '0x2' },
-        { maxLogsResultRows: 1 }
-      )
-      expect(resultTooLarge.error?.code).toBe(-32005)
+  test('rolls back and releases its connection when output aborts', async () => {
+    await withTestDatabase(async (db) => {
+      await seedLogs(db)
+      await db.update(schema.logs).set({ data: `0x${'ab'.repeat(70_000)}` })
+
+      const idleBefore = db.$client.idleCount
+      const response = await postRequest(createTestApi(db), {
+        fromBlock: '0x1',
+        toBlock: '0x2',
+      })
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('expected response body')
+
+      expect((await reader.read()).done).toBe(false)
+      await reader.cancel()
+
+      for (let attempt = 0; attempt < 50; attempt++) {
+        if (db.$client.idleCount === idleBefore) break
+        await Bun.sleep(10)
+      }
+
+      expect(db.$client.idleCount).toBe(idleBefore)
     })
   })
 })
 
-async function getLogs(db: Database, filter: Record<string, unknown>) {
-  const response = await rpc(db, filter)
-  if (response.error) throw new Error(response.error.message)
-  return response as Extract<typeof response, { result: unknown }>
-}
-
-async function rpc(
+async function renderStream(
   db: Database,
   filter: Record<string, unknown>,
-  overrides: { maxLogsBlockRange?: bigint; maxLogsResultRows?: number } = {}
+  batchSize: number
 ) {
-  return (await handleJsonRpc({
+  const app = new Hono()
+  app.get('/', (c) =>
+    streamJsonRpc(c, { id: 1 }, (stream) =>
+      streamEthGetLogs({ config: createConfig(10n), db }, [filter], stream, {
+        batchSize,
+      })
+    )
+  )
+  return (await app.request('/')).text()
+}
+
+function createTestApi(db: Database, maxLogsBlockRange = 10n) {
+  return createApiServer({
     db,
     logger: testLogger,
-    config: {
-      chainId: 314_159,
-      maxLogsBlockRange: overrides.maxLogsBlockRange ?? 10n,
-      maxLogsResultRows: overrides.maxLogsResultRows ?? 10,
+    config: createConfig(maxLogsBlockRange),
+  })
+}
+
+function createConfig(maxLogsBlockRange: bigint) {
+  return {
+    chainId: 314_159,
+    maxLogsBlockRange,
+    clients: {
+      backfill: {
+        request: () => {
+          throw new Error('unexpected proxy request')
+        },
+      },
+      live: {
+        request: () => {
+          throw new Error('unexpected proxy request')
+        },
+      },
     },
-    body: {
+  } as never
+}
+
+function postRequest(
+  app: ReturnType<typeof createTestApi>,
+  filter: Record<string, unknown>
+) {
+  return app.request('/', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
       jsonrpc: '2.0',
       id: 1,
       method: 'eth_getLogs',
       params: [filter],
-    },
-  } as never)) as {
-    result: Array<{
+    }),
+  })
+}
+
+async function getLogs(
+  app: ReturnType<typeof createTestApi>,
+  filter: Record<string, unknown>
+) {
+  const response = (await (await postRequest(app, filter)).json()) as {
+    result?: Array<{
       address: string
       topics: string[]
       data: string
@@ -145,102 +218,8 @@ async function rpc(
       logIndex: string
       removed: boolean
     }>
-    error?: { code: number; message: string }
+    error?: { message: string }
   }
-}
-
-async function seedLogs(db: Database) {
-  await db
-    .insert(schema.blocks)
-    .values([blockRow(1n, block1, bytes32('0')), blockRow(2n, block2, block1)])
-  await db
-    .insert(schema.transactions)
-    .values([txRow(1n, 0, tx1), txRow(2n, 0, tx2)])
-  await db.insert(schema.logs).values([
-    {
-      blockNumber: 1n,
-      logIndex: 0,
-      transactionIndex: 0,
-      address: address1,
-      topic0: topic1,
-      topic1: null,
-      topic2: null,
-      topic3: null,
-      data: '0x',
-    },
-    {
-      blockNumber: 1n,
-      logIndex: 1,
-      transactionIndex: 0,
-      address: address2,
-      topic0: topic1,
-      topic1: topic2,
-      topic2: null,
-      topic3: null,
-      data: '0x1234',
-    },
-    {
-      blockNumber: 2n,
-      logIndex: 0,
-      transactionIndex: 0,
-      address: address1,
-      topic0: topic3,
-      topic1: null,
-      topic2: null,
-      topic3: null,
-      data: '0x',
-    },
-  ])
-}
-
-function blockRow(number: bigint, hash: Hash, parentHash: Hash): EncodedBlock {
-  return {
-    number,
-    hash,
-    isNullRound: false,
-    parentHash,
-    timestamp: number,
-    miner: address('0'),
-    gasUsed: 21_000n,
-    gasLimit: 30_000_000n,
-    baseFeePerGas: 1_000_000_000n,
-    size: 1n,
-    stateRoot: emptyRoot,
-    receiptsRoot: emptyRoot,
-    transactionsRoot: emptyRoot,
-    extraData: '0x',
-    logsBloom: zeroLogsBloom,
-  }
-}
-
-function txRow(
-  blockNumber: bigint,
-  transactionIndex: number,
-  hash: Hash
-): EncodedTransaction {
-  return {
-    hash,
-    blockNumber,
-    transactionIndex,
-    from: address('a'),
-    to: address('b'),
-    input: '0x',
-    value: 0n,
-    nonce: transactionIndex,
-    gas: 21_000n,
-    gasPrice: 1n,
-    maxFeePerGas: 1n,
-    maxPriorityFeePerGas: 1n,
-    type: 2,
-    v: 1n,
-    r: bytes32('c'),
-    s: bytes32('d'),
-    accessList: null,
-    status: 1,
-    receiptGasUsed: 21_000n,
-    cumulativeGasUsed: 21_000n,
-    effectiveGasPrice: 1n,
-    contractAddress: null,
-    logsBloom: zeroLogsBloom,
-  }
+  if (response.error) throw new Error(response.error.message)
+  return response.result ?? []
 }

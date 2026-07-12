@@ -6,12 +6,12 @@ import { decodeLog, decodeReceiptFields } from '../../decode.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
 import { requireHex, requireQuantity } from '../validation.ts'
 import {
-  RECEIPT_LOG_BATCH_SIZE,
-  type ReceiptConnectionDatabase,
-  ReceiptStreamSession,
-} from './receipt-stream-session.ts'
+  LOG_STREAM_BATCH_SIZE,
+  type LogStreamConnectionDatabase,
+  LogStreamSession,
+} from './log-stream-session.ts'
 
-export const BLOCK_RECEIPT_LOG_BATCH_SIZE = RECEIPT_LOG_BATCH_SIZE
+export const BLOCK_RECEIPT_LOG_BATCH_SIZE = LOG_STREAM_BATCH_SIZE
 
 type BlockReference = Pick<typeof schema.blocks.$inferSelect, 'number' | 'hash'>
 type ReceiptTransaction = Awaited<
@@ -21,7 +21,7 @@ type ReceiptTransaction = Awaited<
 type PreparedBlockReceiptData = {
   block: BlockReference
   transactions: ReceiptTransaction[]
-  session: ReceiptStreamSession
+  session: LogStreamSession
 }
 
 /**
@@ -36,7 +36,7 @@ export async function streamEthGetBlockReceipts(
   stream: JsonRpcMethodStream,
   options: { batchSize?: number } = {}
 ) {
-  const session = await ReceiptStreamSession.open(
+  const session = await LogStreamSession.open(
     args.db,
     options.batchSize ?? BLOCK_RECEIPT_LOG_BATCH_SIZE
   )
@@ -83,7 +83,7 @@ async function writePreparedBlockReceiptResult(args: {
   stream: JsonRpcMethodStream
 }) {
   await args.stream.resultArray(async (receipts) => {
-    const logs = args.prepared.session.logs({
+    const logs = args.prepared.session.receiptLogs({
       blockNumber: args.prepared.block.number,
     })
     let nextLog = await logs.next()
@@ -130,7 +130,7 @@ async function writePreparedBlockReceiptResult(args: {
 }
 
 async function resolveBlockReference(
-  db: ReceiptConnectionDatabase,
+  db: LogStreamConnectionDatabase,
   value: unknown
 ): Promise<BlockReference | null> {
   if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
@@ -170,7 +170,7 @@ async function resolveBlockReference(
 }
 
 function selectReceiptTransactions(
-  db: ReceiptConnectionDatabase,
+  db: LogStreamConnectionDatabase,
   blockNumber: bigint
 ) {
   return db
