@@ -6,7 +6,17 @@ import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from './types.ts'
 export function isRequest(body: unknown): body is JsonRpcRequest {
   if (!body || typeof body !== 'object') return false
   const request = body as JsonRpcRequest
-  return request.jsonrpc === '2.0' && typeof request.method === 'string'
+  return (
+    request.jsonrpc === '2.0' &&
+    typeof request.method === 'string' &&
+    request.method.length > 0 &&
+    request.method.length <= 128 &&
+    (request.params === undefined || Array.isArray(request.params)) &&
+    (request.id === undefined ||
+      request.id === null ||
+      typeof request.id === 'string' ||
+      (typeof request.id === 'number' && Number.isFinite(request.id)))
+  )
 }
 
 /**

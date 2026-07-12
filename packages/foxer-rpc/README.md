@@ -19,7 +19,7 @@ The service stores:
 
 Receipt fields are stored on the `transactions` row, and receipt logs are stored in `logs`. There is no separate `receipts` table.
 
-Methods served from the local database are listed below. Any other JSON-RPC method is proxied to the upstream node configured by `RPC_URL`.
+Methods served from the local database are listed below. Selected read-only methods are proxied to the upstream node configured by `RPC_URL`; all other methods are rejected locally.
 
 ## How It Works
 
@@ -111,7 +111,9 @@ Implemented methods:
 - `eth_getBlockReceipts`
 - `eth_getLogs`
 
-Unsupported methods are forwarded to the upstream RPC node. This lets clients use read methods such as `eth_call` while keeping indexed block, transaction, receipt, and log reads served from the local database.
+Selected read-only methods not served locally are forwarded to the upstream RPC node. The proxy allowlist is `eth_call`, `eth_estimateGas`, `eth_feeHistory`, `eth_gasPrice`, `eth_getBalance`, `eth_getCode`, `eth_getProof`, `eth_getStorageAt`, `eth_getTransactionCount`, `eth_maxPriorityFeePerGas`, and `eth_syncing`. All other methods return `-32601 Method not found` without contacting upstream.
+
+Proxied calls use an isolated upstream client with no automatic retries, a 10-second timeout, and a 10 MiB response limit. Incoming JSON-RPC request bodies are limited to 1 MiB and must use the `application/json` content type.
 
 `eth_getBlockReceipts` accepts the Ethereum Execution APIs block identifier shape: block number, block tag, or 32-byte block hash.
 
@@ -364,7 +366,7 @@ The `serve` command:
 
 - requires `DATABASE_URL` and uses only the API Postgres pool
 - uses `MAX_CONNECTIONS`/`--max-connections` to size that pool
-- serves the JSON-RPC API and proxies unsupported methods through `RPC_URL`
+- serves the JSON-RPC API and proxies allowlisted read-only methods through `RPC_URL`
 - does not run migrations, startup verification, backfill, or live sync
 
 Run `serve` only against a database maintained by a `start` deployment. This

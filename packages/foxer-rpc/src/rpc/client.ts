@@ -8,7 +8,11 @@ import {
 export type RpcClients = {
   backfill: PublicClient<Transport>
   live: PublicClient<Transport>
+  proxy: PublicClient<Transport>
 }
+
+export const PROXY_REQUEST_TIMEOUT_MS = 10_000
+export const PROXY_MAX_RESPONSE_BODY_SIZE = 10 * 1024 * 1024
 
 /**
  * Creates separate upstream clients for historical and live work.
@@ -46,6 +50,12 @@ export function createRpcClients(options: {
   const liveTransport = http(options.realtimeRpcUrl ?? options.rpcUrl, {
     fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
   })
+  const proxyTransport = http(options.realtimeRpcUrl ?? options.rpcUrl, {
+    fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
+    timeout: PROXY_REQUEST_TIMEOUT_MS,
+    retryCount: 0,
+    maxResponseBodySize: PROXY_MAX_RESPONSE_BODY_SIZE,
+  })
 
   return {
     backfill: createPublicClient({ transport: backfillTransport }),
@@ -53,5 +63,6 @@ export function createRpcClients(options: {
       transport: liveTransport,
       pollingInterval: 1000,
     }),
+    proxy: createPublicClient({ transport: proxyTransport }),
   }
 }

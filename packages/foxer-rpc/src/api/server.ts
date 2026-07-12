@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { bearerAuth } from 'hono/bearer-auth'
+import { bodyLimit } from 'hono/body-limit'
 import { jwt, sign } from 'hono/jwt'
 import { compress } from 'hono-compress'
 import { type PinoLogger, pinoLogger } from 'hono-pino'
@@ -21,6 +22,8 @@ const mintKeySchema = z.object({
   expiresInDays: z.coerce.number().int().positive().optional(),
 })
 
+export const JSON_RPC_MAX_REQUEST_BODY_SIZE = 1024 * 1024
+
 function omitJsonRpcEnvelope(value: unknown): unknown {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return value
@@ -37,7 +40,7 @@ function omitJsonRpcEnvelope(value: unknown): unknown {
  *
  * The app installs request logging, response compression, a lightweight health
  * route, and the JSON-RPC POST endpoint. Known methods are served from the
- * local database; unsupported methods are proxied by `handleJsonRpc`.
+ * local database; selected read-only methods are proxied by `handleJsonRpc`.
  */
 export function createApiServer({
   db,
@@ -138,45 +141,64 @@ export function createApiServer({
     })
   })
 
-  app.post('/', async (c) => {
-    let body: unknown
-    try {
-      body = await c.req.json()
-    } catch (cause) {
-      logger.error({ error: cause }, 'json-rpc parse error')
-      return c.json(
-        {
-          jsonrpc: '2.0',
-          id: null,
-          error: { code: -32700, message: 'Parse error' },
-        },
-        400
-      )
-    }
+  app.post(
+    '/',
+    bodyLimit({
+      maxSize: JSON_RPC_MAX_REQUEST_BODY_SIZE,
+      onError: (c) =>
+        c.json(error(null, -32600, 'Request body too large'), 413),
+    }),
+    async (c) => {
+      const contentType = c.req.header('content-type')
+      if (
+        contentType?.split(';', 1)[0]?.trim().toLowerCase() !==
+        'application/json'
+      ) {
+        return c.json(
+          error(null, -32600, 'Content-Type must be application/json'),
+          415
+        )
+      }
 
-    if (Array.isArray(body)) {
-      return c.json(error(null, -32600, 'Batch requests are not supported'))
-    }
-    if (!isRequest(body)) {
-      return c.json(error(null, -32600, 'Invalid Request'))
-    }
+      let body: unknown
+      try {
+        body = await c.req.json()
+      } catch (cause) {
+        logger.error({ error: cause }, 'json-rpc parse error')
+        return c.json(
+          {
+            jsonrpc: '2.0',
+            id: null,
+            error: { code: -32700, message: 'Parse error' },
+          },
+          400
+        )
+      }
 
-    const id = body.id ?? null
-    if (!Object.hasOwn(body, 'id')) {
-      return c.json(error(null, -32600, 'Invalid Request'))
+      if (Array.isArray(body)) {
+        return c.json(error(null, -32600, 'Batch requests are not supported'))
+      }
+      if (!isRequest(body)) {
+        return c.json(error(null, -32600, 'Invalid Request'))
+      }
+
+      const id = body.id ?? null
+      if (!Object.hasOwn(body, 'id')) {
+        return c.json(error(null, -32600, 'Invalid Request'))
+      }
+
+      c.var.logger.assign({ jsonRpcBody: omitJsonRpcEnvelope(body) })
+
+      if (isStreamedRequest(body)) {
+        return streamJsonRpc(c, { id }, (stream) =>
+          handleJsonRpcStream({ db, config, logger, body, stream })
+        )
+      }
+
+      const result = await handleJsonRpc({ db, config, logger, body })
+      return c.json(result)
     }
-
-    c.var.logger.assign({ jsonRpcBody: omitJsonRpcEnvelope(body) })
-
-    if (isStreamedRequest(body)) {
-      return streamJsonRpc(c, { id }, (stream) =>
-        handleJsonRpcStream({ db, config, logger, body, stream })
-      )
-    }
-
-    const result = await handleJsonRpc({ db, config, logger, body })
-    return c.json(result)
-  })
+  )
 
   return app
 }

@@ -1,3 +1,5 @@
+import { HttpRequestError, ResponseBodyTooLargeError, TimeoutError } from 'viem'
+
 import { RpcError } from './errors.ts'
 import { ethBlockNumber } from './methods/eth-block-number.ts'
 import { ethChainId } from './methods/eth-chain-id.ts'
@@ -16,6 +18,20 @@ import { web3ClientVersion } from './methods/web3-client-version.ts'
 import { error, ok } from './response.ts'
 import type { JsonRpcMethodStream } from './stream.ts'
 import type { JsonRpcRequest, JsonRpcResponse, MethodContext } from './types.ts'
+
+const PROXIED_METHODS = new Set([
+  'eth_call',
+  'eth_estimateGas',
+  'eth_feeHistory',
+  'eth_gasPrice',
+  'eth_getBalance',
+  'eth_getCode',
+  'eth_getProof',
+  'eth_getStorageAt',
+  'eth_getTransactionCount',
+  'eth_maxPriorityFeePerGas',
+  'eth_syncing',
+])
 
 /**
  * Handles one JSON-RPC request validated by the transport boundary.
@@ -117,6 +133,9 @@ async function dispatch(
       case 'eth_getBlockTransactionCountByHash':
         return ok(id, await ethGetBlockTransactionCountByHash(args.db, params))
       default:
+        if (!PROXIED_METHODS.has(body.method)) {
+          return error(id, -32601, 'Method not found')
+        }
         return proxy(args, body)
     }
   } catch (cause) {
@@ -136,7 +155,7 @@ async function proxy(
   body: JsonRpcRequest
 ): Promise<JsonRpcResponse> {
   try {
-    const result = await args.config.clients.live.request({
+    const result = await args.config.clients.proxy.request({
       method: body.method,
       params: body.params ?? [],
     } as never)
@@ -145,8 +164,19 @@ async function proxy(
     if (isJsonRpcError(cause)) {
       return error(body.id ?? null, cause.code, cause.message, cause.data)
     }
+    if (isUpstreamUnavailableError(cause)) {
+      return error(body.id ?? null, -32002, 'Upstream RPC unavailable')
+    }
     throw cause
   }
+}
+
+function isUpstreamUnavailableError(cause: unknown): boolean {
+  return (
+    cause instanceof HttpRequestError ||
+    cause instanceof ResponseBodyTooLargeError ||
+    cause instanceof TimeoutError
+  )
 }
 
 function isJsonRpcError(

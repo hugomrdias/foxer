@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { sign } from 'hono/jwt'
 import pino from 'pino'
 
-import { createApiServer } from '../src/api/server.ts'
+import {
+  createApiServer,
+  JSON_RPC_MAX_REQUEST_BODY_SIZE,
+} from '../src/api/server.ts'
 
 const authSecret = 'testauthsecret32charslong0ab1234'
 
@@ -17,6 +20,11 @@ const baseConfig = {
     live: {
       request: () => {
         throw new Error('unexpected live proxy request')
+      },
+    },
+    proxy: {
+      request: () => {
+        throw new Error('unexpected proxy request')
       },
     },
   },
@@ -284,6 +292,45 @@ describe('createApiServer auth', () => {
     const app = createServer(authSecret)
     const health = await app.request('/health')
     expect(health.status).toBe(200)
+  })
+})
+
+describe('createApiServer JSON-RPC boundary', () => {
+  test('requires a JSON content type', async () => {
+    const response = await createServer().request('/', {
+      method: 'POST',
+      body: jsonRpcBody,
+    })
+
+    expect(response.status).toBe(415)
+    expect(await response.json()).toEqual({
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code: -32600,
+        message: 'Content-Type must be application/json',
+      },
+    })
+  })
+
+  test('rejects oversized request bodies before parsing', async () => {
+    const response = await createServer().request('/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_call',
+        params: ['x'.repeat(JSON_RPC_MAX_REQUEST_BODY_SIZE)],
+      }),
+    })
+
+    expect(response.status).toBe(413)
+    expect(await response.json()).toEqual({
+      jsonrpc: '2.0',
+      id: null,
+      error: { code: -32600, message: 'Request body too large' },
+    })
   })
 })
 

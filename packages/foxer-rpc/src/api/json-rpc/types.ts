@@ -5,9 +5,9 @@ import type { Logger } from '../../utils/logger.ts'
 export type JsonRpcId = string | number | null
 
 export type JsonRpcRequest = {
-  jsonrpc?: string
+  jsonrpc: '2.0'
   id?: JsonRpcId
-  method?: string
+  method: string
   params?: unknown[]
 }
 
