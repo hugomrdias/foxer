@@ -53,6 +53,18 @@ describe('eth_getBlockReceipts', () => {
         [tx2]
       )
 
+      const byPending = await rpc(app, 'pending')
+      expect(
+        byPending.result?.map((receipt) => receipt.transactionHash)
+      ).toEqual([tx2])
+
+      for (const tag of ['earliest', 'safe', 'finalized']) {
+        const response = await rpc(app, tag)
+        expect(
+          response.result?.map((receipt) => receipt.transactionHash)
+        ).toEqual([tx1])
+      }
+
       const byHash = await rpc(app, block1)
       if (!byHash.result) throw new Error('expected receipts by hash')
       expect(byHash.result).toHaveLength(1)
@@ -230,7 +242,12 @@ async function renderPreparedStream(
   const app = new Hono()
   app.get('/', (c) =>
     streamJsonRpc(c, { id: 1 }, (stream) =>
-      streamEthGetBlockReceipts({ db }, [block], stream, { batchSize })
+      streamEthGetBlockReceipts(
+        { config: { finality: 1n }, db },
+        [block],
+        stream,
+        { batchSize }
+      )
     )
   )
   return (await app.request('/')).text()

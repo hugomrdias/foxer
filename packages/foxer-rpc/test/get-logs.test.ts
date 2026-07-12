@@ -170,6 +170,7 @@ function createTestApi(db: Database, maxLogsBlockRange = 10n) {
 function createConfig(maxLogsBlockRange: bigint) {
   return {
     chainId: 314_159,
+    finality: 1n,
     maxLogsBlockRange,
     clients: {
       backfill: {

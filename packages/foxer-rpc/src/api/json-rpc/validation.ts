@@ -1,29 +1,62 @@
+import { asc, desc } from 'drizzle-orm'
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { Hex } from 'viem'
 
-import type { Database } from '../../db/client.ts'
+import type { InternalConfig } from '../../config.ts'
+import { schema } from '../../db/schema/index.ts'
 import { RpcError } from './errors.ts'
 
 /**
- * Resolves Ethereum block tags and hex quantities into local block heights.
+ * Resolves Ethereum block tags and hex quantities against available local data.
+ *
+ * `safe` and `finalized` share the configured finality depth. `pending` is the
+ * latest indexed block because this indexer does not expose a pending block.
  */
 export async function resolveBlockNumber(
-  args: { db: Database },
+  args: {
+    db: NodePgDatabase
+    config: Pick<InternalConfig, 'finality'>
+  },
   value: unknown
 ): Promise<bigint | null> {
-  if (
-    value == null ||
-    value === 'latest' ||
-    value === 'safe' ||
-    value === 'finalized' ||
-    value === 'pending'
-  ) {
-    return (await args.db.$prepared.getLatestBlock.execute())[0]?.number ?? null
-  }
-  if (value === 'earliest') return 0n
   if (typeof value === 'string' && value.startsWith('0x')) {
     return requireQuantity(value, 'block parameter')
   }
+
+  if (value === 'earliest') return selectBoundaryBlock(args.db, 'earliest')
+  if (value == null || value === 'latest' || value === 'pending') {
+    return selectBoundaryBlock(args.db, 'latest')
+  }
+  if (value === 'safe' || value === 'finalized') {
+    const latest = await selectBoundaryBlock(args.db, 'latest')
+    if (latest == null) return null
+    const earliest = await selectBoundaryBlock(args.db, 'earliest')
+    if (earliest == null) return null
+    const finality = args.config.finality > 0n ? args.config.finality : 0n
+    const resolved = latest - finality
+    return resolved < earliest ? earliest : resolved
+  }
+
   throw new RpcError(-32602, 'invalid block parameter')
+}
+
+async function selectBoundaryBlock(
+  db: NodePgDatabase,
+  boundary: 'earliest' | 'latest'
+) {
+  return (
+    (
+      await db
+        .select({ number: schema.blocks.number })
+        .from(schema.blocks)
+        .orderBy(
+          boundary === 'earliest'
+            ? asc(schema.blocks.number)
+            : desc(schema.blocks.number)
+        )
+        .limit(1)
+    )[0]?.number ?? null
+  )
 }
 
 /**

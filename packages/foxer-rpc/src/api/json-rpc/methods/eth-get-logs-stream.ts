@@ -18,10 +18,9 @@ import { schema } from '../../../db/schema/index.ts'
 import { decodeLog } from '../../decode.ts'
 import { RpcError } from '../errors.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
-import { requireHex, requireQuantity } from '../validation.ts'
+import { requireHex, resolveBlockNumber } from '../validation.ts'
 import {
   LOG_STREAM_BATCH_SIZE,
-  type LogStreamConnectionDatabase,
   LogStreamSession,
 } from './log-stream-session.ts'
 
@@ -85,13 +84,13 @@ export async function streamEthGetLogs(
     toBlock = block.number
   } else {
     fromBlock =
-      (await resolveStreamBlockNumber(
-        session.db,
+      (await resolveBlockNumber(
+        { config: args.config, db: session.db },
         filter.fromBlock ?? 'latest'
       )) ?? 0n
     toBlock =
-      (await resolveStreamBlockNumber(
-        session.db,
+      (await resolveBlockNumber(
+        { config: args.config, db: session.db },
         filter.toBlock ?? 'latest'
       )) ?? 0n
   }
@@ -168,34 +167,6 @@ async function streamLogs(
       if (rows.length < session.batchSize) return
     }
   })
-}
-
-async function resolveStreamBlockNumber(
-  db: LogStreamConnectionDatabase,
-  value: unknown
-): Promise<bigint | null> {
-  if (
-    value == null ||
-    value === 'latest' ||
-    value === 'safe' ||
-    value === 'finalized' ||
-    value === 'pending'
-  ) {
-    return (
-      (
-        await db
-          .select({ number: schema.blocks.number })
-          .from(schema.blocks)
-          .orderBy(sql`${schema.blocks.number} desc`)
-          .limit(1)
-      )[0]?.number ?? null
-    )
-  }
-  if (value === 'earliest') return 0n
-  if (typeof value === 'string' && value.startsWith('0x')) {
-    return requireQuantity(value, 'block parameter')
-  }
-  throw new RpcError(-32602, 'invalid block parameter')
 }
 
 function addAddressFilter(conditions: SQL[], value: unknown) {

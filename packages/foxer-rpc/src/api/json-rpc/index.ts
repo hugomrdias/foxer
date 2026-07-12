@@ -53,7 +53,11 @@ export function handleJsonRpcStream(
 
   switch (args.body.method) {
     case 'eth_getBlockReceipts':
-      return streamEthGetBlockReceipts({ db: args.db }, params, args.stream)
+      return streamEthGetBlockReceipts(
+        { config: args.config, db: args.db },
+        params,
+        args.stream
+      )
     case 'eth_getLogs':
       return streamEthGetLogs(
         { config: args.config, db: args.db },

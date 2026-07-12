@@ -24,6 +24,7 @@ export function createReceiptTestApi(db: Database) {
     logger: testLogger,
     config: {
       chainId: 314_159,
+      finality: 1n,
       clients: {
         backfill: {
           request: () => {

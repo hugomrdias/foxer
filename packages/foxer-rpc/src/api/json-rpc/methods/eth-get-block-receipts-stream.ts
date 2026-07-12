@@ -1,10 +1,11 @@
 import { asc, desc, eq } from 'drizzle-orm'
 
+import type { InternalConfig } from '../../../config.ts'
 import { type Database, receiptTransactionColumns } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog, decodeReceiptFields } from '../../decode.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
-import { requireHex, requireQuantity } from '../validation.ts'
+import { requireHex, resolveBlockNumber } from '../validation.ts'
 import {
   LOG_STREAM_BATCH_SIZE,
   type LogStreamConnectionDatabase,
@@ -31,7 +32,10 @@ type PreparedBlockReceiptData = {
  * then writes ordered receipts without returning transport-specific state.
  */
 export async function streamEthGetBlockReceipts(
-  args: { db: Database },
+  args: {
+    config: Pick<InternalConfig, 'finality'>
+    db: Database
+  },
   params: unknown[],
   stream: JsonRpcMethodStream,
   options: { batchSize?: number } = {}
@@ -44,7 +48,7 @@ export async function streamEthGetBlockReceipts(
   let transactions: ReceiptTransaction[] = []
 
   try {
-    block = await resolveBlockReference(session.db, params[0])
+    block = await resolveBlockReference(session.db, args.config, params[0])
     if (block) {
       transactions = await selectReceiptTransactions(session.db, block.number)
     }
@@ -131,6 +135,7 @@ async function writePreparedBlockReceiptResult(args: {
 
 async function resolveBlockReference(
   db: LogStreamConnectionDatabase,
+  config: Pick<InternalConfig, 'finality'>,
   value: unknown
 ): Promise<BlockReference | null> {
   if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
@@ -144,23 +149,8 @@ async function resolveBlockReference(
     return rows[0] ?? null
   }
 
-  if (
-    value == null ||
-    value === 'latest' ||
-    value === 'safe' ||
-    value === 'finalized' ||
-    value === 'pending'
-  ) {
-    const rows = await db
-      .select({ number: schema.blocks.number, hash: schema.blocks.hash })
-      .from(schema.blocks)
-      .orderBy(desc(schema.blocks.number))
-      .limit(1)
-    return rows[0] ?? null
-  }
-
-  const blockNumber =
-    value === 'earliest' ? 0n : requireQuantity(value, 'block parameter')
+  const blockNumber = await resolveBlockNumber({ config, db }, value)
+  if (blockNumber == null) return null
   const rows = await db
     .select({ number: schema.blocks.number, hash: schema.blocks.hash })
     .from(schema.blocks)
