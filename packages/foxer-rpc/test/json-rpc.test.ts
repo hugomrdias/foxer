@@ -104,6 +104,105 @@ describe('handleJsonRpc', () => {
     })
   })
 
+  test('proxies block trace methods with opaque provider options', async () => {
+    const requests = mockUpstreamRpc(
+      {
+        debug_traceBlockByNumber: [],
+        debug_traceBlockByHash: [],
+      },
+      { url: realtimeRpcUrl }
+    )
+    const clients = createRpcClients({
+      rpcUrl: upstreamRpcUrl,
+      realtimeRpcUrl,
+    })
+    const blockHash = `0x${'ab'.repeat(32)}`
+    const cases = [
+      {
+        method: 'debug_traceBlockByNumber',
+        params: ['latest'],
+      },
+      {
+        method: 'debug_traceBlockByNumber',
+        params: [
+          '0x10',
+          {
+            tracer: 'vendorTracer',
+            tracerConfig: { vendorOption: true },
+          },
+        ],
+      },
+      {
+        method: 'debug_traceBlockByHash',
+        params: [blockHash, { tracer: 'callTracer', onlyTopCall: true }],
+      },
+    ] as const
+
+    for (const [index, item] of cases.entries()) {
+      const response = await handleJsonRpc({
+        ...args,
+        config: { ...baseConfig, clients },
+        body: {
+          jsonrpc: '2.0',
+          id: index,
+          method: item.method,
+          params: [...item.params],
+        },
+      } as never)
+
+      expect(response).toEqual({ jsonrpc: '2.0', id: index, result: [] })
+      expect(requests[index]).toMatchObject(item)
+    }
+  })
+
+  test('rejects malformed block trace requests without calling upstream', async () => {
+    const requests = mockUpstreamRpc(
+      {
+        debug_traceBlockByNumber: [],
+        debug_traceBlockByHash: [],
+      },
+      { url: realtimeRpcUrl }
+    )
+    const clients = createRpcClients({
+      rpcUrl: upstreamRpcUrl,
+      realtimeRpcUrl,
+    })
+    const cases = [
+      { method: 'debug_traceBlockByNumber', params: [] },
+      { method: 'debug_traceBlockByNumber', params: ['0x'] },
+      { method: 'debug_traceBlockByNumber', params: ['0x1', null] },
+      { method: 'debug_traceBlockByHash', params: ['0x1234'] },
+      {
+        method: 'debug_traceBlockByHash',
+        params: [`0x${'ab'.repeat(32)}`, []],
+      },
+      {
+        method: 'debug_traceBlockByHash',
+        params: [`0x${'ab'.repeat(32)}`, {}, 'extra'],
+      },
+    ]
+
+    for (const [index, item] of cases.entries()) {
+      const response = await handleJsonRpc({
+        ...args,
+        config: { ...baseConfig, clients },
+        body: {
+          jsonrpc: '2.0',
+          id: index,
+          method: item.method,
+          params: item.params,
+        },
+      } as never)
+
+      expect(response).toMatchObject({
+        jsonrpc: '2.0',
+        id: index,
+        error: { code: -32602 },
+      })
+    }
+    expect(requests).toEqual([])
+  })
+
   test('forwards upstream json-rpc errors from allowed proxied methods', async () => {
     mockUpstreamRpc(
       {
@@ -167,6 +266,35 @@ describe('handleJsonRpc', () => {
       id: 1,
       error: { code: -32601, message: 'Method not found' },
     })
+    expect(requests).toEqual([])
+  })
+
+  test('keeps other debug methods outside the proxy allowlist', async () => {
+    const requests = mockUpstreamRpc(
+      {
+        debug_traceCall: [],
+        debug_traceTransaction: [],
+      },
+      { url: realtimeRpcUrl }
+    )
+    const clients = createRpcClients({
+      rpcUrl: upstreamRpcUrl,
+      realtimeRpcUrl,
+    })
+
+    for (const method of ['debug_traceCall', 'debug_traceTransaction']) {
+      const response = await handleJsonRpc({
+        ...args,
+        config: { ...baseConfig, clients },
+        body: { jsonrpc: '2.0', id: 1, method, params: [] },
+      } as never)
+
+      expect(response).toEqual({
+        jsonrpc: '2.0',
+        id: 1,
+        error: { code: -32601, message: 'Method not found' },
+      })
+    }
     expect(requests).toEqual([])
   })
 

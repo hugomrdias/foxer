@@ -111,7 +111,9 @@ Implemented methods:
 - `eth_getBlockReceipts`
 - `eth_getLogs`
 
-Selected read-only methods not served locally are forwarded to the upstream RPC node. The proxy allowlist is `eth_call`, `eth_estimateGas`, `eth_feeHistory`, `eth_gasPrice`, `eth_getBalance`, `eth_getCode`, `eth_getProof`, `eth_getStorageAt`, `eth_getTransactionCount`, `eth_maxPriorityFeePerGas`, and `eth_syncing`. All other methods return `-32601 Method not found` without contacting upstream.
+Selected read-only methods not served locally are forwarded to the upstream RPC node. The proxy allowlist is `debug_traceBlockByHash`, `debug_traceBlockByNumber`, `eth_call`, `eth_estimateGas`, `eth_feeHistory`, `eth_gasPrice`, `eth_getBalance`, `eth_getCode`, `eth_getProof`, `eth_getStorageAt`, `eth_getTransactionCount`, `eth_maxPriorityFeePerGas`, and `eth_syncing`. All other methods return `-32601 Method not found` without contacting upstream.
+
+The block trace methods accept a block hash or block quantity/tag followed by an optional trace-options object. Trace options are passed through unchanged so the configured upstream provider controls supported tracers and vendor extensions.
 
 Proxied calls use an isolated upstream client with no automatic retries, a 10-second timeout, and a 10 MiB response limit. Incoming JSON-RPC request bodies are limited to 1 MiB and must use the `application/json` content type.
 

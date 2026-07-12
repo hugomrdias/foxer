@@ -18,8 +18,11 @@ import { web3ClientVersion } from './methods/web3-client-version.ts'
 import { error, ok } from './response.ts'
 import type { JsonRpcMethodStream } from './stream.ts'
 import type { JsonRpcRequest, JsonRpcResponse, MethodContext } from './types.ts'
+import { requireHex, requireQuantity } from './validation.ts'
 
 const PROXIED_METHODS = new Set([
+  'debug_traceBlockByHash',
+  'debug_traceBlockByNumber',
   'eth_call',
   'eth_estimateGas',
   'eth_feeHistory',
@@ -136,6 +139,7 @@ async function dispatch(
         if (!PROXIED_METHODS.has(body.method)) {
           return error(id, -32601, 'Method not found')
         }
+        validateProxiedRequest(body)
         return proxy(args, body)
     }
   } catch (cause) {
@@ -148,6 +152,48 @@ async function dispatch(
     )
     return error(id, -32603, 'Internal error')
   }
+}
+
+const TRACE_BLOCK_TAGS = new Set([
+  'earliest',
+  'finalized',
+  'latest',
+  'pending',
+  'safe',
+])
+
+function validateProxiedRequest(body: JsonRpcRequest): void {
+  if (
+    body.method !== 'debug_traceBlockByNumber' &&
+    body.method !== 'debug_traceBlockByHash'
+  ) {
+    return
+  }
+
+  const params = body.params ?? []
+  if (params.length < 1 || params.length > 2) {
+    throw new RpcError(-32602, 'invalid trace parameters')
+  }
+
+  if (body.method === 'debug_traceBlockByNumber') {
+    if (!TRACE_BLOCK_TAGS.has(params[0] as string)) {
+      requireQuantity(params[0], 'block parameter')
+    }
+  } else {
+    requireHex(params[0], 'block hash', 32)
+  }
+
+  if (params.length === 2 && !isPlainObject(params[1])) {
+    throw new RpcError(-32602, 'invalid trace options')
+  }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }
 
 async function proxy(
