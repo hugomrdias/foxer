@@ -21,7 +21,6 @@ For changes follow plan -> user approval -> execution
 2. **User** reviews and approves the plan — **stop and wait** before handoff.
 3. Implement the approved plan.
 
-
 ## Project skills
 
 <!-- Skills live under `.agents/skills/` (e.g. shadcn). Cursor-native skills: `.cursor/skills/`. -->
