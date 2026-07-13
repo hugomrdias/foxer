@@ -1,6 +1,6 @@
 import { gte } from 'drizzle-orm'
 
-import { MAX_QUERY_PARAMS } from '../contants.ts'
+import { MAX_QUERY_PARAMS } from '../constants.ts'
 import type {
   EncodedBlock,
   EncodedLog,
