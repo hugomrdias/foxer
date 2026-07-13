@@ -5,6 +5,10 @@ import { createDatabase, type DatabaseContext } from '../src/db/client.ts'
 import { runMigrations } from '../src/db/migrate.ts'
 import { testLogger } from './test-logger.ts'
 
+export type TestDatabaseContext = DatabaseContext & {
+  databaseUrl: string
+}
+
 type TestState = {
   container?: StartedPostgreSqlContainer
   templateUrl?: string
@@ -39,7 +43,7 @@ export async function migrateTemplateDatabase() {
   }
 }
 
-export async function createTestDatabaseContext(): Promise<DatabaseContext> {
+export async function createTestDatabaseContext(): Promise<TestDatabaseContext> {
   const container = state.container
   if (!container) throw new Error('PostgreSQL test container is not ready')
 
@@ -51,21 +55,29 @@ export async function createTestDatabaseContext(): Promise<DatabaseContext> {
     await admin.end()
   }
 
+  const connectionString = databaseUrl(container, database)
   const context = createDatabase({
-    databaseUrl: databaseUrl(container, database),
+    databaseUrl: connectionString,
     logger: testLogger,
   })
   const stop = context.stop
-  context.stop = async () => {
-    await stop()
-    const cleanup = new Pool({ connectionString: systemDatabaseUrl(container) })
-    try {
-      await cleanup.query(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`)
-    } finally {
-      await cleanup.end()
-    }
+  return {
+    ...context,
+    databaseUrl: connectionString,
+    stop: async () => {
+      await stop()
+      const cleanup = new Pool({
+        connectionString: systemDatabaseUrl(container),
+      })
+      try {
+        await cleanup.query(
+          `DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`
+        )
+      } finally {
+        await cleanup.end()
+      }
+    },
   }
-  return context
 }
 
 function systemDatabaseUrl(container: StartedPostgreSqlContainer) {

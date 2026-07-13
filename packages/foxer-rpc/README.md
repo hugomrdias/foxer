@@ -43,13 +43,14 @@ At startup, `foxer-rpc`:
 1. Reads configuration from CLI flags and environment variables.
 2. Connects to the upstream RPC node with `viem`.
 3. Reads the upstream `chainId`.
-4. Opens a static one-connection PostgreSQL sync pool.
-5. Applies the shipped Drizzle migrations from `packages/foxer-rpc/drizzle`.
-6. Verifies recently indexed blocks against the upstream chain to detect reorgs.
-7. Backfills historical blocks up to `head - finality` through the sync pool.
-8. Opens the PostgreSQL API pool.
-9. Starts live sync with `watchBlockNumber` on the sync database context.
-10. Starts the Hono JSON-RPC API on the API database context.
+4. Acquires the singleton sync lease on a dedicated PostgreSQL connection.
+5. Opens a static one-connection PostgreSQL sync pool.
+6. Applies the shipped Drizzle migrations from `packages/foxer-rpc/drizzle`.
+7. Verifies recently indexed blocks against the upstream chain to detect reorgs.
+8. Backfills historical blocks up to `head - finality` through the sync pool.
+9. Opens the PostgreSQL API pool.
+10. Starts live sync with `watchBlockNumber` on the sync database context.
+11. Starts the Hono JSON-RPC API on the API database context.
 
 During sync, each block is fetched with transactions included. Receipts are fetched once per block with `eth_getBlockReceipts`, and log rows are derived from those receipts. This avoids one RPC call per transaction.
 
@@ -375,15 +376,20 @@ Run `serve` only against a database maintained by a `start` deployment. This
 keeps the single sync writer near Postgres while API-only replicas can be placed
 closer to clients.
 
+The sync lease is cooperative. For the first upgrade from a release that does
+not acquire it, stop the old `start` process before deploying the lease-enabled
+release. Subsequent rolling deployments wait for the outgoing writer
+automatically.
+
 ## Recommended Production Settings
 
 For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics. The values below assume about 8 GB of RAM dedicated to Postgres. Scale `shared_buffers` to roughly 25% of RAM and `effective_cache_size` to roughly 50-75%.
 
-The combined `start` deployment keeps two Postgres pools. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. API-only `serve` deployments open only the API pool. Pools are tagged with `application_name` values `foxer-rpc-api` and `foxer-rpc-sync` for observability.
+The combined `start` deployment keeps two Postgres pools plus one dedicated connection that holds its singleton sync lease. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. API-only `serve` deployments open only the API pool. Connections are tagged with `application_name` values `foxer-rpc-api`, `foxer-rpc-sync`, and `foxer-rpc-sync-lease` for observability.
 
-Plan PostgreSQL `max_connections` for every replica plus headroom: each `start` process can hold up to its configured API maximum plus one sync connection, while each `serve` process can hold up to its configured API maximum.
+Plan PostgreSQL `max_connections` for every replica plus headroom: each `start` process can hold up to its configured API maximum plus one sync connection and one lease connection, while each `serve` process can hold up to its configured API maximum.
 
-For one `start` process using the defaults, configure PostgreSQL with at least 101 application connections plus operational headroom (for example, `max_connections = 110`).
+For one `start` process using the defaults, configure PostgreSQL with at least 102 application connections plus operational headroom (for example, `max_connections = 110`). During a rolling deployment, the incoming process can temporarily hold a second lease connection while it waits for the outgoing sync writer.
 
 ```conf
 shared_buffers = 2GB
