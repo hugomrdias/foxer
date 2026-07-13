@@ -7,6 +7,8 @@ let container: Awaited<ReturnType<PostgreSqlContainer['start']>> | undefined
 
 setDefaultTimeout(120_000)
 
+const postgresSetupTimeout = 300_000
+
 beforeAll(async () => {
   server.listen({ onUnhandledRequest: 'error' })
   container = await new PostgreSqlContainer('postgres:17-alpine')
@@ -16,7 +18,7 @@ beforeAll(async () => {
     .start()
   setPostgresContainer(container, container.getConnectionUri())
   await migrateTemplateDatabase()
-})
+}, postgresSetupTimeout)
 
 afterEach(() => server.resetHandlers())
 
