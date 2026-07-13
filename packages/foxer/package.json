@@ -62,7 +62,7 @@
     "dotenv": "^17.2.3",
     "drizzle-orm": "1.0.0-beta.17-67b1795",
     "exit-hook": "^5.1.0",
-    "hono": "^4.12.29",
+    "hono": "^4.12.30",
     "hono-pino": "^0.10.3",
     "http-shutdown": "^1.2.2",
     "iso-base": "^4.4.0",
@@ -83,7 +83,7 @@
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "hono": ">=4.12.29",
-    "viem": "2.55.0"
+    "hono": ">=4.12.30",
+    "viem": "2.55.1"
   }
 }

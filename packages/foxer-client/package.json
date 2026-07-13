@@ -55,9 +55,9 @@
     "@types/node": "26.1.1",
     "type-fest": "^5.8.0",
     "typescript": "6.0.3",
-    "viem": "2.55.0"
+    "viem": "2.55.1"
   },
   "peerDependencies": {
-    "viem": "2.55.0"
+    "viem": "2.55.1"
   }
 }
