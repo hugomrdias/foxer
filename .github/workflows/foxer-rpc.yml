@@ -2,6 +2,7 @@ name: foxer-rpc
 env:
   CI: true
   FORCE_COLOR: 1
+  TESTCONTAINERS_RYUK_DISABLED: true
 on:
   push:
     branches:
