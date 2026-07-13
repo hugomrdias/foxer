@@ -51,6 +51,13 @@ export function createLogger({
   return pino({
     level,
     serializers: { error: errorSerializer },
+    formatters: {
+      level: (label) => {
+        return {
+          level: label,
+        }
+      },
+    },
     base: undefined,
   })
 }
