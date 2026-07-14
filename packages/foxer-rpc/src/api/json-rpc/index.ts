@@ -170,7 +170,7 @@ async function dispatch(
           return error(id, -32601, 'Method not found')
         }
         validateProxiedRequest(body)
-        return proxy(args, body)
+        return await proxy(args, body)
     }
   } catch (cause) {
     if (cause instanceof RpcError) {

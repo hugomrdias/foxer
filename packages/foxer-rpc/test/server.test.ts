@@ -419,6 +419,42 @@ describe('createApiServer JSON-RPC boundary', () => {
       error: { code: -32600, message: 'Request body too large' },
     })
   })
+
+  test('returns HTTP 200 for JSON-RPC method errors', async () => {
+    const cases = [
+      {
+        request: { method: 'unknown_method', params: [] },
+        error: { code: -32601, message: 'Method not found' },
+      },
+      {
+        request: { method: 'eth_getBlockByNumber', params: ['0x'] },
+        error: { code: -32602, message: 'invalid block parameter' },
+      },
+      {
+        request: { method: 'eth_call', params: [] },
+        error: { code: -32603, message: 'Internal error' },
+      },
+    ]
+
+    for (const [index, item] of cases.entries()) {
+      const response = await createServer().request('/', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: index + 1,
+          ...item.request,
+        }),
+      })
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({
+        jsonrpc: '2.0',
+        id: index + 1,
+        error: item.error,
+      })
+    }
+  })
 })
 
 describe('createApiServer request logging', () => {
@@ -533,7 +569,7 @@ describe('createApiServer request logging', () => {
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
   })
 
-  test('does not add JSON-RPC metadata when parsing fails', async () => {
+  test('returns parse errors with HTTP 200 without JSON-RPC metadata', async () => {
     const { app, logs } = createServerWithLogs()
 
     const response = await app.request('/', {
@@ -542,7 +578,12 @@ describe('createApiServer request logging', () => {
       body: '{',
     })
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({
+      jsonrpc: '2.0',
+      id: null,
+      error: { code: -32700, message: 'Parse error' },
+    })
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody')
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
