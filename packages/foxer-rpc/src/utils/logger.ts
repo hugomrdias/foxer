@@ -28,7 +28,11 @@ export function createLogger({
     const extra: Record<string, unknown> = {}
     const meta = Array.isArray(error.meta) ? error.meta.join('\n') : error.meta
     if (meta) extra.meta = meta
-    if (error.raw.cause) extra.cause = error.raw.cause
+    if (error.raw.cause instanceof Error) {
+      extra.cause = pino.stdSerializers.err(error.raw.cause)
+    } else if (error.raw.cause) {
+      extra.cause = error.raw.cause
+    }
     return {
       message: error.message,
       stack: error.stack,

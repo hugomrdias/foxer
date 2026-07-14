@@ -5,7 +5,12 @@ import { type Database, receiptTransactionColumns } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog, decodeReceiptFields } from '../../decode.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
-import { requireHex, resolveBlockNumber } from '../validation.ts'
+import type { StreamCapacityLimiter } from '../stream-capacity.ts'
+import {
+  requireHex,
+  resolveBlockNumber,
+  validateBlockParameter,
+} from '../validation.ts'
 import {
   LOG_STREAM_BATCH_SIZE,
   type LogStreamConnectionDatabase,
@@ -35,13 +40,16 @@ export async function streamEthGetBlockReceipts(
   args: {
     config: Pick<InternalConfig, 'finality'>
     db: Database
+    streamCapacity: StreamCapacityLimiter
   },
   params: unknown[],
   stream: JsonRpcMethodStream,
   options: { batchSize?: number } = {}
 ) {
+  validateBlockReference(params[0])
   const session = await LogStreamSession.open(
     args.db,
+    args.streamCapacity,
     options.batchSize ?? BLOCK_RECEIPT_LOG_BATCH_SIZE
   )
   let block: BlockReference | null = null
@@ -131,6 +139,14 @@ async function writePreparedBlockReceiptResult(args: {
       )
     }
   })
+}
+
+function validateBlockReference(value: unknown) {
+  if (typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)) {
+    requireHex(value, 'block hash', 32)
+    return
+  }
+  validateBlockParameter(value)
 }
 
 async function resolveBlockReference(

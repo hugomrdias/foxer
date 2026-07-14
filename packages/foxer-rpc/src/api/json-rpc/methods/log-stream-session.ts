@@ -7,6 +7,10 @@ import type { PoolClient } from 'pg'
 
 import type { Database } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
+import type {
+  StreamCapacityLimiter,
+  StreamCapacityPermit,
+} from '../stream-capacity.ts'
 
 export const LOG_STREAM_BATCH_SIZE = 16_384
 
@@ -19,33 +23,44 @@ export class LogStreamSession {
   readonly batchSize: number
   readonly client: PoolClient
   readonly db: LogStreamConnectionDatabase
+  private readonly capacityPermit: StreamCapacityPermit
   private closed = false
 
   private constructor(args: {
     batchSize: number
     client: PoolClient
     db: LogStreamConnectionDatabase
+    capacityPermit: StreamCapacityPermit
   }) {
     this.batchSize = args.batchSize
     this.client = args.client
     this.db = args.db
+    this.capacityPermit = args.capacityPermit
   }
 
-  static async open(database: Database, batchSize = LOG_STREAM_BATCH_SIZE) {
+  static async open(
+    database: Database,
+    capacity: StreamCapacityLimiter,
+    batchSize = LOG_STREAM_BATCH_SIZE
+  ) {
     if (!Number.isSafeInteger(batchSize) || batchSize <= 0) {
       throw new Error('log stream batch size must be a positive integer')
     }
 
-    const client = await database.$client.connect()
+    const capacityPermit = capacity.acquire()
+    let client: PoolClient | undefined
     try {
+      client = await database.$client.connect()
       await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
       return new LogStreamSession({
         batchSize,
         client,
         db: drizzleNodePostgres({ client }),
+        capacityPermit,
       })
     } catch (cause) {
-      client.release(true)
+      client?.release(true)
+      capacityPermit.release()
       throw cause
     }
   }
@@ -102,6 +117,8 @@ export class LogStreamSession {
     } catch (cause) {
       this.client.release(true)
       throw cause
+    } finally {
+      this.capacityPermit.release()
     }
   }
 }

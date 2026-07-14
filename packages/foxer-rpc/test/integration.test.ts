@@ -29,7 +29,12 @@ test('upstream HTTP block is stored in PostgreSQL and served as JSON-RPC', async
 
     const app = createApiServer({
       db,
-      config: { chainId: 314_159, clients } as never,
+      config: {
+        chainId: 314_159,
+        clients,
+        maxConnections: 100,
+        maxStreamConnections: 80,
+      } as never,
       logger: testLogger,
     })
     const response = await app.request('/', {

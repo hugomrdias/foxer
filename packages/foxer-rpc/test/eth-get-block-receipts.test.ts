@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 import { streamEthGetBlockReceipts } from '../src/api/json-rpc/methods/eth-get-block-receipts-stream.ts'
 import { streamJsonRpc } from '../src/api/json-rpc/stream.ts'
+import { StreamCapacityLimiter } from '../src/api/json-rpc/stream-capacity.ts'
 import { type Database, receiptTransactionColumns } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
 import {
@@ -212,12 +213,16 @@ describe('eth_getBlockReceipts', () => {
       await seedReceipts(db)
       await db.update(schema.logs).set({ data: `0x${'ab'.repeat(70_000)}` })
 
+      const streamCapacity = new StreamCapacityLimiter(1)
       const idleBefore = db.$client.idleCount
-      const response = await createReceiptTestApi(db).request('/', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: requestBody('0x1'),
-      })
+      const response = await createReceiptTestApi(db, streamCapacity).request(
+        '/',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: requestBody('0x1'),
+        }
+      )
       const reader = response.body?.getReader()
       if (!reader) throw new Error('expected response body')
 
@@ -230,6 +235,7 @@ describe('eth_getBlockReceipts', () => {
       }
 
       expect(db.$client.idleCount).toBe(idleBefore)
+      expect(streamCapacity.active).toBe(0)
     })
   })
 })
@@ -243,7 +249,11 @@ async function renderPreparedStream(
   app.get('/', (c) =>
     streamJsonRpc(c, { id: 1 }, (stream) =>
       streamEthGetBlockReceipts(
-        { config: { finality: 1n }, db },
+        {
+          config: { finality: 1n },
+          db,
+          streamCapacity: new StreamCapacityLimiter(1),
+        },
         [block],
         stream,
         { batchSize }

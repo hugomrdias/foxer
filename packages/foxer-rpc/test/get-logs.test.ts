@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 
 import { streamEthGetLogs } from '../src/api/json-rpc/methods/eth-get-logs-stream.ts'
 import { streamJsonRpc } from '../src/api/json-rpc/stream.ts'
+import { StreamCapacityLimiter } from '../src/api/json-rpc/stream-capacity.ts'
 import { createApiServer } from '../src/api/server.ts'
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
@@ -151,9 +152,16 @@ async function renderStream(
   const app = new Hono()
   app.get('/', (c) =>
     streamJsonRpc(c, { id: 1 }, (stream) =>
-      streamEthGetLogs({ config: createConfig(10n), db }, [filter], stream, {
-        batchSize,
-      })
+      streamEthGetLogs(
+        {
+          config: createConfig(10n),
+          db,
+          streamCapacity: new StreamCapacityLimiter(1),
+        },
+        [filter],
+        stream,
+        { batchSize }
+      )
     )
   )
   return (await app.request('/')).text()
@@ -171,7 +179,9 @@ function createConfig(maxLogsBlockRange: bigint) {
   return {
     chainId: 314_159,
     finality: 1n,
+    maxConnections: 100,
     maxLogsBlockRange,
+    maxStreamConnections: 80,
     clients: {
       backfill: {
         request: () => {

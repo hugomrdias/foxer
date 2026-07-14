@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { sign } from 'hono/jwt'
 import pino from 'pino'
-
+import { StreamCapacityLimiter } from '../src/api/json-rpc/stream-capacity.ts'
 import {
   createApiServer,
   JSON_RPC_MAX_REQUEST_BODY_SIZE,
@@ -11,6 +11,8 @@ const authSecret = 'testauthsecret32charslong0ab1234'
 
 const baseConfig = {
   chainId: 314_159,
+  maxConnections: 100,
+  maxStreamConnections: 80,
   clients: {
     backfill: {
       request: () => {
@@ -84,6 +86,91 @@ function createServerWithLogs() {
 function completedRequest(logs: Record<string, unknown>[]) {
   return logs.find((log) => log.msg === 'Request completed')
 }
+
+test('all streamed methods share one immediate-rejection capacity limit', async () => {
+  const logs: Record<string, unknown>[] = []
+  const logger = pino(
+    { base: undefined, timestamp: false },
+    {
+      write(line) {
+        logs.push(JSON.parse(line))
+      },
+    }
+  )
+  const streamCapacity = new StreamCapacityLimiter(1)
+  const heldPermit = streamCapacity.acquire()
+  const app = createApiServer({
+    db: mockDb,
+    config: {
+      ...baseConfig,
+      maxConnections: 2,
+      maxStreamConnections: 1,
+    } as never,
+    logger,
+    streamCapacity,
+  })
+  const requests = [
+    { method: 'eth_getBlockReceipts', params: ['0x1'] },
+    { method: 'eth_getLogs', params: [{}] },
+    {
+      method: 'eth_getTransactionReceipt',
+      params: [`0x${'1'.repeat(64)}`],
+    },
+  ]
+
+  try {
+    for (const [index, request] of requests.entries()) {
+      const response = await app.request('/', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: index + 1, ...request }),
+      })
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({
+        jsonrpc: '2.0',
+        id: index + 1,
+        error: {
+          code: -32005,
+          data: { maxConcurrentStreams: 1 },
+          message: 'Stream concurrency limit exceeded',
+        },
+      })
+    }
+
+    for (const [index, request] of [
+      { method: 'eth_getBlockReceipts', params: ['0xzz'] },
+      { method: 'eth_getLogs', params: [{ fromBlock: '0xzz' }] },
+    ].entries()) {
+      const response = await app.request('/', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 100 + index, ...request }),
+      })
+      expect(await response.json()).toEqual({
+        jsonrpc: '2.0',
+        id: 100 + index,
+        error: { code: -32602, message: 'invalid block parameter' },
+      })
+    }
+  } finally {
+    heldPermit.release()
+  }
+
+  const rejections = logs.filter(
+    (log) => log.msg === 'json-rpc stream rejected'
+  )
+  expect(rejections).toHaveLength(3)
+  expect(rejections.map((log) => log.method)).toEqual(
+    requests.map((request) => request.method)
+  )
+  expect(rejections[0]).toMatchObject({
+    activeStreamConnections: 1,
+    maxConnections: 2,
+    maxStreamConnections: 1,
+    rejectionReason: 'stream_concurrency_limit',
+  })
+})
 
 describe('createApiServer auth', () => {
   test('without authSecret: POST / succeeds and /admin/keys returns 404', async () => {

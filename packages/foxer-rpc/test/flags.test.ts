@@ -6,6 +6,7 @@ import {
   MIN_BACKFILL_MEMORY_LIMIT_MB,
   resolveBackfillMemoryLimitBytes,
   resolveMaxConnections,
+  resolveMaxStreamConnections,
 } from '../src/config.ts'
 
 test('does not expose a configurable backfill write mode', () => {
@@ -28,6 +29,24 @@ test('resolves and validates the API Postgres pool size', () => {
   expect(resolveMaxConnections(1, undefined)).toBe(1)
   expect(() => resolveMaxConnections(0, undefined)).toThrow()
   expect(() => resolveMaxConnections(3.5, undefined)).toThrow()
+})
+
+test('reserves 20 API connections from streams by default', () => {
+  expect('default' in globalFlags.maxStreamConnections).toBe(false)
+  expect(resolveMaxStreamConnections(undefined, undefined, 100)).toBe(80)
+  expect(resolveMaxStreamConnections(undefined, undefined, 90)).toBe(70)
+  expect(resolveMaxStreamConnections(undefined, undefined, 10)).toBe(1)
+})
+
+test('resolves and validates the streamed Postgres connection limit', () => {
+  expect(resolveMaxStreamConnections(undefined, '60', 90)).toBe(60)
+  expect(resolveMaxStreamConnections(50, '60', 90)).toBe(50)
+  expect(resolveMaxStreamConnections(1, undefined, 90)).toBe(1)
+  expect(() => resolveMaxStreamConnections(0, undefined, 90)).toThrow()
+  expect(() => resolveMaxStreamConnections(91, undefined, 90)).toThrow(
+    'MAX_STREAM_CONNECTIONS cannot exceed MAX_CONNECTIONS'
+  )
+  expect(() => resolveMaxStreamConnections(3.5, undefined, 90)).toThrow()
 })
 
 test('defaults the backfill memory limit to 64 MiB', () => {

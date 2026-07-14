@@ -4,6 +4,7 @@ import { type Database, receiptTransactionColumns } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog, decodeReceiptFields } from '../../decode.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
+import type { StreamCapacityLimiter } from '../stream-capacity.ts'
 import { requireHex } from '../validation.ts'
 import {
   LOG_STREAM_BATCH_SIZE,
@@ -12,7 +13,7 @@ import {
 
 /** Streams one transaction receipt and its ordered logs from one DB snapshot. */
 export async function streamEthGetTransactionReceipt(
-  args: { db: Database },
+  args: { db: Database; streamCapacity: StreamCapacityLimiter },
   params: unknown[],
   stream: JsonRpcMethodStream,
   options: { batchSize?: number } = {}
@@ -20,6 +21,7 @@ export async function streamEthGetTransactionReceipt(
   const hash = requireHex(params[0], 'transaction hash', 32)
   const session = await LogStreamSession.open(
     args.db,
+    args.streamCapacity,
     options.batchSize ?? LOG_STREAM_BATCH_SIZE
   )
 

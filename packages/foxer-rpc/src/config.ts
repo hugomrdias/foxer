@@ -17,6 +17,7 @@ export type InternalConfig = {
   deferBackfillIndexes: boolean
   backfillMemoryLimitBytes: number
   maxConnections: number
+  maxStreamConnections: number
   port: number
   logLevel: LogLevel
   chainId: number
@@ -27,6 +28,7 @@ export type InternalConfig = {
 export const DEFAULT_BACKFILL_MEMORY_LIMIT_MB = 64
 export const MIN_BACKFILL_MEMORY_LIMIT_MB = 8
 export const MAX_BACKFILL_MEMORY_LIMIT_MB = 4_096
+export const DEFAULT_API_CONNECTION_RESERVE = 20
 
 const backfillMemoryLimitMbSchema = z.coerce
   .number()
@@ -36,12 +38,14 @@ const backfillMemoryLimitMbSchema = z.coerce
   .default(DEFAULT_BACKFILL_MEMORY_LIMIT_MB)
 
 const maxConnectionsSchema = z.coerce.number().int().min(1).default(100)
+const maxStreamConnectionsSchema = z.coerce.number().int().min(1)
 
 const envSchema = z.object({
   RPC_URL: z.url().optional(),
   REALTIME_RPC_URL: z.url().optional(),
   DATABASE_URL: z.url().optional(),
   MAX_CONNECTIONS: maxConnectionsSchema,
+  MAX_STREAM_CONNECTIONS: maxStreamConnectionsSchema,
   START_BLOCK: z.coerce.bigint().default(0n),
   FINALITY: z.coerce.bigint().default(30n),
   PORT: z.coerce.number().int().positive().default(8545),
@@ -63,6 +67,7 @@ export type CliConfig = {
   realtimeRpcUrl?: string
   databaseUrl?: string
   maxConnections?: number
+  maxStreamConnections?: number
   startBlock?: string
   finality?: string
   maxLogsBlockRange?: string
@@ -91,6 +96,23 @@ export function resolveMaxConnections(
   return maxConnectionsSchema.parse(flagValue ?? envValue)
 }
 
+/** Resolves the streamed-request share of the API PostgreSQL pool. */
+export function resolveMaxStreamConnections(
+  flagValue: number | undefined,
+  envValue: string | undefined,
+  maxConnections: number
+): number {
+  const value =
+    flagValue ??
+    envValue ??
+    Math.max(1, maxConnections - DEFAULT_API_CONNECTION_RESERVE)
+  const maxStreamConnections = maxStreamConnectionsSchema.parse(value)
+  if (maxStreamConnections > maxConnections) {
+    throw new Error('MAX_STREAM_CONNECTIONS cannot exceed MAX_CONNECTIONS')
+  }
+  return maxStreamConnections
+}
+
 /**
  * Builds the runtime configuration used by the CLI, sync engine, and API.
  *
@@ -100,15 +122,22 @@ export function resolveMaxConnections(
  * or upstream call per request.
  */
 export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
+  const maxConnections = resolveMaxConnections(
+    flags.maxConnections,
+    process.env.MAX_CONNECTIONS
+  )
+  const maxStreamConnections = resolveMaxStreamConnections(
+    flags.maxStreamConnections,
+    process.env.MAX_STREAM_CONNECTIONS,
+    maxConnections
+  )
   const env = envSchema.parse({
     ...process.env,
     RPC_URL: flags.rpcUrl ?? process.env.RPC_URL,
     REALTIME_RPC_URL: flags.realtimeRpcUrl ?? process.env.REALTIME_RPC_URL,
     DATABASE_URL: flags.databaseUrl ?? process.env.DATABASE_URL,
-    MAX_CONNECTIONS: resolveMaxConnections(
-      flags.maxConnections,
-      process.env.MAX_CONNECTIONS
-    ),
+    MAX_CONNECTIONS: maxConnections,
+    MAX_STREAM_CONNECTIONS: maxStreamConnections,
     START_BLOCK: flags.startBlock ?? process.env.START_BLOCK,
     FINALITY: flags.finality ?? process.env.FINALITY,
     PORT: flags.port ?? process.env.PORT,
@@ -144,6 +173,7 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
     backfillMemoryLimitBytes: env.BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024,
     maxConnections: env.MAX_CONNECTIONS,
+    maxStreamConnections: env.MAX_STREAM_CONNECTIONS,
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     chainId,

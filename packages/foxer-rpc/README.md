@@ -160,6 +160,7 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `REALTIME_RPC_URL` | `--realtime-rpc-url` | `RPC_URL` | Optional upstream RPC URL for live polling |
 | `DATABASE_URL` | `--database-url` | Required | PostgreSQL connection URL |
 | `MAX_CONNECTIONS` | `--max-connections` | `100` | Maximum Postgres connections for the API pool (minimum 1) |
+| `MAX_STREAM_CONNECTIONS` | `--max-stream-connections` | `max(1, MAX_CONNECTIONS - 20)` | Maximum API connections held by streamed JSON-RPC methods; cannot exceed `MAX_CONNECTIONS` |
 | `START_BLOCK` | `--start-block` | `0` | First block to sync when the DB is empty |
 | `FINALITY` | `--finality` | `30` | Blocks to leave behind the chain head during backfill |
 | `BACKFILL_MEMORY_LIMIT_MB` | `--backfill-memory-limit-mb` | `64` | Target memory for fetched and encoded backfill data |
@@ -369,6 +370,7 @@ The `serve` command:
 
 - requires `DATABASE_URL` and uses only the API Postgres pool
 - uses `MAX_CONNECTIONS`/`--max-connections` to size that pool
+- limits connection-holding streamed methods with `MAX_STREAM_CONNECTIONS`/`--max-stream-connections`
 - serves the JSON-RPC API and proxies allowlisted read-only methods through `RPC_URL`
 - does not run migrations, startup verification, backfill, or live sync
 
@@ -386,6 +388,8 @@ automatically.
 For a dedicated Postgres instance on SSD/NVMe, start with conservative defaults and tune from metrics. The values below assume about 8 GB of RAM dedicated to Postgres. Scale `shared_buffers` to roughly 25% of RAM and `effective_cache_size` to roughly 50-75%.
 
 The combined `start` deployment keeps two Postgres pools plus one dedicated connection that holds its singleton sync lease. `MAX_CONNECTIONS`/`--max-connections` controls only the API pool (100 connections by default). Backfill and live sync run sequentially on a shared, static one-connection sync pool, so API load cannot exhaust the connection used by sync. API-only `serve` deployments open only the API pool. Connections are tagged with `application_name` values `foxer-rpc-api`, `foxer-rpc-sync`, and `foxer-rpc-sync-lease` for observability.
+
+`eth_getLogs`, `eth_getBlockReceipts`, and `eth_getTransactionReceipt` each hold one repeatable-read API connection for the lifetime of their streamed response. `MAX_STREAM_CONNECTIONS` caps their combined concurrency per API process and rejects excess streams with JSON-RPC error `-32005` before they enter the Postgres pool wait queue. Its default leaves up to 20 API-pool slots available for short requests. Those slots are lazy pool capacity, not pre-opened or exclusively reserved connections.
 
 Plan PostgreSQL `max_connections` for every replica plus headroom: each `start` process can hold up to its configured API maximum plus one sync connection and one lease connection, while each `serve` process can hold up to its configured API maximum.
 

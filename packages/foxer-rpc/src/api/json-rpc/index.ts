@@ -17,6 +17,10 @@ import { netVersion } from './methods/net-version.ts'
 import { web3ClientVersion } from './methods/web3-client-version.ts'
 import { error, ok } from './response.ts'
 import type { JsonRpcMethodStream } from './stream.ts'
+import {
+  StreamCapacityExceededError,
+  type StreamCapacityLimiter,
+} from './stream-capacity.ts'
 import type { JsonRpcRequest, JsonRpcResponse, MethodContext } from './types.ts'
 import { requireHex, requireQuantity } from './validation.ts'
 
@@ -62,35 +66,61 @@ export function isStreamedRequest(body: JsonRpcRequest): boolean {
 /**
  * Dispatches one validated request through a method-facing JSON-RPC stream.
  */
-export function handleJsonRpcStream(
+export async function handleJsonRpcStream(
   args: MethodContext & {
     body: JsonRpcRequest
     stream: JsonRpcMethodStream
+    streamCapacity: StreamCapacityLimiter
   }
 ) {
   const params = args.body.params ?? []
 
-  switch (args.body.method) {
-    case 'eth_getBlockReceipts':
-      return streamEthGetBlockReceipts(
-        { config: args.config, db: args.db },
-        params,
-        args.stream
+  try {
+    switch (args.body.method) {
+      case 'eth_getBlockReceipts':
+        return await streamEthGetBlockReceipts(
+          {
+            config: args.config,
+            db: args.db,
+            streamCapacity: args.streamCapacity,
+          },
+          params,
+          args.stream
+        )
+      case 'eth_getLogs':
+        return await streamEthGetLogs(
+          {
+            config: args.config,
+            db: args.db,
+            streamCapacity: args.streamCapacity,
+          },
+          params,
+          args.stream
+        )
+      case 'eth_getTransactionReceipt':
+        return await streamEthGetTransactionReceipt(
+          { db: args.db, streamCapacity: args.streamCapacity },
+          params,
+          args.stream
+        )
+      default:
+        throw new Error(`JSON-RPC method is not streamed: ${args.body.method}`)
+    }
+  } catch (cause) {
+    if (cause instanceof StreamCapacityExceededError) {
+      args.logger.warn(
+        {
+          activeStreamConnections: cause.activeStreamConnections,
+          maxConnections: args.config.maxConnections,
+          maxStreamConnections: cause.maxStreamConnections,
+          method: args.body.method,
+          params,
+          rejectionReason: 'stream_concurrency_limit',
+        },
+        'json-rpc stream rejected'
       )
-    case 'eth_getLogs':
-      return streamEthGetLogs(
-        { config: args.config, db: args.db },
-        params,
-        args.stream
-      )
-    case 'eth_getTransactionReceipt':
-      return streamEthGetTransactionReceipt(
-        { db: args.db },
-        params,
-        args.stream
-      )
-    default:
-      throw new Error(`JSON-RPC method is not streamed: ${args.body.method}`)
+    }
+    throw cause
   }
 }
 

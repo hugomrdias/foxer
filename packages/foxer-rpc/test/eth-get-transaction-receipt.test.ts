@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 
 import { streamEthGetTransactionReceipt } from '../src/api/json-rpc/methods/eth-get-transaction-receipt-stream.ts'
 import { streamJsonRpc } from '../src/api/json-rpc/stream.ts'
+import { StreamCapacityLimiter } from '../src/api/json-rpc/stream-capacity.ts'
 import type { Database } from '../src/db/client.ts'
 import { schema } from '../src/db/schema/index.ts'
 import {
@@ -84,7 +85,12 @@ async function renderStream(db: Database, hash: unknown, batchSize: number) {
   const app = new Hono()
   app.get('/', (c) =>
     streamJsonRpc(c, { id: 1 }, (stream) =>
-      streamEthGetTransactionReceipt({ db }, [hash], stream, { batchSize })
+      streamEthGetTransactionReceipt(
+        { db, streamCapacity: new StreamCapacityLimiter(1) },
+        [hash],
+        stream,
+        { batchSize }
+      )
     )
   )
   return (await app.request('/')).text()

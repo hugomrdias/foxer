@@ -18,7 +18,12 @@ import { schema } from '../../../db/schema/index.ts'
 import { decodeLog } from '../../decode.ts'
 import { RpcError } from '../errors.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
-import { requireHex, resolveBlockNumber } from '../validation.ts'
+import type { StreamCapacityLimiter } from '../stream-capacity.ts'
+import {
+  requireHex,
+  resolveBlockNumber,
+  validateBlockParameter,
+} from '../validation.ts'
 import {
   LOG_STREAM_BATCH_SIZE,
   LogStreamSession,
@@ -34,7 +39,11 @@ type LogFilter = {
 
 /** Streams filtered logs in canonical `(blockNumber, logIndex)` order. */
 export async function streamEthGetLogs(
-  args: { config: InternalConfig; db: Database },
+  args: {
+    config: InternalConfig
+    db: Database
+    streamCapacity: StreamCapacityLimiter
+  },
   params: unknown[],
   stream: JsonRpcMethodStream,
   options: { batchSize?: number } = {}
@@ -57,9 +66,14 @@ export async function streamEthGetLogs(
     filter.blockHash == null
       ? undefined
       : requireHex(filter.blockHash, 'block hash', 32)
+  if (!blockHash) {
+    validateBlockParameter(filter.fromBlock ?? 'latest')
+    validateBlockParameter(filter.toBlock ?? 'latest')
+  }
 
   const session = await LogStreamSession.open(
     args.db,
+    args.streamCapacity,
     options.batchSize ?? LOG_STREAM_BATCH_SIZE
   )
   stream.beforeFinish(() => session.commit())

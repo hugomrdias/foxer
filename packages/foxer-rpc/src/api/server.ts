@@ -16,6 +16,7 @@ import {
 } from './json-rpc/index.ts'
 import { error, isRequest } from './json-rpc/response.ts'
 import { streamJsonRpc } from './json-rpc/stream.ts'
+import { StreamCapacityLimiter } from './json-rpc/stream-capacity.ts'
 
 const mintKeySchema = z.object({
   sub: z.string().min(1),
@@ -46,10 +47,12 @@ export function createApiServer({
   db,
   config,
   logger,
+  streamCapacity = new StreamCapacityLimiter(config.maxStreamConnections),
 }: {
   db: Database
   config: InternalConfig
   logger: Logger
+  streamCapacity?: StreamCapacityLimiter
 }) {
   const app = new Hono<{ Variables: { logger: PinoLogger } }>()
 
@@ -191,7 +194,14 @@ export function createApiServer({
 
       if (isStreamedRequest(body)) {
         return streamJsonRpc(c, { id }, (stream) =>
-          handleJsonRpcStream({ db, config, logger, body, stream })
+          handleJsonRpcStream({
+            db,
+            config,
+            logger,
+            body,
+            stream,
+            streamCapacity,
+          })
         )
       }
 

@@ -6,6 +6,24 @@ import type { InternalConfig } from '../../config.ts'
 import { schema } from '../../db/schema/index.ts'
 import { RpcError } from './errors.ts'
 
+const BLOCK_TAGS = new Set([
+  'earliest',
+  'finalized',
+  'latest',
+  'pending',
+  'safe',
+])
+
+/** Validates a block quantity or supported local block tag without querying. */
+export function validateBlockParameter(value: unknown): void {
+  if (value == null || BLOCK_TAGS.has(value as string)) return
+  if (typeof value === 'string' && value.startsWith('0x')) {
+    requireQuantity(value, 'block parameter')
+    return
+  }
+  throw new RpcError(-32602, 'invalid block parameter')
+}
+
 /**
  * Resolves Ethereum block tags and hex quantities against available local data.
  *
@@ -19,6 +37,7 @@ export async function resolveBlockNumber(
   },
   value: unknown
 ): Promise<bigint | null> {
+  validateBlockParameter(value)
   if (typeof value === 'string' && value.startsWith('0x')) {
     return requireQuantity(value, 'block parameter')
   }

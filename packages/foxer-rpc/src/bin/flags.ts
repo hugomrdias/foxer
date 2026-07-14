@@ -34,6 +34,10 @@ export const globalFlags = {
     type: Number,
     description: 'Maximum Postgres connections for the JSON-RPC API pool',
   },
+  maxStreamConnections: {
+    type: Number,
+    description: 'Maximum API connections held by streamed JSON-RPC methods',
+  },
   startBlock: {
     type: String,
     description: 'First block to sync',

@@ -12,6 +12,8 @@ const mockDb = {
 
 const baseConfig = {
   chainId: 314_159,
+  maxConnections: 100,
+  maxStreamConnections: 80,
   clients: {
     backfill: {
       request: () => {

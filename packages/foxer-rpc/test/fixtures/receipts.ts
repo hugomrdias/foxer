@@ -1,5 +1,6 @@
 import type { Hash } from 'viem'
 
+import type { StreamCapacityLimiter } from '../../src/api/json-rpc/stream-capacity.ts'
 import { createApiServer } from '../../src/api/server.ts'
 import type { Database } from '../../src/db/client.ts'
 import { schema } from '../../src/db/schema/index.ts'
@@ -18,13 +19,19 @@ export const tx1 = bytes32('a')
 export const tx2 = bytes32('b')
 export const tx3 = bytes32('e')
 
-export function createReceiptTestApi(db: Database) {
+export function createReceiptTestApi(
+  db: Database,
+  streamCapacity?: StreamCapacityLimiter
+) {
   return createApiServer({
     db,
     logger: testLogger,
+    streamCapacity,
     config: {
       chainId: 314_159,
       finality: 1n,
+      maxConnections: 100,
+      maxStreamConnections: 80,
       clients: {
         backfill: {
           request: () => {
