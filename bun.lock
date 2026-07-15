@@ -182,15 +182,12 @@
         "foxer-rpc.src": "./src/bin/index.ts",
       },
       "dependencies": {
-        "@hono/node-server": "^2.0.8",
         "cleye": "^2.6.0",
         "dotenv": "^17.2.3",
         "drizzle-orm": "1.0.0-rc.4",
         "exit-hook": "^5.1.0",
         "hono": "^4.12.30",
-        "hono-compress": "^1.0.2",
         "hono-pino": "^0.10.3",
-        "http-shutdown": "^1.2.2",
         "iso-base": "^4.4.0",
         "p-queue": "^9.3.1",
         "pg": "^8.22.0",
@@ -567,8 +564,6 @@
     "@rolldown/binding-win32-x64-msvc": ["@rolldown/binding-win32-x64-msvc@1.1.5", "", { "os": "win32", "cpu": "x64" }, "sha512-tTZuDBPw85tEN5PQi1pnEBzDy0Z49HtScLAbD5t6hyeU92A95pRWaSMw1GZZi/RwgSgUIl0xrSlXIT/9QzvYSA=="],
 
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
-
-    "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.62.2", "", { "os": "linux", "cpu": "x64" }, "sha512-5BqxR/pshjey51iliyzTD5Xi3EN0aLmQ2lZ3lvefVV9c82BvrLo2/6OT55iifpWBufs6kdwWbuOKS841DrmK9A=="],
 
     "@scure/base": ["@scure/base@1.2.6", "", {}, "sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg=="],
 
@@ -1021,8 +1016,6 @@
     "headers-polyfill": ["headers-polyfill@5.0.1", "", { "dependencies": { "@types/set-cookie-parser": "^2.4.10", "set-cookie-parser": "^3.0.1" } }, "sha512-1TJ6Fih/b8h5TIcv+1+Hw0PDQWJTKDKzFZzcKOiW1wJza3XoAQlkCuXLbymPYB8+ZQyw8mHvdw560e8zVFIWyA=="],
 
     "hono": ["hono@4.12.30", "", {}, "sha512-emn+JoJjrN9YTpRDS5it/UI2SO9BAE37T6I3d963RxcZ81G9A4pr2SZTEiiaiKbzx+NKRg5BZ89fCL7gCJCUog=="],
-
-    "hono-compress": ["hono-compress@1.0.2", "", { "optionalDependencies": { "@rollup/rollup-linux-x64-gnu": "^4.60.0" }, "peerDependencies": { "hono": "^4.12.9" } }, "sha512-9jj7gZcb3WFVHdMWu3XmnNjUaQpwlTRQQ+D8UDeOQroQNXJR4BNj4CpRdhwp9gp43ZvPSiJZ3Nhny5RoQRF+2w=="],
 
     "hono-pino": ["hono-pino@0.10.3", "", { "dependencies": { "defu": "^6.1.4" }, "peerDependencies": { "hono": ">=4.0.0", "pino": ">=7.1.0" } }, "sha512-n0RNPIFOoq25Fg8b4D5gus4sVqI0z+8I17ibl96+p43d07UnZ0EMM/It0qSgfc7UtaC+XP5FkFmRHwBp6owsNA=="],
 

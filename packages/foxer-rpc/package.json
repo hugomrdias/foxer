@@ -39,15 +39,12 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.8",
     "cleye": "^2.6.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "1.0.0-rc.4",
     "exit-hook": "^5.1.0",
     "hono": "^4.12.30",
-    "hono-compress": "^1.0.2",
     "hono-pino": "^0.10.3",
-    "http-shutdown": "^1.2.2",
     "iso-base": "^4.4.0",
     "p-queue": "^9.3.1",
     "pg": "^8.22.0",

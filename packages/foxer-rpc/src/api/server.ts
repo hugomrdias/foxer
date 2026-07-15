@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import { bearerAuth } from 'hono/bearer-auth'
 import { bodyLimit } from 'hono/body-limit'
 import { jwt, sign } from 'hono/jwt'
-import { compress } from 'hono-compress'
 import { type PinoLogger, pinoLogger } from 'hono-pino'
 import { z } from 'zod'
 
@@ -39,9 +38,9 @@ function omitJsonRpcEnvelope(value: unknown): unknown {
 /**
  * Builds the Hono app used by the CLI server.
  *
- * The app installs request logging, response compression, a lightweight health
- * route, and the JSON-RPC POST endpoint. Known methods are served from the
- * local database; selected read-only methods are proxied by `handleJsonRpc`.
+ * The app installs request logging, a lightweight health route, and the
+ * JSON-RPC POST endpoint. Known methods are served from the local database;
+ * selected read-only methods are proxied by `handleJsonRpc`.
  */
 export function createApiServer({
   db,
@@ -59,14 +58,6 @@ export function createApiServer({
   app.use(
     pinoLogger({
       pino: logger,
-    })
-  )
-  app.use(
-    compress({
-      encodings: ['zstd', 'gzip', 'deflate'],
-      threshold: 1024,
-      zstdLevel: 3,
-      gzipLevel: 6,
     })
   )
 

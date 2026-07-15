@@ -186,7 +186,7 @@ describe('eth_getBlockReceipts', () => {
     })
   })
 
-  test('streams through gzip compression', async () => {
+  test('streams without application-layer compression', async () => {
     await withTestDatabase(async (db) => {
       await seedReceipts(db)
       const response = await createReceiptTestApi(db).request('/', {
@@ -198,13 +198,8 @@ describe('eth_getBlockReceipts', () => {
         body: requestBody('0x1'),
       })
 
-      expect(response.headers.get('content-encoding')).toBe('gzip')
-      const decompressed = Bun.gunzipSync(
-        new Uint8Array(await response.arrayBuffer())
-      )
-      expect(
-        JSON.parse(new TextDecoder().decode(decompressed)).result
-      ).toHaveLength(1)
+      expect(response.headers.get('content-encoding')).toBeNull()
+      expect((await response.json()).result).toHaveLength(1)
     })
   })
 
