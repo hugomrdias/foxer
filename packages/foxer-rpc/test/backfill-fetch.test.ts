@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 
 import type { Database } from '../src/db/client.ts'
 import { createRpcClients } from '../src/rpc/client.ts'
-import { createOrderedBlockFetcher } from '../src/sync/fetch-blocks.ts'
+import { fetchBlocksInOrder } from '../src/sync/fetch-blocks.ts'
 import { rpcBlock } from './rpc-fixtures.ts'
 import { mockUpstreamRpc, type RpcRequest, upstreamRpcUrl } from './upstream.ts'
 
@@ -13,11 +13,11 @@ afterEach(() => {
   active.max = 0
 })
 
-describe('createOrderedBlockFetcher', () => {
-  test('returns ordered HTTP results and adapts lookahead after the first block', async () => {
+describe('fetchBlocksInOrder', () => {
+  test('returns ordered HTTP results with bounded concurrency', async () => {
     const blockCount = 12
+    const concurrency = 3
     const completionOrder: bigint[] = []
-    const readyBlocks: bigint[] = []
     mockUpstreamRpc({
       eth_getBlockByNumber: async ({ params }: RpcRequest) => {
         const blockNumber = BigInt(String(params?.[0]))
@@ -30,64 +30,27 @@ describe('createOrderedBlockFetcher', () => {
       },
     })
 
-    const fetcher = createOrderedBlockFetcher({
+    const results = await fetchBlocksInOrder({
       client: createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill,
       db: {} as Database,
       fromBlock: 100n,
       toBlock: 100n + BigInt(blockCount - 1),
-      memoryLimitBytes: 64 * 1024 * 1024,
-      onBlockReady: ({ data }) => readyBlocks.push(data.block.number),
+      concurrency,
     })
-    const results = []
-    while (true) {
-      const result = await fetcher.next(0)
-      if (!result) break
-      results.push(result)
-    }
 
-    expect(results.map(({ data }) => data.block.number)).toEqual(
+    expect(results.map((item) => item.block.number)).toEqual(
       Array.from({ length: blockCount }, (_, index) => 100n + BigInt(index))
     )
-    expect(active.max).toBeGreaterThan(1)
-    expect(active.max).toBeLessThanOrEqual(8)
-    expect(fetcher.peakInFlight).toBe(active.max)
+    expect(active.max).toBe(concurrency)
     expect(completionOrder).not.toEqual(
       Array.from({ length: blockCount }, (_, index) => 100n + BigInt(index))
     )
-    expect(readyBlocks.toSorted((a, b) => Number(a - b))).toEqual(
-      Array.from({ length: blockCount }, (_, index) => 100n + BigInt(index))
-    )
   })
 
-  test('uses the memory reservation to stop increasing lookahead', async () => {
-    mockUpstreamRpc({
-      eth_getBlockByNumber: async ({ params }: RpcRequest) => {
-        active.current += 1
-        active.max = Math.max(active.max, active.current)
-        await Bun.sleep(1)
-        active.current -= 1
-        return rpcBlock(BigInt(String(params?.[0])))
-      },
-    })
-
-    const fetcher = createOrderedBlockFetcher({
-      client: createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill,
-      db: {} as Database,
-      fromBlock: 1n,
-      toBlock: 10n,
-      memoryLimitBytes: 512 * 1024,
-    })
-    while (await fetcher.next(400 * 1024)) {
-      // drain
-    }
-
-    expect(fetcher.peakInFlight).toBe(1)
-  })
-
-  test('rejects invalid memory limits before making HTTP requests', () => {
+  test('rejects invalid concurrency before making HTTP requests', () => {
     const requests = mockUpstreamRpc({})
     const client = createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill
-    for (const memoryLimitBytes of [
+    for (const concurrency of [
       0,
       -1,
       1.5,
@@ -96,58 +59,61 @@ describe('createOrderedBlockFetcher', () => {
       Number.MAX_SAFE_INTEGER + 1,
     ]) {
       expect(() =>
-        createOrderedBlockFetcher({
+        fetchBlocksInOrder({
           client,
           db: {} as Database,
           fromBlock: 1n,
           toBlock: 1n,
-          memoryLimitBytes,
+          concurrency,
         })
-      ).toThrow('Backfill memory limit must be a positive safe integer')
+      ).toThrow('Backfill concurrency must be a positive safe integer')
     }
     expect(requests).toEqual([])
   })
 
-  test('stops scheduling new HTTP work after a failure', async () => {
+  test('rejects promptly and stops workers from claiming more blocks', async () => {
     const claimed: bigint[] = []
-    const readyBlocks: bigint[] = []
-    const requests = mockUpstreamRpc({
-      eth_getBlockByNumber: ({ params }: RpcRequest) => {
+    let releaseWorkers: () => void = () => undefined
+    const workerGate = new Promise<void>((resolve) => {
+      releaseWorkers = resolve
+    })
+    mockUpstreamRpc({
+      eth_getBlockByNumber: async ({ params }: RpcRequest) => {
         const blockNumber = BigInt(String(params?.[0]))
         claimed.push(blockNumber)
-        if (blockNumber === 2n) {
+        if (blockNumber === 100n) {
+          await Bun.sleep(5)
           return { error: { code: -32_000, message: 'upstream failure' } }
         }
+        await workerGate
         return rpcBlock(blockNumber)
       },
     })
-    const fetcher = createOrderedBlockFetcher({
+
+    const fetch = fetchBlocksInOrder({
       client: createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill,
       db: {} as Database,
-      fromBlock: 1n,
-      toBlock: 20n,
-      memoryLimitBytes: 64 * 1024 * 1024,
-      onBlockReady: ({ data }) => readyBlocks.push(data.block.number),
+      fromBlock: 100n,
+      toBlock: 109n,
+      concurrency: 3,
     })
 
-    await expect(fetcher.next(0)).resolves.toBeDefined()
-    await expect(fetcher.next(0)).rejects.toThrow('upstream failure')
-    expect(claimed.length).toBeLessThanOrEqual(9)
-    expect(requests).toHaveLength(claimed.length)
-    expect(readyBlocks).not.toContain(2n)
+    await expect(fetch).rejects.toThrow('upstream failure')
+    expect(claimed).toEqual([100n, 101n, 102n])
+    releaseWorkers()
   })
 
-  test('returns null for an empty range without HTTP', async () => {
+  test('returns an empty array for an empty range without HTTP', async () => {
     const requests = mockUpstreamRpc({})
-    const fetcher = createOrderedBlockFetcher({
+    const results = await fetchBlocksInOrder({
       client: createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill,
       db: {} as Database,
       fromBlock: 10n,
       toBlock: 9n,
-      memoryLimitBytes: 64 * 1024 * 1024,
+      concurrency: 2,
     })
 
-    expect(await fetcher.next(0)).toBeNull()
+    expect(results).toEqual([])
     expect(requests).toEqual([])
   })
 })

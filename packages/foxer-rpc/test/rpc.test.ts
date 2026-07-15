@@ -8,23 +8,22 @@ import { address, bytes32, emptyRoot, zeroLogsBloom } from './helpers.ts'
 import { rpcReceipt } from './rpc-fixtures.ts'
 import { mockUpstreamRpc, upstreamRpcUrl } from './upstream.ts'
 
-test('receipt ingestion fetches HTTP data and returns canonical weighted rows', async () => {
+test('receipt ingestion fetches HTTP data and returns canonical rows', async () => {
   const requests = mockUpstreamRpc({ eth_getBlockReceipts: [rpcReceipt()] })
   const client = createRpcClients({ rpcUrl: upstreamRpcUrl }).backfill
 
-  const weighted = await getEncodedBlockReceipts({
+  const encoded = await getEncodedBlockReceipts({
     client,
     block: blockWithTransaction(),
   })
-  const [transaction] = weighted.data.transactions
+  const [transaction] = encoded.transactions
 
   expect(requests.map(({ method }) => method)).toEqual(['eth_getBlockReceipts'])
-  expect(weighted.estimatedBytes).toBeGreaterThan(0)
   expect(transaction.hash).toBe(bytes32('a'))
   expect(transaction.status).toBe(1)
   expect(transaction.effectiveGasPrice).toBe(100n)
   expect(transaction.logsBloom).toBe(`0x${'00'.repeat(255)}ab`)
-  expect(weighted.data.logs[0]?.data).toBe('0xabcd')
+  expect(encoded.logs[0]?.data).toBe('0xabcd')
 })
 
 test('receipt ingestion rejects malformed receipt logs blooms from HTTP', async () => {

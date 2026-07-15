@@ -5,11 +5,13 @@ import { pipeline } from 'node:stream/promises'
 import type { PoolClient } from 'pg'
 import { from as copyFrom } from 'pg-copy-streams'
 
-import type { BackfillBatch, EncodedLog } from '../../types.ts'
+import type { EncodedLog, IndexedBlockData } from '../../types.ts'
 import type { Database } from '../client.ts'
 import {
   consumeLogs,
   consumeTransactions,
+  countLogs,
+  countTransactions,
   iterateBlocks,
 } from '../indexed-batch.ts'
 import {
@@ -177,47 +179,44 @@ function emptyCopyMetrics(): CopyMetrics {
  */
 export async function copyIndexedBlockData(args: {
   db: Database
-  batch: BackfillBatch
+  batch: IndexedBlockData[]
 }): Promise<CopyMetrics> {
-  if (args.batch.items.length === 0) {
+  if (args.batch.length === 0) {
     return emptyCopyMetrics()
   }
 
+  const transactionCount = countTransactions(args.batch)
+  const logCount = countLogs(args.batch)
   const metrics = emptyCopyMetrics()
   const client = await args.db.$client.connect()
   await runCopyTransaction(client, async () => {
-    if (args.batch.items.length > 0) {
-      metrics.blocks = await copyTableRows(
-        client,
-        'blocks',
-        BLOCK_COPY_COLUMNS,
-        iterateBlocks(args.batch.items),
-        encodeBlockCopyRow,
-        DEFAULT_COPY_CHUNK_BYTES
-      )
-    }
-    if (args.batch.transactionCount > 0) {
+    metrics.blocks = await copyTableRows(
+      client,
+      'blocks',
+      BLOCK_COPY_COLUMNS,
+      iterateBlocks(args.batch),
+      encodeBlockCopyRow,
+      DEFAULT_COPY_CHUNK_BYTES
+    )
+    if (transactionCount > 0) {
       metrics.transactions = await copyTableRows(
         client,
         'transactions',
         TRANSACTION_COPY_COLUMNS,
-        consumeTransactions(args.batch.items),
+        consumeTransactions(args.batch),
         encodeTransactionCopyRow,
         DEFAULT_COPY_CHUNK_BYTES
       )
     }
-    if (args.batch.logCount > 0) {
+    if (logCount > 0) {
       metrics.logs = await copyLogTableRows(
         client,
-        consumeLogs(args.batch.items),
+        consumeLogs(args.batch),
         DEFAULT_COPY_CHUNK_BYTES
       )
     }
   })
-  args.batch.items.length = 0
-  args.batch.transactionCount = 0
-  args.batch.logCount = 0
-  args.batch.estimatedBytes = 0
+  args.batch.length = 0
 
   return metrics
 }

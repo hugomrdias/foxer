@@ -30,7 +30,7 @@ export async function queueBlock(args: {
 
   try {
     const getBlockClock = startClock()
-    const weighted = await safeGetBlock({ client, blockNumber, db })
+    const data = await safeGetBlock({ client, blockNumber, db })
     logger.debug(
       {
         blockNumber: blockNumber.toString(),
@@ -44,7 +44,7 @@ export async function queueBlock(args: {
       logger,
       db,
       client,
-      data: weighted.data,
+      data,
     })
     logger.debug(
       {

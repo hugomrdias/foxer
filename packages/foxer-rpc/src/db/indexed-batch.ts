@@ -1,34 +1,9 @@
 import type {
-  BackfillBatch,
   EncodedBlock,
   EncodedLog,
   EncodedTransaction,
   IndexedBlockData,
 } from '../types.ts'
-
-/** Creates an empty ownership container for one adaptive backfill write. */
-export function createBackfillBatch(): BackfillBatch {
-  return {
-    items: [],
-    transactionCount: 0,
-    logCount: 0,
-    estimatedBytes: 0,
-  }
-}
-
-/**
- * Transfers one fetched block into a COPY batch without cloning row arrays.
- */
-export function appendToBackfillBatch(
-  batch: BackfillBatch,
-  data: IndexedBlockData,
-  estimatedBytes: number
-): void {
-  batch.items.push(data)
-  batch.transactionCount += data.transactions.length
-  batch.logCount += data.logs.length
-  batch.estimatedBytes += estimatedBytes
-}
 
 /**
  * Returns the number of blocks in a backfill batch.

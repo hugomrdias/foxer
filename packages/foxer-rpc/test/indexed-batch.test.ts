@@ -1,13 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 import { insertIndexedBlockData } from '../src/db/actions.ts'
 import {
-  appendToBackfillBatch,
   consumeLogs,
   consumeTransactions,
   countBlocks,
   countLogs,
   countTransactions,
-  createBackfillBatch,
   flattenBlocks,
   flattenLogs,
   flattenTransactions,
@@ -150,25 +148,6 @@ describe('indexed batch utilities', () => {
     expect(blocks.length).toBe(countBlocks(batch))
     expect(transactions.length).toBe(countTransactions(batch))
     expect(logs.length).toBe(countLogs(batch))
-  })
-
-  test('tracks supplied weight without cloning row arrays', () => {
-    const heavy = sampleIndexedBlock(2n, 1, 1_000)
-    const transactions = heavy.transactions
-    const logs = heavy.logs
-    const batch = createBackfillBatch()
-
-    appendToBackfillBatch(batch, heavy, 123)
-
-    expect(batch.estimatedBytes).toBe(123)
-    expect(batch.items).toHaveLength(1)
-    expect(batch.items[0]).toBe(heavy)
-    expect(batch.transactionCount).toBe(1)
-    expect(batch.logCount).toBe(1_000)
-    expect(heavy.transactions).toBe(transactions)
-    expect(heavy.logs).toBe(logs)
-    expect(heavy.transactions).toHaveLength(1)
-    expect(heavy.logs).toHaveLength(1_000)
   })
 
   test('consuming iterators release each block array as streaming advances', () => {

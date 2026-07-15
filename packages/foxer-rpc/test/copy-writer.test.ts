@@ -15,10 +15,6 @@ import {
   copyIndexedBlockData,
   runCopyTransaction,
 } from '../src/db/copy/writer.ts'
-import {
-  appendToBackfillBatch,
-  createBackfillBatch,
-} from '../src/db/indexed-batch.ts'
 import { schema } from '../src/db/schema/index.ts'
 import type { IndexedBlockData } from '../src/types.ts'
 import {
@@ -166,10 +162,7 @@ test('copies tables in blocks, transactions, logs order', async () => {
       batch,
     })
     expect(copyTables).toEqual(['blocks', 'transactions', 'logs'])
-    expect(batch.items).toEqual([])
-    expect(batch.transactionCount).toBe(0)
-    expect(batch.logCount).toBe(0)
-    expect(batch.estimatedBytes).toBe(0)
+    expect(batch).toEqual([])
     expect(entry.transactions).toEqual([])
     expect(entry.logs).toEqual([])
   } finally {
@@ -338,11 +331,7 @@ describe('copyIndexedBlockData on PostgreSQL', () => {
 })
 
 function backfillBatch(entries: IndexedBlockData[]) {
-  const batch = createBackfillBatch()
-  for (const entry of entries) {
-    appendToBackfillBatch(batch, entry, 1)
-  }
-  return batch
+  return entries
 }
 
 async function deleteTestBlock(db: Database, blockNumber: bigint) {

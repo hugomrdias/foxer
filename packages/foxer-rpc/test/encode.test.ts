@@ -8,11 +8,10 @@ import {
 } from '../src/api/decode.ts'
 import {
   encodeBlock,
+  encodeBlockDataFromRpcReceipts,
   encodeNullRoundBlock,
   encodeTransaction,
   encodeTransactionType,
-  encodeWeightedBlockDataFromRpcReceipts,
-  encodeWeightedNullRoundBlock,
 } from '../src/db/encode.ts'
 import { schema } from '../src/db/schema/index.ts'
 import type {
@@ -59,24 +58,13 @@ test('stores the canonical zero bloom for null rounds', () => {
   })
 
   expect(encoded.block.logsBloom).toBe(zeroLogsBloom)
-
-  const weighted = encodeWeightedNullRoundBlock({
-    number: 2n,
-    hash: bytes32('1'),
-    timestamp: 1n,
-  })
-  expect(weighted.data).toEqual(encoded)
-  expect(weighted.estimatedBytes).toBeGreaterThan(0)
 })
 
 test('rejects block transactions without matching receipts', () => {
   const tx = transaction({ hash: bytes32('9') })
 
   expect(() =>
-    encodeWeightedBlockDataFromRpcReceipts(
-      chainBlock({ transactions: [tx] }),
-      []
-    )
+    encodeBlockDataFromRpcReceipts(chainBlock({ transactions: [tx] }), [])
   ).toThrow(`transaction ${tx.hash} has no matching receipt`)
 })
 
@@ -100,13 +88,11 @@ test('encodes raw RPC receipts directly into final transaction and log rows', ()
     ],
   }) as unknown as TransactionReceipt
 
-  const weighted = encodeWeightedBlockDataFromRpcReceipts(
+  const encoded = encodeBlockDataFromRpcReceipts(
     chainBlock({ transactions: [tx] }),
     [rawReceipt]
   )
-  const encoded = weighted.data
 
-  expect(weighted.estimatedBytes).toBeGreaterThan(0)
   expect(encoded.transactions).toHaveLength(1)
   expect(encoded.transactions[0].hash).toBe(txHash)
   expect(encoded.transactions[0].logsBloom).toBe(zeroLogsBloom)
@@ -123,48 +109,6 @@ test('encodes raw RPC receipts directly into final transaction and log rows', ()
       data: '0xabcd',
     },
   ])
-})
-
-test('weights calldata, access lists, and log payloads while encoding', () => {
-  const txHash = bytes32('7')
-  const baseReceipt = receipt({
-    transactionHash: txHash,
-  }) as unknown as TransactionReceipt
-  const small = encodeWeightedBlockDataFromRpcReceipts(
-    chainBlock({ transactions: [transaction({ hash: txHash })] }),
-    [baseReceipt]
-  )
-  const large = encodeWeightedBlockDataFromRpcReceipts(
-    chainBlock({
-      transactions: [
-        transaction({
-          hash: txHash,
-          input: `0x${'ab'.repeat(1_024)}`,
-          accessList: [{ address: address('f'), storageKeys: [bytes32('e')] }],
-        }),
-      ],
-    }),
-    [
-      {
-        ...baseReceipt,
-        logs: [
-          {
-            address: address('c'),
-            topics: [bytes32('d')],
-            data: `0x${'cd'.repeat(1_024)}`,
-            blockNumber: 1n,
-            transactionHash: txHash,
-            transactionIndex: 0,
-            blockHash: bytes32('1'),
-            logIndex: 0,
-            removed: false,
-          },
-        ],
-      },
-    ]
-  )
-
-  expect(large.estimatedBytes).toBeGreaterThan(small.estimatedBytes)
 })
 
 test('persists receipt logs blooms and returns stored values unchanged', async () => {

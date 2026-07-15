@@ -15,7 +15,7 @@ export type InternalConfig = {
   finality: bigint
   maxLogsBlockRange: bigint
   deferBackfillIndexes: boolean
-  backfillMemoryLimitBytes: number
+  backfillConcurrency: number
   maxConnections: number
   maxStreamConnections: number
   port: number
@@ -25,17 +25,14 @@ export type InternalConfig = {
   authSecret?: string
 }
 
-export const DEFAULT_BACKFILL_MEMORY_LIMIT_MB = 64
-export const MIN_BACKFILL_MEMORY_LIMIT_MB = 8
-export const MAX_BACKFILL_MEMORY_LIMIT_MB = 4_096
+export const DEFAULT_BACKFILL_CONCURRENCY = 20
 export const DEFAULT_API_CONNECTION_RESERVE = 20
 
-const backfillMemoryLimitMbSchema = z.coerce
+const backfillConcurrencySchema = z.coerce
   .number()
   .int()
-  .min(MIN_BACKFILL_MEMORY_LIMIT_MB)
-  .max(MAX_BACKFILL_MEMORY_LIMIT_MB)
-  .default(DEFAULT_BACKFILL_MEMORY_LIMIT_MB)
+  .positive()
+  .default(DEFAULT_BACKFILL_CONCURRENCY)
 
 const maxConnectionsSchema = z.coerce.number().int().min(1).default(100)
 const maxStreamConnectionsSchema = z.coerce.number().int().min(1)
@@ -58,7 +55,7 @@ const envSchema = z.object({
     .optional()
     .transform((value) => value === true || value === 'true' || value === '1')
     .default(false),
-  BACKFILL_MEMORY_LIMIT_MB: backfillMemoryLimitMbSchema,
+  BACKFILL_CONCURRENCY: backfillConcurrencySchema,
   AUTH_SECRET: z.string().min(16).optional(),
 })
 
@@ -72,20 +69,20 @@ export type CliConfig = {
   finality?: string
   maxLogsBlockRange?: string
   deferBackfillIndexes?: boolean
-  backfillMemoryLimitMb?: number
+  backfillConcurrency?: number
   port?: number
   logLevel?: LogLevel
   authSecret?: string
 }
 
 /**
- * Resolves the retained backfill-data target with CLI-over-environment precedence.
+ * Resolves the number of blocks fetched and copied per backfill batch.
  */
-export function resolveBackfillMemoryLimitBytes(
+export function resolveBackfillConcurrency(
   flagValue: number | undefined,
   envValue: string | undefined
 ): number {
-  return backfillMemoryLimitMbSchema.parse(flagValue ?? envValue) * 1024 * 1024
+  return backfillConcurrencySchema.parse(flagValue ?? envValue)
 }
 
 /** Resolves the API PostgreSQL pool size with CLI precedence. */
@@ -146,8 +143,8 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
       flags.maxLogsBlockRange ?? process.env.MAX_LOGS_BLOCK_RANGE,
     DEFER_BACKFILL_INDEXES:
       flags.deferBackfillIndexes ?? process.env.DEFER_BACKFILL_INDEXES,
-    BACKFILL_MEMORY_LIMIT_MB:
-      flags.backfillMemoryLimitMb ?? process.env.BACKFILL_MEMORY_LIMIT_MB,
+    BACKFILL_CONCURRENCY:
+      flags.backfillConcurrency ?? process.env.BACKFILL_CONCURRENCY,
     AUTH_SECRET: flags.authSecret ?? process.env.AUTH_SECRET,
   })
 
@@ -171,7 +168,7 @@ export async function createConfig(flags: CliConfig): Promise<InternalConfig> {
     finality: env.FINALITY,
     maxLogsBlockRange: env.MAX_LOGS_BLOCK_RANGE,
     deferBackfillIndexes: env.DEFER_BACKFILL_INDEXES,
-    backfillMemoryLimitBytes: env.BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024,
+    backfillConcurrency: env.BACKFILL_CONCURRENCY,
     maxConnections: env.MAX_CONNECTIONS,
     maxStreamConnections: env.MAX_STREAM_CONNECTIONS,
     port: env.PORT,

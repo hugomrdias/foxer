@@ -30,6 +30,7 @@ export function createRpcClients(options: {
     fetchOptions: { headers: { 'Accept-Encoding': 'zstd, gzip' } },
     timeout: 120000,
     maxResponseBodySize: false,
+    retryCount: 0,
     // onFetchRequest: async (request) => {
     // console.log(
     //   'request',

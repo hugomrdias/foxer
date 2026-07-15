@@ -2,10 +2,10 @@ import type { Hash, PublicClient } from 'viem'
 
 import type { Database } from '../db/client.ts'
 import {
-  encodeWeightedBlockDataFromRpcReceipts,
-  encodeWeightedNullRoundBlock,
+  encodeBlockDataFromRpcReceipts,
+  encodeNullRoundBlock,
 } from '../db/encode.ts'
-import type { WeightedIndexedBlockData } from '../types.ts'
+import type { IndexedBlockData } from '../types.ts'
 import { normalizeHex } from '../utils/hex.ts'
 import { getEncodedBlockReceipts } from './get-receipts.ts'
 
@@ -26,7 +26,7 @@ export async function safeGetBlock(options: {
   client: PublicClient
   blockNumber: bigint
   db: Database
-}): Promise<WeightedIndexedBlockData> {
+}): Promise<IndexedBlockData> {
   const { client, blockNumber, db } = options
   try {
     const block = await client.getBlock({
@@ -35,7 +35,7 @@ export async function safeGetBlock(options: {
     })
 
     if (block.transactions.length === 0) {
-      return encodeWeightedBlockDataFromRpcReceipts(block, [])
+      return encodeBlockDataFromRpcReceipts(block, [])
     }
 
     return getEncodedBlockReceipts({ client, block })
@@ -72,7 +72,7 @@ export async function safeGetBlock(options: {
         }
       }
 
-      return encodeWeightedNullRoundBlock({
+      return encodeNullRoundBlock({
         number: blockNumber,
         hash: previousBlock.hash,
         timestamp: previousBlock.timestamp,

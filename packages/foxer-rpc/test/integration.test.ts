@@ -12,7 +12,7 @@ test('upstream HTTP block is stored in PostgreSQL and served as JSON-RPC', async
   await withTestDatabase(async (db) => {
     mockUpstreamRpc({ eth_getBlockByNumber: rpcBlock(1n) })
     const clients = createRpcClients({ rpcUrl: upstreamRpcUrl })
-    const weighted = await safeGetBlock({
+    const data = await safeGetBlock({
       client: clients.backfill,
       blockNumber: 1n,
       db,
@@ -23,7 +23,7 @@ test('upstream HTTP block is stored in PostgreSQL and served as JSON-RPC', async
         logger: testLogger,
         db,
         client: clients.live,
-        data: weighted.data,
+        data,
       })
     ).resolves.toEqual({ status: 'ok' })
 

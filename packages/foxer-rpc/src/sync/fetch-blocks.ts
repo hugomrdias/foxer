@@ -1,116 +1,53 @@
 import type { InternalConfig } from '../config.ts'
 import type { Database } from '../db/client.ts'
 import { safeGetBlock } from '../rpc/get-block.ts'
-import type { WeightedIndexedBlockData } from '../types.ts'
-
-const MAX_FETCH_LOOKAHEAD = 8
-const MIN_FETCH_RESERVATION_BYTES = 256 * 1024
-
-type PendingResult = { value: WeightedIndexedBlockData } | { error: unknown }
-
-export type OrderedBlockFetcher = {
-  next: (bufferedBytes: number) => Promise<WeightedIndexedBlockData | null>
-  readonly nextReservationBytes: number
-  readonly peakInFlight: number
-}
+import type { IndexedBlockData } from '../types.ts'
 
 /**
- * Creates an ordered fetch scheduler whose lookahead adapts to retained bytes.
- *
- * The first request establishes a block-size reservation. Small observed blocks
- * allow more parallel lookahead; heavy blocks reduce it without an operator
- * concurrency setting. Completed out-of-order results remain bounded by the
- * same reservation calculation and the fixed lookahead ceiling.
+ * Fetches a contiguous block range with bounded concurrency while preserving
+ * canonical block order in preallocated result slots.
  */
-export function createOrderedBlockFetcher(args: {
+export function fetchBlocksInOrder(args: {
   client: InternalConfig['clients']['backfill']
   db: Database
   fromBlock: bigint
   toBlock: bigint
-  memoryLimitBytes: number
-  onBlockReady?: (value: WeightedIndexedBlockData) => void
-}): OrderedBlockFetcher {
-  if (
-    !Number.isSafeInteger(args.memoryLimitBytes) ||
-    args.memoryLimitBytes <= 0
-  ) {
-    throw new Error('Backfill memory limit must be a positive safe integer')
+  concurrency: number
+}): Promise<IndexedBlockData[]> {
+  if (!Number.isSafeInteger(args.concurrency) || args.concurrency <= 0) {
+    throw new Error('Backfill concurrency must be a positive safe integer')
   }
 
-  const pending = new Map<bigint, Promise<PendingResult>>()
-  let nextToSchedule = args.fromBlock
-  let nextToRead = args.fromBlock
-  let reservationBytes = args.memoryLimitBytes
-  let observedBlocks = 0
+  const count = Number(args.toBlock - args.fromBlock + 1n)
+  if (count <= 0) {
+    return Promise.resolve([])
+  }
+
+  const results = new Array<IndexedBlockData>(count)
+  let nextIndex = 0
   let failed = false
-  let activeRequests = 0
-  let peakInFlight = 0
 
-  const schedule = (bufferedBytes: number) => {
-    if (failed || nextToSchedule > args.toBlock) return
+  const worker = async () => {
+    while (!failed) {
+      const index = nextIndex
+      if (index >= count) return
+      nextIndex += 1
 
-    const availableBytes = Math.max(args.memoryLimitBytes - bufferedBytes, 0)
-    const target = Math.max(
-      1,
-      Math.min(
-        MAX_FETCH_LOOKAHEAD,
-        Math.floor(availableBytes / reservationBytes)
-      )
-    )
-
-    while (pending.size < target && nextToSchedule <= args.toBlock) {
-      const blockNumber = nextToSchedule
-      nextToSchedule += 1n
-      activeRequests += 1
-      peakInFlight = Math.max(peakInFlight, activeRequests)
-      const request = safeGetBlock({
-        client: args.client,
-        blockNumber,
-        db: args.db,
-      })
-        .then((value): PendingResult => {
-          args.onBlockReady?.(value)
-          return { value }
+      try {
+        results[index] = await safeGetBlock({
+          client: args.client,
+          blockNumber: args.fromBlock + BigInt(index),
+          db: args.db,
         })
-        .catch((error): PendingResult => {
-          failed = true
-          return { error }
-        })
-        .finally(() => {
-          activeRequests -= 1
-        })
-      pending.set(blockNumber, request)
+      } catch (error) {
+        failed = true
+        throw error
+      }
     }
   }
 
-  return {
-    async next(bufferedBytes) {
-      if (nextToRead > args.toBlock) return null
-      schedule(bufferedBytes)
-      const request = pending.get(nextToRead)
-      if (!request) return null
-
-      const result = await request
-      pending.delete(nextToRead)
-      if ('error' in result) throw result.error
-
-      nextToRead += 1n
-      const actualBytes = Math.max(
-        MIN_FETCH_RESERVATION_BYTES,
-        result.value.estimatedBytes
-      )
-      reservationBytes =
-        observedBlocks === 0
-          ? actualBytes
-          : Math.max(actualBytes, Math.ceil(reservationBytes * 0.75))
-      observedBlocks += 1
-      return result.value
-    },
-    get nextReservationBytes() {
-      return reservationBytes
-    },
-    get peakInFlight() {
-      return peakInFlight
-    },
-  }
+  const workerCount = Math.min(args.concurrency, count)
+  return Promise.all(Array.from({ length: workerCount }, worker)).then(
+    () => results
+  )
 }

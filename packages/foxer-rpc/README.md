@@ -163,16 +163,14 @@ Configuration is read from CLI flags and environment variables. CLI flags overri
 | `MAX_STREAM_CONNECTIONS` | `--max-stream-connections` | `max(1, MAX_CONNECTIONS - 20)` | Maximum API connections held by streamed JSON-RPC methods; cannot exceed `MAX_CONNECTIONS` |
 | `START_BLOCK` | `--start-block` | `0` | First block to sync when the DB is empty |
 | `FINALITY` | `--finality` | `30` | Blocks to leave behind the chain head during backfill |
-| `BACKFILL_MEMORY_LIMIT_MB` | `--backfill-memory-limit-mb` | `64` | Target memory for fetched and encoded backfill data |
+| `BACKFILL_CONCURRENCY` | `--backfill-concurrency` | `20` | Blocks fetched concurrently per backfill COPY batch |
 | `PORT` | `--port` | `8545` | JSON-RPC server port |
 | `LOG_LEVEL` | `--log-level` | `info` | Pino log level |
 | `MAX_LOGS_BLOCK_RANGE` | `--max-logs-block-range` | `2000` | Maximum block range for `eth_getLogs` |
 | `AUTH_SECRET` | `--auth-secret` | None | Enables JWT auth on all routes except `/health` |
 
 Historical backfill always writes blocks, transactions, and logs with PostgreSQL binary COPY.
-Fetch concurrency and COPY transaction sizes adapt to the memory target. A single
-unusually large block may exceed the target because its JSON-RPC response must be
-decoded as one value before ingestion can measure it.
+Each COPY transaction contains up to `BACKFILL_CONCURRENCY` contiguous blocks.
 COPY stream chunks use a fixed internal 256 KiB target.
 
 ## Testing

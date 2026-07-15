@@ -69,8 +69,8 @@ export const globalFlags = {
     description:
       'Drop and rebuild non-constraint indexes during large historical backfills',
   },
-  backfillMemoryLimitMb: {
+  backfillConcurrency: {
     type: Number,
-    description: 'Target memory in MiB for fetched and encoded backfill data',
+    description: 'Blocks fetched concurrently per backfill COPY batch',
   },
 } as const

@@ -7,16 +7,9 @@ import type {
   EncodedLog,
   EncodedTransaction,
   IndexedBlockData,
-  WeightedIndexedBlockData,
 } from '../types.ts'
 import { zeroLogsBloom } from '../utils/bloom.ts'
 import { normalizeFixedWidthHex, normalizeHex } from '../utils/hex.ts'
-import {
-  indexedBlockContainerBytes,
-  retainedBlockBytes,
-  retainedLogBytes,
-  retainedTransactionBytes,
-} from './retained-size.ts'
 
 /**
  * Converts a viem block into the compact `blocks` insert shape.
@@ -153,10 +146,10 @@ function encodeLog(log: TransactionReceipt['logs'][number]): EncodedLog {
 /**
  * Encodes raw viem receipts directly into final database rows.
  */
-export function encodeWeightedBlockDataFromRpcReceipts(
+export function encodeBlockDataFromRpcReceipts(
   block: ChainBlock,
   receipts: TransactionReceipt[]
-): WeightedIndexedBlockData {
+): IndexedBlockData {
   const receiptByHash = new Map<
     ReturnType<typeof normalizeHex>,
     TransactionReceipt
@@ -169,10 +162,6 @@ export function encodeWeightedBlockDataFromRpcReceipts(
   }
 
   const transactions = new Array<EncodedTransaction>(block.transactions.length)
-  let estimatedBytes = indexedBlockContainerBytes(
-    block.transactions.length,
-    logCount
-  )
   for (let i = 0; i < block.transactions.length; i++) {
     const tx = block.transactions[i]
     const receipt = receiptByHash.get(normalizeHex(tx.hash))
@@ -183,7 +172,6 @@ export function encodeWeightedBlockDataFromRpcReceipts(
     }
     const encoded = encodeTransaction(tx, receipt)
     transactions[i] = encoded
-    estimatedBytes += retainedTransactionBytes(encoded)
   }
 
   const logs = new Array<EncodedLog>(logCount)
@@ -192,20 +180,15 @@ export function encodeWeightedBlockDataFromRpcReceipts(
     for (const log of receipt.logs) {
       const encoded = encodeLog(log)
       logs[logIndex] = encoded
-      estimatedBytes += retainedLogBytes(encoded)
       logIndex += 1
     }
   }
 
   const encodedBlock = encodeBlock(block)
-  estimatedBytes += retainedBlockBytes(encodedBlock)
   return {
-    data: {
-      block: encodedBlock,
-      transactions,
-      logs,
-    },
-    estimatedBytes,
+    block: encodedBlock,
+    transactions,
+    logs,
   }
 }
 
@@ -245,20 +228,6 @@ export function encodeNullRoundBlock(options: {
     },
     transactions: [],
     logs: [],
-  }
-}
-
-/** Encodes and weights one null-round placeholder without reflective traversal. */
-export function encodeWeightedNullRoundBlock(options: {
-  number: bigint
-  hash: Hash
-  timestamp: bigint
-}): WeightedIndexedBlockData {
-  const data = encodeNullRoundBlock(options)
-  return {
-    data,
-    estimatedBytes:
-      indexedBlockContainerBytes(0, 0) + retainedBlockBytes(data.block),
   }
 }
 

@@ -2,9 +2,7 @@ import { expect, test } from 'bun:test'
 
 import { globalFlags } from '../src/bin/flags.ts'
 import {
-  MAX_BACKFILL_MEMORY_LIMIT_MB,
-  MIN_BACKFILL_MEMORY_LIMIT_MB,
-  resolveBackfillMemoryLimitBytes,
+  resolveBackfillConcurrency,
   resolveMaxConnections,
   resolveMaxStreamConnections,
 } from '../src/config.ts'
@@ -17,8 +15,9 @@ test('exposes only one backfill ingestion tuning flag', () => {
   expect('batchSize' in globalFlags).toBe(false)
   expect('backfillFetchConcurrency' in globalFlags).toBe(false)
   expect('backfillCopyChunkBytes' in globalFlags).toBe(false)
-  expect('backfillMemoryLimitMb' in globalFlags).toBe(true)
-  expect('default' in globalFlags.backfillMemoryLimitMb).toBe(false)
+  expect('backfillMemoryLimitMb' in globalFlags).toBe(false)
+  expect('backfillConcurrency' in globalFlags).toBe(true)
+  expect('default' in globalFlags.backfillConcurrency).toBe(false)
 })
 
 test('resolves and validates the API Postgres pool size', () => {
@@ -49,34 +48,21 @@ test('resolves and validates the streamed Postgres connection limit', () => {
   expect(() => resolveMaxStreamConnections(3.5, undefined, 90)).toThrow()
 })
 
-test('defaults the backfill memory limit to 64 MiB', () => {
-  expect(resolveBackfillMemoryLimitBytes(undefined, undefined)).toBe(
-    64 * 1024 * 1024
-  )
+test('defaults backfill concurrency to 20', () => {
+  expect(resolveBackfillConcurrency(undefined, undefined)).toBe(20)
 })
 
-test('reads the backfill memory limit from env when the flag is unset', () => {
-  expect(resolveBackfillMemoryLimitBytes(undefined, '32')).toBe(
-    32 * 1024 * 1024
-  )
+test('reads backfill concurrency from env when the flag is unset', () => {
+  expect(resolveBackfillConcurrency(undefined, '12')).toBe(12)
 })
 
-test('prefers the CLI backfill memory limit over env', () => {
-  expect(resolveBackfillMemoryLimitBytes(128, '32')).toBe(128 * 1024 * 1024)
+test('prefers CLI backfill concurrency over env', () => {
+  expect(resolveBackfillConcurrency(8, '12')).toBe(8)
 })
 
-test('rejects backfill memory limits outside the safe range', () => {
-  expect(
-    resolveBackfillMemoryLimitBytes(MIN_BACKFILL_MEMORY_LIMIT_MB, undefined)
-  ).toBe(MIN_BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024)
-  expect(
-    resolveBackfillMemoryLimitBytes(MAX_BACKFILL_MEMORY_LIMIT_MB, undefined)
-  ).toBe(MAX_BACKFILL_MEMORY_LIMIT_MB * 1024 * 1024)
-  expect(() =>
-    resolveBackfillMemoryLimitBytes(MIN_BACKFILL_MEMORY_LIMIT_MB - 1, undefined)
-  ).toThrow()
-  expect(() =>
-    resolveBackfillMemoryLimitBytes(MAX_BACKFILL_MEMORY_LIMIT_MB + 1, undefined)
-  ).toThrow()
-  expect(() => resolveBackfillMemoryLimitBytes(16.5, undefined)).toThrow()
+test('rejects invalid backfill concurrency', () => {
+  expect(resolveBackfillConcurrency(1, undefined)).toBe(1)
+  expect(() => resolveBackfillConcurrency(0, undefined)).toThrow()
+  expect(() => resolveBackfillConcurrency(-1, undefined)).toThrow()
+  expect(() => resolveBackfillConcurrency(1.5, undefined)).toThrow()
 })

@@ -18,17 +18,3 @@ export type IndexedBlockData = {
   transactions: EncodedTransaction[]
   logs: EncodedLog[]
 }
-
-/** Nested, byte-accounted ownership container used by historical COPY ingestion. */
-export type BackfillBatch = {
-  items: IndexedBlockData[]
-  transactionCount: number
-  logCount: number
-  estimatedBytes: number
-}
-
-/** One fetched block paired with its conservative retained-memory estimate. */
-export type WeightedIndexedBlockData = {
-  data: IndexedBlockData
-  estimatedBytes: number
-}
