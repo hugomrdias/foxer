@@ -1,8 +1,8 @@
 import type { Context } from 'hono'
 import { stream } from 'hono/streaming'
 
-import { RpcError } from './errors.ts'
-import type { JsonRpcId } from './types.ts'
+import { JsonRpcSerializationError, JsonRpcStreamStateError } from './errors.ts'
+import type { JsonRpcErrorResponse, JsonRpcId } from './types.ts'
 
 const DEFAULT_JSON_CHUNK_BYTES = 64 * 1024
 
@@ -18,6 +18,7 @@ type ErrorCallback = (cause: unknown) => void | Promise<void>
 type WriteScope<T> = (scope: T) => void | Promise<void>
 
 export type StreamJsonRpcOptions = {
+  handleError: (cause: unknown) => JsonRpcErrorResponse
   id: JsonRpcId
   chunkBytes?: number
 }
@@ -63,10 +64,11 @@ export function streamJsonRpc(
       await writer.finish()
     } catch (cause) {
       await methodStream.cleanup(cause)
+      const errorResponse = options.handleError(cause)
       let errorResponseWritten = false
       if (!output.aborted) {
         try {
-          errorResponseWritten = await writer.writeError(responseError(cause))
+          errorResponseWritten = await writer.writeError(errorResponse)
         } catch {
           // The response cannot be recovered; abort it below.
         }
@@ -172,46 +174,41 @@ export class JsonRpcStreamWriter {
 
   assertResultComplete() {
     if (!this.resultComplete) {
-      throw new Error('JSON-RPC stream did not write a result')
+      throw new JsonRpcStreamStateError(
+        'JSON-RPC stream did not write a result'
+      )
     }
   }
 
   async finish() {
     this.assertResultComplete()
-    if (this.finished) throw new Error('JSON-RPC stream is already finished')
+    if (this.finished) {
+      throw new JsonRpcStreamStateError('JSON-RPC stream is already finished')
+    }
     this.finished = true
     await this.output.append('}')
     await this.output.flush()
   }
 
-  async writeError(error: {
-    code: number
-    message: string
-    data?: unknown
-  }): Promise<boolean> {
+  async writeError(response: JsonRpcErrorResponse): Promise<boolean> {
     if (this.output.flushed || this.output.aborted) return false
     this.output.reset()
     this.envelopeStarted = true
     this.resultComplete = true
     this.finished = true
     await this.output.append(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        id: this.id,
-        error:
-          error.data === undefined
-            ? { code: error.code, message: error.message }
-            : error,
-      })
+      stringifyJson(response, 'JSON-RPC error response is not serializable')
     )
     await this.output.flush()
     return true
   }
 
   private async beginResult() {
-    if (this.finished) throw new Error('JSON-RPC stream is already finished')
+    if (this.finished) {
+      throw new JsonRpcStreamStateError('JSON-RPC stream is already finished')
+    }
     if (this.envelopeStarted) {
-      throw new Error('JSON-RPC stream already has a result')
+      throw new JsonRpcStreamStateError('JSON-RPC stream already has a result')
     }
     this.envelopeStarted = true
     await this.output.append(
@@ -250,7 +247,9 @@ export class JsonArrayStreamWriter {
   }
 
   async open(prefix = '') {
-    if (this.opened) throw new Error('JSON array stream is already open')
+    if (this.opened) {
+      throw new JsonRpcStreamStateError('JSON array stream is already open')
+    }
     this.opened = true
     await this.output.append(`${prefix}[`)
   }
@@ -269,8 +268,12 @@ export class JsonArrayStreamWriter {
   }
 
   private assertOpen() {
-    if (!this.opened) throw new Error('JSON array stream is not open')
-    if (this.closed) throw new Error('JSON array stream is closed')
+    if (!this.opened) {
+      throw new JsonRpcStreamStateError('JSON array stream is not open')
+    }
+    if (this.closed) {
+      throw new JsonRpcStreamStateError('JSON array stream is closed')
+    }
   }
 }
 
@@ -285,7 +288,10 @@ export class JsonObjectStreamWriter {
   }
 
   async value(name: string, value: unknown) {
-    const encoded = JSON.stringify(value)
+    const encoded = stringifyJson(
+      value,
+      'JSON-RPC object value is not serializable'
+    )
     if (encoded === undefined) return
     await this.output.append(`${this.propertyPrefix(name)}${encoded}`)
   }
@@ -311,7 +317,9 @@ export class JsonObjectStreamWriter {
   }
 
   async open(prefix = '') {
-    if (this.opened) throw new Error('JSON object stream is already open')
+    if (this.opened) {
+      throw new JsonRpcStreamStateError('JSON object stream is already open')
+    }
     this.opened = true
     await this.output.append(`${prefix}{`)
   }
@@ -330,8 +338,12 @@ export class JsonObjectStreamWriter {
   }
 
   private assertOpen() {
-    if (!this.opened) throw new Error('JSON object stream is not open')
-    if (this.closed) throw new Error('JSON object stream is closed')
+    if (!this.opened) {
+      throw new JsonRpcStreamStateError('JSON object stream is not open')
+    }
+    if (this.closed) {
+      throw new JsonRpcStreamStateError('JSON object stream is closed')
+    }
   }
 }
 
@@ -343,7 +355,9 @@ class BufferedJsonOutput {
 
   constructor(output: JsonRpcOutputStream, chunkBytes: number) {
     if (!Number.isSafeInteger(chunkBytes) || chunkBytes <= 0) {
-      throw new Error('JSON stream chunk bytes must be a positive integer')
+      throw new JsonRpcStreamStateError(
+        'JSON stream chunk bytes must be a positive integer'
+      )
     }
     this.output = output
     this.chunkBytes = chunkBytes
@@ -359,7 +373,9 @@ class BufferedJsonOutput {
 
   reset() {
     if (this.hasFlushed) {
-      throw new Error('cannot reset JSON-RPC output after flushing a chunk')
+      throw new JsonRpcStreamStateError(
+        'cannot reset JSON-RPC output after flushing a chunk'
+      )
     }
     this.buffer = ''
   }
@@ -381,29 +397,32 @@ class BufferedJsonOutput {
   }
 
   private assertOpen() {
-    if (this.output.aborted) throw new Error('JSON-RPC output aborted')
+    if (this.output.aborted) {
+      throw new JsonRpcStreamStateError('JSON-RPC output aborted')
+    }
   }
 }
 
 function stringifyRootValue(value: unknown) {
-  const encoded = JSON.stringify(value)
+  const encoded = stringifyJson(value, 'JSON-RPC result is not serializable')
   if (encoded === undefined) {
-    throw new Error('JSON-RPC result is not JSON serializable')
+    throw new JsonRpcSerializationError(
+      'JSON-RPC result is not JSON serializable'
+    )
   }
   return encoded
 }
 
 function stringifyArrayValue(value: unknown) {
-  return JSON.stringify(value) ?? 'null'
+  return (
+    stringifyJson(value, 'JSON-RPC array value is not serializable') ?? 'null'
+  )
 }
 
-function responseError(cause: unknown) {
-  if (cause instanceof RpcError) {
-    return {
-      code: cause.code,
-      message: cause.message,
-      data: cause.data,
-    }
+function stringifyJson(value: unknown, message: string) {
+  try {
+    return JSON.stringify(value)
+  } catch (cause) {
+    throw new JsonRpcSerializationError(message, cause)
   }
-  return { code: -32603, message: 'Internal error' }
 }

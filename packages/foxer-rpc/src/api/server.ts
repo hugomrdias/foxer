@@ -9,13 +9,22 @@ import type { InternalConfig } from '../config.ts'
 import type { Database } from '../db/client.ts'
 import type { Logger } from '../utils/logger.ts'
 import {
+  BatchRequestsUnsupportedError,
+  handleJsonRpcFailure,
+  InvalidRequestError,
+  JsonRpcParseError,
+  RequestBodyTooLargeError,
+  UnsupportedContentTypeError,
+} from './json-rpc/errors.ts'
+import {
   handleJsonRpc,
   handleJsonRpcStream,
   isStreamedRequest,
 } from './json-rpc/index.ts'
-import { error, isRequest } from './json-rpc/response.ts'
+import { isRequest } from './json-rpc/response.ts'
 import { streamJsonRpc } from './json-rpc/stream.ts'
 import { StreamCapacityLimiter } from './json-rpc/stream-capacity.ts'
+import type { JsonRpcRequest } from './json-rpc/types.ts'
 
 const mintKeySchema = z.object({
   sub: z.string().min(1),
@@ -139,58 +148,86 @@ export function createApiServer({
     '/',
     bodyLimit({
       maxSize: JSON_RPC_MAX_REQUEST_BODY_SIZE,
-      onError: (c) =>
-        c.json(error(null, -32600, 'Request body too large'), 413),
+      onError: (c) => {
+        const failure = handleJsonRpcFailure(new RequestBodyTooLargeError(), {
+          id: null,
+          logger,
+          maxConnections: config.maxConnections,
+        })
+        return c.json(failure.response, failure.status)
+      },
     }),
     async (c) => {
-      const contentType = c.req.header('content-type')
-      if (
-        contentType?.split(';', 1)[0]?.trim().toLowerCase() !==
-        'application/json'
-      ) {
-        return c.json(
-          error(null, -32600, 'Content-Type must be application/json'),
-          415
-        )
-      }
-
-      let body: unknown
+      let request: JsonRpcRequest | undefined
       try {
-        body = await c.req.json()
+        const contentType = c.req.header('content-type')
+        if (
+          contentType?.split(';', 1)[0]?.trim().toLowerCase() !==
+          'application/json'
+        ) {
+          throw new UnsupportedContentTypeError()
+        }
+
+        let body: unknown
+        try {
+          body = await c.req.json()
+        } catch (cause) {
+          throw new JsonRpcParseError(cause)
+        }
+
+        if (Array.isArray(body)) {
+          throw new BatchRequestsUnsupportedError()
+        }
+        if (!isRequest(body)) throw new InvalidRequestError()
+        if (!Object.hasOwn(body, 'id')) throw new InvalidRequestError()
+
+        const validatedRequest = body
+        request = validatedRequest
+        const id = validatedRequest.id ?? null
+
+        c.var.logger.assign({
+          jsonRpcBody: omitJsonRpcEnvelope(validatedRequest),
+        })
+
+        if (isStreamedRequest(validatedRequest)) {
+          return streamJsonRpc(
+            c,
+            {
+              handleError: (cause) =>
+                handleJsonRpcFailure(cause, {
+                  id,
+                  logger,
+                  maxConnections: config.maxConnections,
+                  request: validatedRequest,
+                }).response,
+              id,
+            },
+            (stream) =>
+              handleJsonRpcStream({
+                db,
+                config,
+                body: validatedRequest,
+                stream,
+                streamCapacity,
+              })
+          )
+        }
+
+        const result = await handleJsonRpc({
+          db,
+          config,
+          body: validatedRequest,
+        })
+        return c.json(result)
       } catch (cause) {
-        logger.error({ error: cause }, 'json-rpc parse error')
-        return c.json(error(null, -32700, 'Parse error'))
+        const failure = handleJsonRpcFailure(cause, {
+          id: request?.id ?? null,
+          logger,
+          maxConnections: config.maxConnections,
+          request,
+        })
+        return c.json(failure.response, failure.status)
       }
-
-      if (Array.isArray(body)) {
-        return c.json(error(null, -32600, 'Batch requests are not supported'))
-      }
-      if (!isRequest(body)) {
-        return c.json(error(null, -32600, 'Invalid Request'))
-      }
-
-      const id = body.id ?? null
-      if (!Object.hasOwn(body, 'id')) {
-        return c.json(error(null, -32600, 'Invalid Request'))
-      }
-
-      c.var.logger.assign({ jsonRpcBody: omitJsonRpcEnvelope(body) })
-
-      if (isStreamedRequest(body)) {
-        return streamJsonRpc(c, { id }, (stream) =>
-          handleJsonRpcStream({
-            db,
-            config,
-            logger,
-            body,
-            stream,
-            streamCapacity,
-          })
-        )
-      }
-
-      const result = await handleJsonRpc({ db, config, logger, body })
-      return c.json(result)
     }
   )
 

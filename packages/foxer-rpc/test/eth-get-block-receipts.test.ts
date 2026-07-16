@@ -17,7 +17,11 @@ import {
   tx2,
   tx3,
 } from './fixtures/receipts.ts'
-import { bytes32, withTestDatabase } from './helpers.ts'
+import {
+  bytes32,
+  handleTestJsonRpcFailure,
+  withTestDatabase,
+} from './helpers.ts'
 
 describe('eth_getBlockReceipts', () => {
   test('receipt selections omit transaction calldata and unrelated columns', () => {
@@ -242,17 +246,23 @@ async function renderPreparedStream(
 ) {
   const app = new Hono()
   app.get('/', (c) =>
-    streamJsonRpc(c, { id: 1 }, (stream) =>
-      streamEthGetBlockReceipts(
-        {
-          config: { finality: 1n },
-          db,
-          streamCapacity: new StreamCapacityLimiter(1),
-        },
-        [block],
-        stream,
-        { batchSize }
-      )
+    streamJsonRpc(
+      c,
+      {
+        handleError: (cause) => handleTestJsonRpcFailure(cause, { id: 1 }),
+        id: 1,
+      },
+      (stream) =>
+        streamEthGetBlockReceipts(
+          {
+            config: { finality: 1n },
+            db,
+            streamCapacity: new StreamCapacityLimiter(1),
+          },
+          [block],
+          stream,
+          { batchSize }
+        )
     )
   )
   return (await app.request('/')).text()

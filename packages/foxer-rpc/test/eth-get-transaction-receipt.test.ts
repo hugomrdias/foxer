@@ -13,7 +13,11 @@ import {
   seedReceipts,
   tx1,
 } from './fixtures/receipts.ts'
-import { bytes32, withTestDatabase } from './helpers.ts'
+import {
+  bytes32,
+  handleTestJsonRpcFailure,
+  withTestDatabase,
+} from './helpers.ts'
 
 describe('eth_getTransactionReceipt', () => {
   test('streams one receipt across log batches and HTTP', async () => {
@@ -84,13 +88,19 @@ describe('eth_getTransactionReceipt', () => {
 async function renderStream(db: Database, hash: unknown, batchSize: number) {
   const app = new Hono()
   app.get('/', (c) =>
-    streamJsonRpc(c, { id: 1 }, (stream) =>
-      streamEthGetTransactionReceipt(
-        { db, streamCapacity: new StreamCapacityLimiter(1) },
-        [hash],
-        stream,
-        { batchSize }
-      )
+    streamJsonRpc(
+      c,
+      {
+        handleError: (cause) => handleTestJsonRpcFailure(cause, { id: 1 }),
+        id: 1,
+      },
+      (stream) =>
+        streamEthGetTransactionReceipt(
+          { db, streamCapacity: new StreamCapacityLimiter(1) },
+          [hash],
+          stream,
+          { batchSize }
+        )
     )
   )
   return (await app.request('/')).text()

@@ -1,13 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 import { Hono } from 'hono'
 
-import { RpcError } from '../src/api/json-rpc/errors.ts'
+import { InvalidParamsError } from '../src/api/json-rpc/errors.ts'
 import {
   type JsonArrayStreamWriter,
   type JsonRpcOutputStream,
   JsonRpcStreamWriter,
   streamJsonRpc,
 } from '../src/api/json-rpc/stream.ts'
+import { handleTestJsonRpcFailure } from './helpers.ts'
 
 describe('JsonRpcStreamWriter', () => {
   test('writes nested arrays and objects with JSON.stringify semantics', async () => {
@@ -102,7 +103,7 @@ describe('streamJsonRpc', () => {
     const events: string[] = []
     const app = new Hono()
     app.get('/', (c) =>
-      streamJsonRpc(c, { id: 7 }, async (stream) => {
+      streamJsonRpc(c, streamOptions(7), async (stream) => {
         stream.beforeFinish(() => {
           events.push('commit')
         })
@@ -130,21 +131,25 @@ describe('streamJsonRpc', () => {
     const events: string[] = []
     const app = new Hono()
     app.get('/', (c) =>
-      streamJsonRpc(c, { chunkBytes: 1, id: 8 }, async (stream) => {
-        stream.beforeFinish(() => {
-          events.push('commit')
-        })
-        stream.onError(() => {
-          events.push('first cleanup')
-        })
-        stream.onError(() => {
-          events.push('second cleanup')
-        })
-        await stream.resultArray(async (values) => {
-          await values.value('partial')
-          throw new Error('stream failed')
-        })
-      })
+      streamJsonRpc(
+        c,
+        { ...streamOptions(8), chunkBytes: 1 },
+        async (stream) => {
+          stream.beforeFinish(() => {
+            events.push('commit')
+          })
+          stream.onError(() => {
+            events.push('first cleanup')
+          })
+          stream.onError(() => {
+            events.push('second cleanup')
+          })
+          await stream.resultArray(async (values) => {
+            await values.value('partial')
+            throw new Error('stream failed')
+          })
+        }
+      )
     )
 
     const response = await app.request('/')
@@ -156,11 +161,11 @@ describe('streamJsonRpc', () => {
     const events: string[] = []
     const app = new Hono()
     app.get('/', (c) =>
-      streamJsonRpc(c, { id: 9 }, (stream) => {
+      streamJsonRpc(c, streamOptions(9), (stream) => {
         stream.onError(() => {
           events.push('cleanup')
         })
-        throw new RpcError(-32602, 'invalid stream params')
+        throw new InvalidParamsError('invalid stream params')
       })
     )
 
@@ -176,7 +181,7 @@ describe('streamJsonRpc', () => {
   test('maps unexpected unflushed failures to internal errors', async () => {
     const app = new Hono()
     app.get('/', (c) =>
-      streamJsonRpc(c, { id: 10 }, () => {
+      streamJsonRpc(c, streamOptions(10), () => {
         throw new Error('database unavailable')
       })
     )
@@ -189,6 +194,13 @@ describe('streamJsonRpc', () => {
     })
   })
 })
+
+function streamOptions(id: number) {
+  return {
+    handleError: (cause: unknown) => handleTestJsonRpcFailure(cause, { id }),
+    id,
+  }
+}
 
 function createOutput(
   options: { abortOnWrite?: boolean } = {}

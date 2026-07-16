@@ -1,6 +1,5 @@
 import type { InternalConfig } from '../../config.ts'
 import type { Database } from '../../db/client.ts'
-import type { Logger } from '../../utils/logger.ts'
 
 export type JsonRpcId = string | number | null
 
@@ -11,16 +10,21 @@ export type JsonRpcRequest = {
   params?: unknown[]
 }
 
-export type JsonRpcResponse =
-  | { jsonrpc: '2.0'; id: JsonRpcId; result: unknown }
-  | {
-      jsonrpc: '2.0'
-      id: JsonRpcId
-      error: { code: number; message: string; data?: unknown }
-    }
+export type JsonRpcSuccessResponse = {
+  jsonrpc: '2.0'
+  id: JsonRpcId
+  result: unknown
+}
+
+export type JsonRpcErrorResponse = {
+  jsonrpc: '2.0'
+  id: JsonRpcId
+  error: { code: number; message: string; data?: unknown }
+}
+
+export type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse
 
 export type MethodContext = {
   db: Database
   config: InternalConfig
-  logger: Logger
 }

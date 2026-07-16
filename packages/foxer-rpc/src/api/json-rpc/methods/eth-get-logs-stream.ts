@@ -16,7 +16,7 @@ import type { InternalConfig } from '../../../config.ts'
 import type { Database } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog } from '../../decode.ts'
-import { RpcError } from '../errors.ts'
+import { InvalidParamsError, LogsBlockRangeTooLargeError } from '../errors.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
 import type { StreamCapacityLimiter } from '../stream-capacity.ts'
 import {
@@ -53,8 +53,7 @@ export async function streamEthGetLogs(
     filter.blockHash != null &&
     (filter.fromBlock != null || filter.toBlock != null)
   ) {
-    throw new RpcError(
-      -32602,
+    throw new InvalidParamsError(
       'blockHash cannot be combined with fromBlock/toBlock'
     )
   }
@@ -114,9 +113,7 @@ export async function streamEthGetLogs(
     return
   }
   if (toBlock - fromBlock > args.config.maxLogsBlockRange) {
-    throw new RpcError(-32005, 'eth_getLogs block range too large', {
-      maxBlockRange: args.config.maxLogsBlockRange.toString(),
-    })
+    throw new LogsBlockRangeTooLargeError(args.config.maxLogsBlockRange)
   }
 
   conditions.push(gte(schema.logs.blockNumber, fromBlock))

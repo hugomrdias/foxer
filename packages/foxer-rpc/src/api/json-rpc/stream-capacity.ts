@@ -1,24 +1,12 @@
-import { RpcError } from './errors.ts'
+import {
+  JsonRpcConfigurationError,
+  StreamCapacityExceededError,
+} from './errors.ts'
+
+export { StreamCapacityExceededError } from './errors.ts'
 
 export type StreamCapacityPermit = {
   release: () => void
-}
-
-/** Expected overload error raised before a streamed request enters the pool. */
-export class StreamCapacityExceededError extends RpcError {
-  readonly activeStreamConnections: number
-  readonly maxStreamConnections: number
-
-  constructor(args: {
-    activeStreamConnections: number
-    maxStreamConnections: number
-  }) {
-    super(-32005, 'Stream concurrency limit exceeded', {
-      maxConcurrentStreams: args.maxStreamConnections,
-    })
-    this.activeStreamConnections = args.activeStreamConnections
-    this.maxStreamConnections = args.maxStreamConnections
-  }
 }
 
 /**
@@ -36,7 +24,9 @@ export class StreamCapacityLimiter {
       !Number.isSafeInteger(maxStreamConnections) ||
       maxStreamConnections < 1
     ) {
-      throw new Error('max stream connections must be a positive integer')
+      throw new JsonRpcConfigurationError(
+        'max stream connections must be a positive integer'
+      )
     }
     this.maxStreamConnections = maxStreamConnections
   }

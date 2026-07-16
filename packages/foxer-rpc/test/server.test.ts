@@ -587,5 +587,36 @@ describe('createApiServer request logging', () => {
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcBody')
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethod')
     expect(completedRequest(logs)).not.toHaveProperty('jsonRpcMethods')
+    expect(
+      logs.filter((log) => log.msg === 'json-rpc parse error')
+    ).toHaveLength(1)
+  })
+
+  test('logs buffered and streamed internal failures exactly once', async () => {
+    const cases = [
+      { method: 'eth_call', params: [] },
+      {
+        method: 'eth_getTransactionReceipt',
+        params: [`0x${'1'.repeat(64)}`],
+      },
+    ]
+
+    for (const [index, request] of cases.entries()) {
+      const { app, logs } = createServerWithLogs()
+      const response = await app.request('/', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: index + 1, ...request }),
+      })
+
+      expect(await response.json()).toEqual({
+        jsonrpc: '2.0',
+        id: index + 1,
+        error: { code: -32603, message: 'Internal error' },
+      })
+      expect(
+        logs.filter((log) => log.msg === 'json-rpc internal error')
+      ).toEqual([expect.objectContaining({ method: request.method })])
+    }
   })
 })

@@ -4,6 +4,7 @@ import type { InternalConfig } from '../../../config.ts'
 import { type Database, receiptTransactionColumns } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog, decodeReceiptFields } from '../../decode.ts'
+import { JsonRpcDataIntegrityError } from '../errors.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
 import type { StreamCapacityLimiter } from '../stream-capacity.ts'
 import {
@@ -106,13 +107,15 @@ async function writePreparedBlockReceiptResult(args: {
       txIndex++
     ) {
       const tx = args.prepared.transactions[txIndex]
-      if (!tx) throw new Error('missing receipt transaction')
+      if (!tx) {
+        throw new JsonRpcDataIntegrityError('missing receipt transaction')
+      }
 
       if (
         !nextLog.done &&
         nextLog.value.transactionIndex < tx.transactionIndex
       ) {
-        throw new Error(
+        throw new JsonRpcDataIntegrityError(
           `Block ${args.prepared.block.number} log ${nextLog.value.logIndex} references missing transaction ${nextLog.value.transactionIndex}`
         )
       }
@@ -134,7 +137,7 @@ async function writePreparedBlockReceiptResult(args: {
     }
 
     if (!nextLog.done) {
-      throw new Error(
+      throw new JsonRpcDataIntegrityError(
         `Block ${args.prepared.block.number} log ${nextLog.value.logIndex} references missing transaction ${nextLog.value.transactionIndex}`
       )
     }

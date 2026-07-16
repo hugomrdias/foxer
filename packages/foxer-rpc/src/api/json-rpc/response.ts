@@ -1,4 +1,9 @@
-import type { JsonRpcId, JsonRpcRequest, JsonRpcResponse } from './types.ts'
+import type {
+  JsonRpcErrorResponse,
+  JsonRpcId,
+  JsonRpcRequest,
+  JsonRpcSuccessResponse,
+} from './types.ts'
 
 /**
  * Checks whether an unknown body has the minimum JSON-RPC request shape.
@@ -22,7 +27,7 @@ export function isRequest(body: unknown): body is JsonRpcRequest {
 /**
  * Builds a successful JSON-RPC 2.0 response envelope.
  */
-export function ok(id: JsonRpcId, result: unknown): JsonRpcResponse {
+export function ok(id: JsonRpcId, result: unknown): JsonRpcSuccessResponse {
   return { jsonrpc: '2.0', id, result }
 }
 
@@ -34,7 +39,7 @@ export function error(
   code: number,
   message: string,
   data?: unknown
-): JsonRpcResponse {
+): JsonRpcErrorResponse {
   return {
     jsonrpc: '2.0',
     id,

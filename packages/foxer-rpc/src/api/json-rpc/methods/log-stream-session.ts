@@ -7,6 +7,10 @@ import type { PoolClient } from 'pg'
 
 import type { Database } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
+import {
+  JsonRpcConfigurationError,
+  JsonRpcDataIntegrityError,
+} from '../errors.ts'
 import type {
   StreamCapacityLimiter,
   StreamCapacityPermit,
@@ -44,7 +48,9 @@ export class LogStreamSession {
     batchSize = LOG_STREAM_BATCH_SIZE
   ) {
     if (!Number.isSafeInteger(batchSize) || batchSize <= 0) {
-      throw new Error('log stream batch size must be a positive integer')
+      throw new JsonRpcConfigurationError(
+        'log stream batch size must be a positive integer'
+      )
     }
 
     const capacityPermit = capacity.acquire()
@@ -88,7 +94,7 @@ export class LogStreamSession {
 
       for (const row of rows) {
         if (row.logIndex <= lastLogIndex) {
-          throw new Error(
+          throw new JsonRpcDataIntegrityError(
             `Block ${args.blockNumber} logs are not strictly ordered by log index`
           )
         }

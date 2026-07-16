@@ -2,8 +2,16 @@ import { describe, expect, test } from 'bun:test'
 import { HttpResponse, http } from 'msw'
 import { TimeoutError } from 'viem'
 
-import { handleJsonRpc, isStreamedRequest } from '../src/api/json-rpc/index.ts'
+import {
+  InvalidParamsError,
+  MethodNotFoundError,
+} from '../src/api/json-rpc/errors.ts'
+import {
+  handleJsonRpc as dispatchJsonRpc,
+  isStreamedRequest,
+} from '../src/api/json-rpc/index.ts'
 import { createRpcClients } from '../src/rpc/client.ts'
+import { handleTestJsonRpcFailure } from './helpers.ts'
 import {
   mockUpstreamRpc,
   realtimeRpcUrl,
@@ -40,7 +48,44 @@ const args = {
   },
 }
 
+async function handleJsonRpc(args: Parameters<typeof dispatchJsonRpc>[0]) {
+  try {
+    return await dispatchJsonRpc(args)
+  } catch (cause) {
+    return handleTestJsonRpcFailure(cause, {
+      id: args.body.id ?? null,
+      request: args.body,
+    })
+  }
+}
+
 describe('handleJsonRpc', () => {
+  test('throws typed failures for the transport boundary to handle', async () => {
+    await expect(
+      dispatchJsonRpc({
+        ...args,
+        body: {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'unknown_method',
+          params: [],
+        },
+      } as never)
+    ).rejects.toBeInstanceOf(MethodNotFoundError)
+
+    await expect(
+      dispatchJsonRpc({
+        ...args,
+        body: {
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'eth_getBlockByNumber',
+          params: ['0x'],
+        },
+      } as never)
+    ).rejects.toBeInstanceOf(InvalidParamsError)
+  })
+
   test('identifies methods that use the streaming transport', () => {
     expect(
       isStreamedRequest({

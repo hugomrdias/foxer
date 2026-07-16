@@ -17,7 +17,12 @@ import {
   topic3,
   tx1,
 } from './fixtures/logs.ts'
-import { bytes32, testLogger, withTestDatabase } from './helpers.ts'
+import {
+  bytes32,
+  handleTestJsonRpcFailure,
+  testLogger,
+  withTestDatabase,
+} from './helpers.ts'
 
 describe('eth_getLogs', () => {
   test('applies address, topic, and block hash filters', async () => {
@@ -151,17 +156,23 @@ async function renderStream(
 ) {
   const app = new Hono()
   app.get('/', (c) =>
-    streamJsonRpc(c, { id: 1 }, (stream) =>
-      streamEthGetLogs(
-        {
-          config: createConfig(10n),
-          db,
-          streamCapacity: new StreamCapacityLimiter(1),
-        },
-        [filter],
-        stream,
-        { batchSize }
-      )
+    streamJsonRpc(
+      c,
+      {
+        handleError: (cause) => handleTestJsonRpcFailure(cause, { id: 1 }),
+        id: 1,
+      },
+      (stream) =>
+        streamEthGetLogs(
+          {
+            config: createConfig(10n),
+            db,
+            streamCapacity: new StreamCapacityLimiter(1),
+          },
+          [filter],
+          stream,
+          { batchSize }
+        )
     )
   )
   return (await app.request('/')).text()

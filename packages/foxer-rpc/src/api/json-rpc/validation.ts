@@ -4,7 +4,7 @@ import type { Hex } from 'viem'
 
 import type { InternalConfig } from '../../config.ts'
 import { schema } from '../../db/schema/index.ts'
-import { RpcError } from './errors.ts'
+import { InvalidParamsError } from './errors.ts'
 
 const BLOCK_TAGS = new Set([
   'earliest',
@@ -21,7 +21,7 @@ export function validateBlockParameter(value: unknown): void {
     requireQuantity(value, 'block parameter')
     return
   }
-  throw new RpcError(-32602, 'invalid block parameter')
+  throw new InvalidParamsError('invalid block parameter')
 }
 
 /**
@@ -56,7 +56,7 @@ export async function resolveBlockNumber(
     return resolved < earliest ? earliest : resolved
   }
 
-  throw new RpcError(-32602, 'invalid block parameter')
+  throw new InvalidParamsError('invalid block parameter')
 }
 
 async function selectBoundaryBlock(
@@ -89,7 +89,7 @@ export function requireQuantity(value: unknown, name: string): bigint {
     typeof value !== 'string' ||
     !/^0x(?:0|[1-9a-fA-F][0-9a-fA-F]*)$/.test(value)
   ) {
-    throw new RpcError(-32602, `invalid ${name}`)
+    throw new InvalidParamsError(`invalid ${name}`)
   }
   return BigInt(value)
 }
@@ -97,7 +97,7 @@ export function requireQuantity(value: unknown, name: string): bigint {
 export function requireQuantityNumber(value: unknown, name: string): number {
   const quantityValue = requireQuantity(value, name)
   if (quantityValue > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new RpcError(-32602, `invalid ${name}`)
+    throw new InvalidParamsError(`invalid ${name}`)
   }
   return Number(quantityValue)
 }
@@ -116,7 +116,7 @@ export function requireHex(
     value.length % 2 !== 0 ||
     (byteLength != null && value.length !== 2 + byteLength * 2)
   ) {
-    throw new RpcError(-32602, `invalid ${name}`)
+    throw new InvalidParamsError(`invalid ${name}`)
   }
   return value.toLowerCase() as Hex
 }

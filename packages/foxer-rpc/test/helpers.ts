@@ -2,7 +2,7 @@ import type { Database } from '../src/db/client.ts'
 import { createTestDatabaseContext } from './postgres.ts'
 
 export { zeroLogsBloom } from '../src/utils/bloom.ts'
-export { testLogger } from './test-logger.ts'
+export { handleTestJsonRpcFailure, testLogger } from './test-logger.ts'
 
 export async function withTestDatabase<T>(
   run: (db: Database) => Promise<T>
