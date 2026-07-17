@@ -15,9 +15,9 @@ Full workflow: `.cursor/skills/implement-with-review/SKILL.md`
 
 Skip review only for trivial edits or when the user asks. -->
 
-For changes follow plan -> user approval -> execution
+For **non-trivial** implementation work (multi-file, across multiple modules), follow plan -> user approval -> execution
 
-1. "Writes a detailed implementation plan (no edits yet).
+1. Write a detailed implementation plan (no edits yet).
 2. **User** reviews and approves the plan — **stop and wait** before handoff.
 3. Implement the approved plan.
 
