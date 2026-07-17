@@ -140,12 +140,6 @@ export class JsonRpcConfigurationError extends InternalJsonRpcError {
   }
 }
 
-export class JsonRpcDataIntegrityError extends InternalJsonRpcError {
-  constructor(message: string) {
-    super(undefined, message)
-  }
-}
-
 export class JsonRpcSerializationError extends InternalJsonRpcError {
   constructor(message: string, cause?: unknown) {
     super(cause, message)

@@ -4,7 +4,6 @@ import type { InternalConfig } from '../../../config.ts'
 import { type Database, receiptTransactionColumns } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
 import { decodeLog, decodeReceiptFields } from '../../decode.ts'
-import { JsonRpcDataIntegrityError } from '../errors.ts'
 import type { JsonRpcMethodStream } from '../stream.ts'
 import type { StreamCapacityLimiter } from '../stream-capacity.ts'
 import {
@@ -101,25 +100,7 @@ async function writePreparedBlockReceiptResult(args: {
     })
     let nextLog = await logs.next()
 
-    for (
-      let txIndex = 0;
-      txIndex < args.prepared.transactions.length;
-      txIndex++
-    ) {
-      const tx = args.prepared.transactions[txIndex]
-      if (!tx) {
-        throw new JsonRpcDataIntegrityError('missing receipt transaction')
-      }
-
-      if (
-        !nextLog.done &&
-        nextLog.value.transactionIndex < tx.transactionIndex
-      ) {
-        throw new JsonRpcDataIntegrityError(
-          `Block ${args.prepared.block.number} log ${nextLog.value.logIndex} references missing transaction ${nextLog.value.transactionIndex}`
-        )
-      }
-
+    for (const tx of args.prepared.transactions) {
       await receipts.object(async (receipt) => {
         await receipt.values(decodeReceiptFields(tx, args.prepared.block))
         await receipt.array('logs', async (receiptLogs) => {
@@ -134,12 +115,6 @@ async function writePreparedBlockReceiptResult(args: {
           }
         })
       })
-    }
-
-    if (!nextLog.done) {
-      throw new JsonRpcDataIntegrityError(
-        `Block ${args.prepared.block.number} log ${nextLog.value.logIndex} references missing transaction ${nextLog.value.transactionIndex}`
-      )
     }
   })
 }

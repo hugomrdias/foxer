@@ -7,10 +7,7 @@ import type { PoolClient } from 'pg'
 
 import type { Database } from '../../../db/client.ts'
 import { schema } from '../../../db/schema/index.ts'
-import {
-  JsonRpcConfigurationError,
-  JsonRpcDataIntegrityError,
-} from '../errors.ts'
+import { JsonRpcConfigurationError } from '../errors.ts'
 import type {
   StreamCapacityLimiter,
   StreamCapacityPermit,
@@ -93,11 +90,6 @@ export class LogStreamSession {
       if (rows.length === 0) return
 
       for (const row of rows) {
-        if (row.logIndex <= lastLogIndex) {
-          throw new JsonRpcDataIntegrityError(
-            `Block ${args.blockNumber} logs are not strictly ordered by log index`
-          )
-        }
         lastLogIndex = row.logIndex
         yield row
       }
