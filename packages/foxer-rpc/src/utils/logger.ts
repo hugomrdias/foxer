@@ -34,9 +34,7 @@ export function createLogger({
       extra.cause = error.raw.cause
     }
     return {
-      message: error.message,
-      stack: error.stack,
-      type: error.constructor.name,
+      ...error,
       ...extra,
     }
   })
@@ -54,7 +52,7 @@ export function createLogger({
 
   return pino({
     level,
-    // serializers: { error: errorSerializer },
+    serializers: { error: errorSerializer },
     formatters: {
       level: (label) => {
         return {
