@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.4...foxer-v0.2.5) (2026-07-17)
+
+
+### Bug Fixes
+
+* update hono dependency versions across packages ([f1b0692](https://github.com/hugomrdias/foxer/commit/f1b06923240ea4f93cd5099b927a6a84fddf1b5a))
+
 ## [0.2.4](https://github.com/hugomrdias/foxer/compare/foxer-v0.2.3...foxer-v0.2.4) (2026-03-27)
 
 
